@@ -411,10 +411,7 @@ class AutodockParameter:
 				'default': 'm',
 				'value': 'm',
 				'comment': 'state selection flag: (m)inimum or (l)ast state',
-				'choices': {
-					'minimum': 'm',
-					'last': 'l'
-				},
+				'choices': ['m', 'l'],
 				'scope': ['SA'],
 				'required': True,
 				'user': True,
@@ -713,6 +710,9 @@ class AutodockParameter:
 	def get_value(self, k):
 		return self.params[k]['value']
 
+	def get_param(self, k):
+		return self.params[k]
+
 	def get_count(self, algorithm='LGA'):
 		count = 0
 		for param in self.params:
@@ -765,25 +765,102 @@ class ParameterTreeModel(QAbstractItemModel):
 '''
 
 class ParameterTreeModel(QStandardItemModel):
-	def __init__(self, parent):
+	def __init__(self, parent, params):
 		super(ParameterTreeModel, self).__init__(parent)
+		self.params = params
 
 	def data(self, index, role):
-		#print(index)
-		if role == Qt.DisplayRole:
-			#return 'hello'
-			return super(ParameterTreeModel, self).data(index, role)
+		param = self.params.get_param(self.get_key(index))
+		column = index.column()
 
+		if role == Qt.DisplayRole:
+			if column < 2:
+				return super(ParameterTreeModel, self).data(index, role)
+			else:
+				if param['type'] is not bool:
+					return param['value']
+
+		elif role == Qt.CheckStateRole:
+			if column == 2 and param['type'] is bool:
+				if param['value']:
+					return Qt.Checked
+				else:
+					return Qt.Unchecked
+
+
+	def get_key(self, index):
+		item = self.item(index.row())
+		return item.text()
+
+class ParameterTreeDelegate(QStyledItemDelegate):
+	def __init__(self, parent, params):
+		super(ParameterTreeDelegate, self).__init__(parent)
+		self.parent = parent
+		self.params = params
+
+	def paint(self, painter, option, index):
+		QStyledItemDelegate.paint(self, painter, option, index)
+
+	def createEditor(self, parent, option, index):
+		col = index.column()
+		row = index.row()
+
+		if col == 2:
+			k = self.parent.model.get_key(index)
+			i = self.params.params[k]
+			t = i['type']
+
+			if t is float:
+				e = QDoubleSpinBox(parent)
+				e.setMaximum(100000000)
+				return e
+			elif t is int:
+				e = QSpinBox(parent)
+				e.setMaximum(100000000)
+				return e
+			elif 'choices' in i:
+				e = QComboBox(parent)
+				e.addItems(i['choices'])
+				return e
+			else:
+				return QLineEdit(parent)
+		
+		return QStyledItemDelegate.createEditor(self, parent, option, index)
+
+	def setEditorData(self, editor, index):
+		col = index.column()
+		row = index.row()
+
+		if col == 2:
+			k = self.parent.model.get_key(index)
+			i = self.params.params[k]
+			t = i['type']
+			v = i['value']
+
+			if t is float or t is int:
+				editor.setValue(v)
+
+			elif 'choices' in i:
+				idx = editor.findText(v)
+				editor.setCurrentIndex(idx)
+			else:
+				editor.setText(v)
+
+		#return QStyledItemDelegate.setEditorData(self, editor, index)
+
+	def setModelData(self, editor, model, index):
+		QStyledItemDelegate.setModelData(self, editor, model, index)
 
 class ParameterTreeView(QTreeView):
-	def __init__(self, parent):
+	def __init__(self, parent, params):
 		super(ParameterTreeView, self).__init__(parent)
-		self.params = AutodockParameter()
-		self.model = ParameterTreeModel(self)
+		self.params = params
+		self.delegate = ParameterTreeDelegate(self, self.params)
+		self.model = ParameterTreeModel(self, self.params)
 		self.model.setHorizontalHeaderLabels(["Command", "Comment", "Value"])
 		self.root = self.model.invisibleRootItem()
 		self.setModel(self.model)
-		
+		self.setItemDelegate(self.delegate)
 
 	def add_item(self, *args):
 		item = [QStandardItem(str(it)) for it in args]
@@ -802,12 +879,12 @@ class AutodockParameterDialog(QDialog):
 		super(AutodockParameterDialog, self).__init__(parent)
 		self.params = AutodockParameter()
 
-		self.dock_tree = ParameterTreeView(self)
+		self.dock_tree = ParameterTreeView(self, self.params)
 		self.dock_tree.header().setStretchLastSection(False)
 		self.dock_tree.header().setSectionResizeMode(0, QHeaderView.ResizeToContents)
 		self.dock_tree.header().setSectionResizeMode(1, QHeaderView.Stretch)
 		self.dock_tree.header().setSectionResizeMode(2, QHeaderView.ResizeToContents)
-		self.search_tree = ParameterTreeView(self)
+		self.search_tree = ParameterTreeView(self, self.params)
 		self.search_tree.header().setStretchLastSection(False)
 		self.search_tree.header().setSectionResizeMode(0, QHeaderView.ResizeToContents)
 		self.search_tree.header().setSectionResizeMode(1, QHeaderView.Stretch)
