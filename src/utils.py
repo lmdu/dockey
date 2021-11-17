@@ -8,7 +8,10 @@ __all__ = ['AttrDict', 'draw_gridbox', 'convert_dimension_to_coordinates',
 
 class AttrDict(dict):
 	def __getattr__(self, attr):
-		return self[attr]
+		try:
+			return self[attr]
+		except KeyError:
+			raise Exception("no attribute")
 
 	def __setattr__(self, attr, val):
 		self[attr] = val

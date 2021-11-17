@@ -1,26 +1,17 @@
-from PySide6.QtWidgets import QTextBrowser, QApplication
+from collections import OrderedDict
 
+class AttrDict(OrderedDict):
+    def __getattr__(self, attr):
+        return self[attr]
 
-if __name__ == '__main__':
-    import sys
+    def __setattr__(self, attr, val):
+        self[attr] = val
 
-    app = QApplication(sys.argv)
+o = AttrDict({
+    'c': 1,
+    'd': 2,
+    'e': 3
+})
 
-    text_browser = QTextBrowser()
-    str_html = """
-        <!DOCTYPE html>
-        <html>
-        <body>
-
-        <h1 style="color:blue;">Hello World!</h1>
-        <p style="color:red;">Lorem ipsum dolor sit amet.</p>
-        <input type="text" name="dd">
-
-        </body>
-        </html>
-        """
-    text_browser.setText(str_html)
-    text_browser.show()
-    text_browser.raise_()
-
-    sys.exit(app.exec())
+for k in o:
+    print(k)

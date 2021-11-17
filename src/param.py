@@ -1,8 +1,11 @@
 import os
+import sys
 
 from PySide6.QtGui import *
 from PySide6.QtCore import *
 from PySide6.QtWidgets import *
+
+from utils import *
 
 __all__ = ['AutogridParameter', 'AutodockParameterDialog']
 
@@ -78,7 +81,7 @@ class AutodockParameter:
 	def __init__(self):
 		self.num = 0
 		self.params = {
-			'autodock_parameter_version': {
+			'autodock_parameter_version': AttrDict({
 				'type': str,
 				'default': '4.2',
 				'value': '4.2',
@@ -87,8 +90,8 @@ class AutodockParameter:
 				'required': True,
 				'user': False,
 				'order': self.order
-			},
-			'outlev': {
+			}),
+			'outlev': AttrDict({
 				'type': int,
 				'default': 1,
 				'value': 1,
@@ -97,8 +100,8 @@ class AutodockParameter:
 				'required': True,
 				'user': False,
 				'order': self.order
-			},
-			'parameter_file': {
+			}),
+			'parameter_file': AttrDict({
 				'type': str,
 				'default': 'AD4.1_bound.dat',
 				'value': '',
@@ -107,8 +110,8 @@ class AutodockParameter:
 				'required': False,
 				'user': True,
 				'order': self.order
-			},
-			'intelec': {
+			}),
+			'intelec': AttrDict({
 				'type': bool,
 				'default': True,
 				'value': True,
@@ -117,8 +120,8 @@ class AutodockParameter:
 				'required': True,
 				'user': False,
 				'order': self.order
-			},
-			'intnbp_r_eps': {
+			}),
+			'intnbp_r_eps': AttrDict({
 				'type': [float,float,int,int,str,str],
 				'default': [],
 				'value': [],
@@ -126,8 +129,8 @@ class AutodockParameter:
 				'required': False,
 				'user': False,
 				'order': self.order
-			},
-			'torsdof': {
+			}),
+			'torsdof': AttrDict({
 				'type': int,
 				'default': 0,
 				'value': 0,
@@ -135,8 +138,8 @@ class AutodockParameter:
 				'required': True,
 				'user': False,
 				'order': self.order
-			},
-			'seed': {
+			}),
+			'seed': AttrDict({
 				'type': list,
 				'default': ['pid', 'time'],
 				'value': ['pid', 'time'],
@@ -145,8 +148,8 @@ class AutodockParameter:
 				'required': True,
 				'user': True,
 				'order': self.order
-			},
-			'ligand_types': {
+			}),
+			'ligand_types': AttrDict({
 				'type': list,
 				'default': [],
 				'value': [],
@@ -155,8 +158,8 @@ class AutodockParameter:
 				'required': True,
 				'user': False,
 				'order': self.order
-			},
-			'fld': {
+			}),
+			'fld': AttrDict({
 				'type': str,
 				'default': '',
 				'value': '',
@@ -165,8 +168,8 @@ class AutodockParameter:
 				'required': True,
 				'user': False,
 				'order': self.order
-			},
-			'map': {
+			}),
+			'map': AttrDict({
 				'type': iter,
 				'default': [],
 				'value': [],
@@ -175,8 +178,8 @@ class AutodockParameter:
 				'required': True,
 				'user': False,
 				'order': self.order
-			},
-			'elecmap': {
+			}),
+			'elecmap': AttrDict({
 				'type': str,
 				'default': '',
 				'value': '',
@@ -185,8 +188,8 @@ class AutodockParameter:
 				'required': True,
 				'user': False,
 				'order': self.order
-			},
-			'desolvmap': {
+			}),
+			'desolvmap': AttrDict({
 				'type': str,
 				'default': '',
 				'value': '',
@@ -195,8 +198,8 @@ class AutodockParameter:
 				'required': True,
 				'user': False,
 				'order': self.order
-			},
-			'move': {
+			}),
+			'move': AttrDict({
 				'type': str,
 				'default': '',
 				'value': '',
@@ -205,8 +208,8 @@ class AutodockParameter:
 				'required': True,
 				'user': False,
 				'order': self.order
-			},
-			'flexres': {
+			}),
+			'flexres': AttrDict({
 				'type': str,
 				'default': '',
 				'value': '',
@@ -215,8 +218,8 @@ class AutodockParameter:
 				'required': False,
 				'user': True,
 				'order': self.order,
-			},
-			'about': {
+			}),
+			'about': AttrDict({
 				'type': list,
 				'default': [],
 				'value': [],
@@ -225,8 +228,8 @@ class AutodockParameter:
 				'required': True,
 				'user': False,
 				'order': self.order
-			},
-			'tran0': {
+			}),
+			'tran0': AttrDict({
 				'type': list,
 				'default': ['random'],
 				'value': ['random'],
@@ -235,8 +238,8 @@ class AutodockParameter:
 				'required': True,
 				'user': False,
 				'order': self.order
-			},
-			'quaternion0': {
+			}),
+			'quaternion0': AttrDict({
 				'type': list,
 				'default': ['random'],
 				'value': ['random'],
@@ -245,8 +248,8 @@ class AutodockParameter:
 				'required': True,
 				'user': False,
 				'order': self.order
-			},
-			'dihe0': {
+			}),
+			'dihe0': AttrDict({
 				'type': list,
 				'default': ['random'],
 				'value': ['random'],
@@ -255,48 +258,52 @@ class AutodockParameter:
 				'required': True,
 				'user': False,
 				'order': self.order
-			},
-			'tstep': {
+			}),
+			'tstep': AttrDict({
 				'type': float,
 				'default': 0.2,
 				'value': 0.2,
+				'range': [0, 1000000000],
 				'comment': 'translation step/A',
 				'scope': ['SA'],
 				'required': True,
 				'user': True,
 				'order': self.order
-			},
-			'qstep': {
+			}),
+			'qstep': AttrDict({
 				'type': float,
 				'default': 5.0,
 				'value': 5.0,
+				'range': [0, 1000000000],
 				'comment': 'quaternion step/deg',
 				'scope': ['SA'],
 				'required': True,
 				'user': True,
 				'order': self.order
-			},
-			'dstep': {
+			}),
+			'dstep': AttrDict({
 				'type': float,
 				'default': 5.0,
 				'value': 5.0,
+				'range': [0, 1000000000],
 				'comment': 'torsion step/deg',
 				'scope': ['SA'],
 				'required': True,
 				'user': True,
 				'order': self.order
-			},
-			'rmstol': {
+			}),
+			'rmstol': AttrDict({
 				'type': float,
 				'default': 2.0,
 				'value': 2.0,
+				'range': [0, 1000000000],
 				'comment': 'cluster_tolerance/A',
 				'scope': 'global',
 				'required': True,
 				'user': True,
 				'order': self.order
-			},
-			'epdb': {
+			}),
+			'epdb': AttrDict({
 				'type': bool,
 				'default': False,
 				'value': False,
@@ -305,28 +312,30 @@ class AutodockParameter:
 				'required': True,
 				'user': True,
 				'order': self.order
-			},
-			'e0max': {
+			}),
+			'e0max': AttrDict({
 				'type': [float, int],
 				'default': [0.0, 10000],
 				'value': [0.0, 10000],
+				'range': [0, 1000000000],
 				'comment': 'max initial energy; max number of retries',
 				'scope': ['SA'],
 				'required': True,
 				'user': True,
 				'order': self.order
-			},
-			'rt0': {
+			}),
+			'rt0': AttrDict({
 				'type': float,
 				'default': 616.0,
 				'value': 616.0,
+				'range': [0, 1000000000],
 				'comment': 'initial annealing temperature (times gas constant)',
 				'scope': ['SA'],
 				'required': True,
 				'user': True,
 				'order': self.order
-			},
-			'line_schedule': {
+			}),
+			'linear_schedule': AttrDict({
 				'type': bool,
 				'default': False,
 				'value': True,
@@ -335,8 +344,8 @@ class AutodockParameter:
 				'required': False,
 				'user': True,
 				'order': self.order
-			},
-			'geometric_schedule': {
+			}),
+			'geometric_schedule': AttrDict({
 				'type': bool,
 				'default': False,
 				'value': False,
@@ -345,68 +354,74 @@ class AutodockParameter:
 				'required': False,
 				'user': True,
 				'order': self.order
-			},
-			'rtrf': {
+			}),
+			'rtrf': AttrDict({
 				'type': float,
 				'default': 0.95,
 				'value': 0.95,
+				'range': [0, 1],
 				'comment': 'annealing temperature reduction factor',
 				'scope': ['SA'],
 				'required': False,
 				'user': True,
 				'order': self.order
-			},
-			'runs': {
+			}),
+			'runs': AttrDict({
 				'type': int,
 				'default': 10,
 				'value': 10,
+				'range': [0, 1000000000],
 				'comment': 'number of automated docking runs',
 				'scope': ['SA'],
 				'required': True,
 				'user': True,
 				'order': self.order
-			},
-			'cycles': {
+			}),
+			'cycles': AttrDict({
 				'type': int,
 				'default': 50,
 				'value': 50,
+				'range': [0, 1000000000],
 				'comment': 'number of temperature reduction cycles',
 				'scope': ['SA'],
 				'required': True,
 				'user': True,
 				'order': self.order
-			},
-			'accs': {
+			}),
+			'accs': AttrDict({
 				'type': int,
 				'default': 25000,
 				'value': 25000,
+				'range': [0, 1000000000],
 				'comment': 'maximum number of accepted steps per cycle',
 				'scope': ['SA'],
 				'required': True,
 				'user': True,
 				'order': self.order
-			},
-			'rejs': {
+			}),
+			'rejs': AttrDict({
 				'type': int,
 				'default': 25000,
 				'value': 25000,
+				'range': [0, 1000000000],
 				'comment': 'maximum number of rejected steps per cycle',
 				'scope': ['SA'],
 				'required': True,
 				'user': True,
 				'order': self.order
-			},
-			'rejs': {
+			}),
+			'rejs': AttrDict({
 				'type': int,
 				'default': 25000,
 				'value': 25000,
+				'range': [0, 1000000000],
 				'comment': 'maximum number of rejected steps per cycle',
 				'scope': ['SA'],
 				'required': True,
 				'user': True,
 				'order': self.order
-			},
-			'select': {
+			}),
+			'select': AttrDict({
 				'type': str,
 				'default': 'm',
 				'value': 'm',
@@ -416,108 +431,118 @@ class AutodockParameter:
 				'required': True,
 				'user': True,
 				'order': self.order
-			},
-			'trnrf': {
+			}),
+			'trnrf': AttrDict({
 				'type': float,
 				'default': 1.0,
 				'value': 1.0,
+				'range': [0, 1000000000],
 				'comment': 'per cycle reduction factor for translation',
 				'scope': ['SA'],
 				'required': True,
 				'user': True,
 				'order': self.order
-			},
-			'quarf': {
+			}),
+			'quarf': AttrDict({
 				'type': float,
 				'default': 1.0,
 				'value': 1.0,
+				'range': [0, 1000000000],
 				'comment': 'per cycle reduction factor for quaternions',
 				'scope': ['SA'],
 				'required': True,
 				'user': True,
 				'order': self.order
-			},
-			'dihrf': {
+			}),
+			'dihrf': AttrDict({
 				'type': float,
 				'default': 1.0,
 				'value': 1.0,
+				'range': [0, 1000000000],
 				'comment': 'per cycle reduction factor for dihedrals',
 				'scope': ['SA'],
 				'required': True,
 				'user': True,
 				'order': self.order
-			},
-			'ga_pop_size': {
+			}),
+			'ga_pop_size': AttrDict({
 				'type': int,
 				'default': 150,
 				'value': 150,
-				'comment': 'number of individuals in population',
+				'range': [50, 200],
+				'comment': 'No. of individuals in population',
 				'scope': ['GA', 'LGA', 'LS'],
 				'required': True,
 				'user': True,
 				'order': self.order
-			},
-			'ga_num_evals': {
+			}),
+			'ga_num_evals': AttrDict({
 				'type': int,
 				'default': 2500000,
 				'value': 2500000,
-				'comment': 'maximum number of energy evaluations',
+				'range': [0, 1000000000],
+				'comment': 'Max number of energy evaluations',
 				'scope': ['GA', 'LGA', 'LS'],
 				'required': True,
 				'user': True,
 				'order': self.order
-			},
-			'ga_num_generations': {
+			}),
+			'ga_num_generations': AttrDict({
 				'type': int,
 				'default': 27000,
 				'value': 27000,
+				'range': [0, 1000000000],
 				'comment': 'maximum number of energy evaluations',
 				'scope': ['GA', 'LGA'],
 				'required': True,
 				'user': True,
 				'order': self.order
-			},
-			'ga_elitism': {
+			}),
+			'ga_elitism': AttrDict({
 				'type': int,
 				'default': 1,
 				'value': 1,
+				'range': [0, 200],
 				'comment': 'number of top individuals to survive to next generation',
 				'scope': ['GA', 'LGA'],
 				'required': True,
 				'user': True,
 				'order': self.order
-			},
-			'ga_mutation_rate': {
+			}),
+			'ga_mutation_rate': AttrDict({
 				'type': float,
 				'default': 0.02,
 				'value': 0.02,
-				'comment': 'rate of gene mutation',
+				'range': [0, 1],
+				'comment': 'Rate of gene mutation',
 				'scope': ['GA', 'LGA'],
 				'required': True,
 				'user': True,
 				'order': self.order
-			},
-			'ga_crossover_rate': {
+			}),
+			'ga_crossover_rate': AttrDict({
 				'type': float,
 				'default': 0.8,
 				'value': 0.8,
-				'comment': 'rate of crossover',
+				'range': [0, 1],
+				'comment': 'Rate of crossover',
 				'scope': ['GA', 'LGA'],
 				'required': True,
 				'user': True,
 				'order': self.order
-			},
-			'ga_window_size': {
+			}),
+			'ga_window_size': AttrDict({
 				'type': int,
 				'default': 10,
 				'value': 10,
-				'comment': 'number of preceding generations',
+				'range': [0, 1000000000],
+				'comment': 'Number of preceding generations',
 				'scope': ['GA', 'LGA'],
 				'required': True,
 				'user': True,
 				'order': self.order
-			},
-			'ga_cauchy_alpha': {
+			}),
+			'ga_cauchy_alpha': AttrDict({
 				'type': float,
 				'default': 0.0,
 				'value': 0.0,
@@ -526,8 +551,8 @@ class AutodockParameter:
 				'required': True,
 				'user': False,
 				'order': self.order
-			},
-			'ga_cauchy_beta': {
+			}),
+			'ga_cauchy_beta': AttrDict({
 				'type': float,
 				'default': 1.0,
 				'value': 1.0,
@@ -536,8 +561,8 @@ class AutodockParameter:
 				'required': True,
 				'user': False,
 				'order': self.order
-			},
-			'set_ga': {
+			}),
+			'set_ga': AttrDict({
 				'type': bool,
 				'default': True,
 				'value': True,
@@ -546,8 +571,8 @@ class AutodockParameter:
 				'required': True,
 				'user': False,
 				'order': self.order
-			},
-			'set_ga': {
+			}),
+			'set_ga': AttrDict({
 				'type': bool,
 				'default': True,
 				'value': True,
@@ -556,68 +581,74 @@ class AutodockParameter:
 				'required': True,
 				'user': False,
 				'order': self.order
-			},
-			'sw_max_its': {
+			}),
+			'sw_max_its': AttrDict({
 				'type': int,
 				'default': 300,
 				'value': 300,
+				'range': [0, 1000000000],
 				'comment': 'iterations of Solis & Wets local search',
 				'scope': ['LS', 'LGA'],
 				'required': True,
 				'user': True,
 				'order': self.order
-			},
-			'sw_max_succ': {
+			}),
+			'sw_max_succ': AttrDict({
 				'type': int,
 				'default': 4,
 				'value': 4,
+				'range': [0, 10],
 				'comment': 'consecutive successes before changing rho',
 				'scope': ['LS', 'LGA'],
 				'required': True,
 				'user': True,
 				'order': self.order
-			},
-			'sw_max_fail': {
+			}),
+			'sw_max_fail': AttrDict({
 				'type': int,
 				'default': 4,
 				'value': 4,
+				'range': [0, 10],
 				'comment': 'consecutive failures before changing rho',
 				'scope': ['LS', 'LGA'],
 				'required': True,
 				'user': True,
 				'order': self.order
-			},
-			'sw_rho': {
+			}),
+			'sw_rho': AttrDict({
 				'type': float,
 				'default': 1.0,
 				'value': 1.0,
+				'range': [0, 1000000000],
 				'comment': 'size of local search space to sample',
 				'scope': ['LS', 'LGA'],
 				'required': True,
 				'user': True,
 				'order': self.order
-			},
-			'sw_lb_rho': {
+			}),
+			'sw_lb_rho': AttrDict({
 				'type': float,
 				'default': 0.01,
 				'value': 0.01,
+				'range': [0, 1],
 				'comment': 'lower bound on rho',
 				'scope': ['LS', 'LGA'],
 				'required': True,
 				'user': True,
 				'order': self.order
-			},
-			'ls_search_freq': {
+			}),
+			'ls_search_freq': AttrDict({
 				'type': float,
 				'default': 0.06,
 				'value': 0.06,
+				'range': [0, 1],
 				'comment': 'lower bound on rho',
 				'scope': ['LGA'],
 				'required': True,
 				'user': True,
 				'order': self.order
-			},
-			'set_sw1': {
+			}),
+			'set_sw1': AttrDict({
 				'type': bool,
 				'default': False,
 				'value': False,
@@ -626,8 +657,8 @@ class AutodockParameter:
 				'required': True,
 				'user': False,
 				'order': self.order
-			},
-			'set_psw1': {
+			}),
+			'set_psw1': AttrDict({
 				'type': bool,
 				'default': False,
 				'value': False,
@@ -636,8 +667,8 @@ class AutodockParameter:
 				'required': True,
 				'user': False,
 				'order': self.order
-			},
-			'unbound_model': {
+			}),
+			'unbound_model': AttrDict({
 				'type': str,
 				'default': 'bound',
 				'value': 'bound',
@@ -646,8 +677,8 @@ class AutodockParameter:
 				'required': True,
 				'user': False,
 				'order': self.order
-			},
-			'simanneal': {
+			}),
+			'simanneal': AttrDict({
 				'type': bool,
 				'default': True,
 				'value': True,
@@ -656,8 +687,8 @@ class AutodockParameter:
 				'required': True,
 				'user': False,
 				'order': self.order
-			},
-			'do_local_only': {
+			}),
+			'do_local_only': AttrDict({
 				'type': int,
 				'default': 50,
 				'value': 50,
@@ -666,8 +697,8 @@ class AutodockParameter:
 				'required': True,
 				'user': False,
 				'order': self.order
-			},
-			'do_global_only': {
+			}),
+			'do_global_only': AttrDict({
 				'type': int,
 				'default': 50,
 				'value': 50,
@@ -676,18 +707,19 @@ class AutodockParameter:
 				'required': True,
 				'user': False,
 				'order': self.order
-			},
-			'ga_run': {
+			}),
+			'ga_run': AttrDict({
 				'type': int,
-				'default': 50,
-				'value': 50,
+				'default': 10,
+				'value': 10,
+				'range': [0, 1000000000],
 				'comment': 'do this many hybrid GA-LS runs',
 				'scope': ['LGA'],
 				'required': True,
-				'user': False,
+				'user': True,
 				'order': self.order
-			},
-			'analysis': {
+			}),
+			'analysis': AttrDict({
 				'type': bool,
 				'default': True,
 				'value': True,
@@ -696,7 +728,7 @@ class AutodockParameter:
 				'required': True,
 				'user': False,
 				'order': self.order
-			}
+			})
 		}
 
 	@property
@@ -704,8 +736,14 @@ class AutodockParameter:
 		self.num += 1
 		return self.num
 
-	def set_value(self, k, v):
-		self.params[k]['value'] = v
+	def get_items(self):
+		return self.params.items()
+
+	def set_value(self, k, v, idx=-1):
+		if idx >= 0:
+			self.params[k]['value'][idx] = v
+		else:
+			self.params[k]['value'] = v
 
 	def get_value(self, k):
 		return self.params[k]['value']
@@ -873,7 +911,7 @@ class ParameterTreeView(QTreeView):
 
 	def sizeHint(self):
 		return QSize(500, 200)
-
+'''
 class AutodockParameterDialog(QDialog):
 	def __init__(self, parent):
 		super(AutodockParameterDialog, self).__init__(parent)
@@ -940,3 +978,133 @@ class AutodockParameterDialog(QDialog):
 			if type(meta['value']) == list and len(meta['value']) > 1:
 				for v in meta['value']:
 					parent.appendRow([QStandardItem(''), QStandardItem(''), QStandardItem(str(v))])
+'''
+
+class AutodockParameterDialog(QDialog):
+	def __init__(self, parent):
+		super(AutodockParameterDialog, self).__init__(parent)
+		self.params = AutodockParameter()
+		self.titles = ["Lamarckian GA", "Genetic Algorithm", "Simulated Annealing", "Local Search"]
+		self.algorithms = ['LGA', 'GA', 'SA', 'LS']
+		self.algorithm_select = QComboBox(self)
+		self.algorithm_select.addItems(self.titles)
+		self.algorithm_select.currentIndexChanged.connect(self.change_tab_page)
+
+		layout = QVBoxLayout()
+		self.setLayout(layout)
+
+		select_layout = QHBoxLayout()
+		select_layout.addWidget(QLabel("Search algorithm", self))
+		select_layout.addWidget(self.algorithm_select)
+		layout.addLayout(select_layout)
+		layout.addWidget(QLabel("Search parameters", self))
+
+		self.tab = QTabWidget(self)
+		self.tab.setDocumentMode(True)
+		self.tab.setTabBarAutoHide(True)
+		layout.addWidget(self.tab)
+
+		#self.gatab = QWidget(self)
+		#self.satab = QWidget(self)
+		#self.lstab = QWidget(self)
+
+		
+		#self.tab.addTab(self.gatab, "Genetic Algorithm")
+		#self.tab.addTab(self.satab, "Simulated Annealing")
+		#self.tab.addTab(self.lstab, "Local Search")
+
+		self.create_tab_page()
+
+	def update_parameter(self, cmd, value, idx=-1):
+		self.params.set_value(cmd, value, idx)
+
+	def change_tab_page(self, index):
+		self.tab.clear()
+		self.create_tab_page(index)
+
+	def create_tab_page(self, index=0):
+		self.page = QWidget(self)
+		self.tab.addTab(self.page, self.titles[index])
+		page_layout = QFormLayout()
+		self.page.setLayout(page_layout)
+
+		for cmd, meta in self.params.get_items():
+			if not meta.user:
+				continue
+
+			if self.algorithms[index] not in meta.scope:
+				continue
+
+			if meta.type is int:
+				editor = QSpinBox(self)
+				if 'range' in meta:
+					_min, _max = meta.range
+					editor.setRange(_min, _max)
+				editor.setValue(meta.value)
+				editor.valueChanged.connect(lambda x: self.update_parameter(cmd, x))
+				page_layout.addRow(meta.comment, editor)
+
+			elif meta.type is float:
+				editor = QDoubleSpinBox(self)
+				if 'range' in meta:
+					_min, _max = meta.range
+					editor.setRange(_min, _max)
+				editor.setValue(meta.value)
+				editor.valueChanged.connect(lambda x: self.update_parameter(cmd, x))
+				page_layout.addRow(meta.comment, editor)
+
+			elif cmd == 'geometric_schedule':
+				pass
+
+			elif cmd == 'linear_schedule':
+				slay = QHBoxLayout()
+				bgrp = QButtonGroup()
+				lbtn = QRadioButton("Linear", self)
+				lbtn.toggled.connect(lambda x: self.update_parameter('linear_schedule', x))
+				gbtn = QRadioButton("Geometric", self)
+				gbtn.toggled.connect(lambda x: self.update_parameter('geometric_schedule', x))
+				slay.addWidget(lbtn)
+				bgrp.addButton(lbtn)
+				slay.addWidget(gbtn)
+				bgrp.addButton(gbtn)
+				bgrp.setExclusive(True)
+				page_layout.addRow(meta.comment, slay)
+
+			elif meta.type is bool:
+				editor = QCheckBox(self)
+				editor.setChecked(meta.value)
+				editor.stateChanged.connect(lambda x: self.update_parameter(cmd, x))
+				page_layout.addRow(meta.comment, editor)
+
+			elif 'choices' in meta:
+				editor = QComboBox(self)
+				editor.addItems(meta.choices)
+				idx = editor.findText(meta.value)
+				editor.setCurrentIndex(idx)
+				editor.currentTextChanged.connect(lambda x: self.update_parameter(cmd, x))
+				page_layout.addRow(meta.comment, editor)
+
+			elif isinstance(meta.type, list):
+				for i, t in enumerate(meta.type):
+					if t is int:
+						editor = QSpinBox(self)
+					elif t is float:
+						editor = QDoubleSpinBox(self)
+					else:
+						editor = QLineEdit(self)
+
+					if 'range' in meta:
+						_min, _max = meta.range
+						editor.setRange(_min, _max)
+
+					editor.setValue(meta.value[i])
+
+					if i == 0:
+						page_layout.addRow(meta.comment, editor)
+					else:
+						page_layout.addRow('', editor)
+
+			else:
+				page_layout.addRow(QLabel(meta.comment))
+
+	
