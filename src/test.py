@@ -1,17 +1,30 @@
-from collections import OrderedDict
+import sys
 
-class AttrDict(OrderedDict):
-    def __getattr__(self, attr):
-        return self[attr]
+from PySide6.QtGui import *
+from PySide6.QtCore import *
+from PySide6.QtWidgets import *
 
-    def __setattr__(self, attr, val):
-        self[attr] = val
+def createIntroPage():
+    page = QWizardPage();
+    #page.setTitle("Introduction")
 
-o = AttrDict({
-    'c': 1,
-    'd': 2,
-    'e': 3
-})
+    label = QLabel("This wizard will help you register your copy of Super Product Two.")
+    label.setWordWrap(True)
 
-for k in o:
-    print(k)
+    layout = QVBoxLayout()
+    layout.addWidget(label)
+    page.setLayout(layout)
+
+    return page
+
+if __name__ == '__main__':
+    app = QApplication(sys.argv)
+
+    wizard = QWizard()
+    wizard.setWizardStyle(QWizard.ClassicStyle)
+    wizard.addPage(createIntroPage())
+
+    wizard.setWindowTitle("Run AutoDock")
+    wizard.show()
+
+    sys.exit(app.exec())

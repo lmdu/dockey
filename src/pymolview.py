@@ -389,6 +389,7 @@ class PymolGLWidget(QOpenGLWidget):
 	#		event.accept()
 
 	def load_receptor(self, name, molecule):
+		#view = self.cmd.get_view()
 		self.receptor = name
 		self.cmd.read_pdbstr(molecule, name)
 
@@ -399,6 +400,7 @@ class PymolGLWidget(QOpenGLWidget):
 		self.cmd.get_box(self.receptor)
 		#xyz = self.cmd.get_coordset('las2', copy=0)
 		#print(xyz)
+		#self.cmd.set_view(view)
 
 	def sidebar_controler(self, flag):
 		self.cmd.set('internal_gui', flag)

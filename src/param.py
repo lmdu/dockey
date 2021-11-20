@@ -7,7 +7,7 @@ from PySide6.QtWidgets import *
 
 from utils import *
 
-__all__ = ['AutogridParameter', 'AutodockParameterDialog']
+__all__ = ['AutogridParameter', 'AutodockParameterDialog', 'AutodockParamterWizard']
 
 class AutogridParameter:
 	comments = {
@@ -80,6 +80,7 @@ class AutogridParameter:
 class AutodockParameter:
 	def __init__(self):
 		self.num = 0
+		self.algorithm = 0
 		self.params = {
 			'autodock_parameter_version': AttrDict({
 				'type': str,
@@ -140,7 +141,7 @@ class AutodockParameter:
 				'order': self.order
 			}),
 			'seed': AttrDict({
-				'type': list,
+				'type': [str, str],
 				'default': ['pid', 'time'],
 				'value': ['pid', 'time'],
 				'comment': 'seeds for random generator',
@@ -983,6 +984,7 @@ class AutodockParameterDialog(QDialog):
 class AutodockParameterDialog(QDialog):
 	def __init__(self, parent):
 		super(AutodockParameterDialog, self).__init__(parent)
+		self.setWindowTitle("Parameter setting for AutoDock")
 		self.params = AutodockParameter()
 		self.titles = ["Lamarckian GA", "Genetic Algorithm", "Simulated Annealing", "Local Search"]
 		self.algorithms = ['LGA', 'GA', 'SA', 'LS']
@@ -1004,14 +1006,10 @@ class AutodockParameterDialog(QDialog):
 		self.tab.setTabBarAutoHide(True)
 		layout.addWidget(self.tab)
 
-		#self.gatab = QWidget(self)
-		#self.satab = QWidget(self)
-		#self.lstab = QWidget(self)
-
-		
-		#self.tab.addTab(self.gatab, "Genetic Algorithm")
-		#self.tab.addTab(self.satab, "Simulated Annealing")
-		#self.tab.addTab(self.lstab, "Local Search")
+		btn_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+		btn_box.accepted.connect(self.accept)
+		btn_box.rejected.connect(self.reject)
+		layout.addWidget(btn_box)
 
 		self.create_tab_page()
 
@@ -1107,4 +1105,184 @@ class AutodockParameterDialog(QDialog):
 			else:
 				page_layout.addRow(QLabel(meta.comment))
 
-	
+class AutodockParamterWizard(QWizard):
+	def __init__(self, parent):
+		super(AutodockParamterWizard, self).__init__(parent)
+		self.setWindowTitle("Parameter settings for AutoDock")
+		self.setWizardStyle(QWizard.ClassicStyle)
+		self.params = AutodockParameter()
+
+		self.algorithms = ["Lamarckian GA", "Genetic Algorithm",
+							"Simulated Annealing", "Local Search"]
+
+		self.create_select_page()
+		self.create_algorithm_page()
+		self.create_docking_page()
+		self.create_finish_page()
+
+	def update_parameter(self, cmd, value, idx=-1):
+		self.params.set_value(cmd, value, idx)
+
+	@Slot()
+	def on_algorithm_changed(self, index):
+		#remove widgets
+		for i in range(self.algorithm_layout.rowCount()):
+			self.algorithm_layout.removeRow(0)
+
+		self.params.algorithm = index
+
+		self.create_algorithm_widgets(index)
+
+	def create_select_page(self):
+		tips = QLabel((
+			"<p><b>Lamarckian Genetic Algorithm</b> provides the most efficient "
+			"search for general applications, and in most cases will be the technique "
+			"used. It is typically effective for systems with about 10 rotatable bonds "
+			"in the ligand.</p><p><b>Genetic Algorithm</b> may also be run without the "
+			"local search, but this is typically less efficient than the Lamarckian GA-LS "
+			"combination.</p><p><b>Simulated Annealing</b> is also less efficient that the "
+			"Lamarckian Genetic Algorithm, but it can be useful in applications where search "
+			"starting from a given point is desired.</p><p><b>Local Search</b> may be used "
+			"to optimize a molecule in its local environment.</p>"
+		), self)
+		tips.setWordWrap(True)
+
+		self.select_page = QWizardPage(self)
+		self.select_page.setTitle("Select a property search algorithm")
+		self.addPage(self.select_page)
+		self.select_layout = QVBoxLayout()
+		self.select_page.setLayout(self.select_layout)
+		self.select_layout.addWidget(tips)
+		self.select_layout.addWidget(QLabel("<b>Select search algorithm</b>", self))
+		self.select_input = QComboBox(self)
+		self.select_input.addItems(self.algorithms)
+		self.select_layout.addWidget(self.select_input)
+		self.select_input.currentIndexChanged.connect(self.on_algorithm_changed)
+
+	def create_algorithm_page(self):
+		self.algorithm_page = QWizardPage(self)
+		self.addPage(self.algorithm_page)
+		self.algorithm_layout = QFormLayout()
+		self.algorithm_page.setLayout(self.algorithm_layout)
+		self.create_algorithm_widgets()
+
+	def create_algorithm_widgets(self, index=0):
+		self.algorithm_page.setTitle("Set parameters for {} algorithm".format(self.algorithms[index]))
+		scope = ['LGA', 'GA', 'SA', 'LS'][index]
+		self.create_parameter_widgets(self.algorithm_layout, scope)
+
+	def create_parameter_widgets(self, layout, scope='global'):
+		for cmd, meta in self.params.get_items():
+			if not meta.user:
+				continue
+
+			if scope not in meta.scope:
+				continue
+
+			if meta.type is int:
+				editor = QSpinBox(self)
+				if 'range' in meta:
+					_min, _max = meta.range
+					editor.setRange(_min, _max)
+				editor.setValue(meta.value)
+				editor.valueChanged.connect(lambda x: self.update_parameter(cmd, x))
+				layout.addRow(meta.comment, editor)
+
+			elif meta.type is float:
+				editor = QDoubleSpinBox(self)
+				if 'range' in meta:
+					_min, _max = meta.range
+					editor.setRange(_min, _max)
+				editor.setValue(meta.value)
+				editor.valueChanged.connect(lambda x: self.update_parameter(cmd, x))
+				layout.addRow(meta.comment, editor)
+
+			elif cmd == 'geometric_schedule':
+				pass
+
+			elif cmd == 'linear_schedule':
+				slay = QHBoxLayout()
+				bgrp = QButtonGroup()
+				lbtn = QRadioButton("Linear", self)
+				lbtn.setChecked(meta.value)
+				lbtn.toggled.connect(lambda x: self.update_parameter('linear_schedule', x))
+				gbtn = QRadioButton("Geometric", self)
+				gbtn.toggled.connect(lambda x: self.update_parameter('geometric_schedule', x))
+				slay.addWidget(lbtn)
+				bgrp.addButton(lbtn)
+				slay.addWidget(gbtn)
+				bgrp.addButton(gbtn)
+				bgrp.setExclusive(True)
+				layout.addRow(meta.comment, slay)
+
+			elif meta.type is bool:
+				editor = QCheckBox(self)
+				editor.setChecked(meta.value)
+				editor.stateChanged.connect(lambda x: self.update_parameter(cmd, x))
+				layout.addRow(meta.comment, editor)
+
+			elif meta.type is str:
+				editor = QLineEdit(self)
+				editor.setText(meta.value)
+				editor.textChanged.connect(lambda x: self.update_parameter(cmd, x))
+				layout.addRow(meta.comment, editor)
+
+			elif 'choices' in meta:
+				editor = QComboBox(self)
+				editor.addItems(meta.choices)
+				idx = editor.findText(meta.value)
+				editor.setCurrentIndex(idx)
+				editor.currentTextChanged.connect(lambda x: self.update_parameter(cmd, x))
+				layout.addRow(meta.comment, editor)
+
+			elif isinstance(meta.type, list):
+				for i, t in enumerate(meta.type):
+					if t is int:
+						editor = QSpinBox(self)
+						editor.valueChanged.connect(lambda x: self.update_parameter(cmd, x, i))
+						editor.setValue(meta.value[i])
+					elif t is float:
+						editor = QDoubleSpinBox(self)
+						editor.valueChanged.connect(lambda x: self.update_parameter(cmd, x, i))
+						editor.setValue(meta.value[i])
+					else:
+						editor = QLineEdit(self)
+						editor.textChanged.connect(lambda x: self.update_parameter(cmd, x, i))
+						editor.setText(meta.value[i])
+
+					if 'range' in meta:
+						_min, _max = meta.range
+						editor.setRange(_min, _max)
+
+					if i == 0:
+						layout.addRow(meta.comment, editor)
+					else:
+						layout.addRow('', editor)
+
+			else:
+				layout.addRow(QLabel(meta.comment))
+
+	def create_docking_page(self):
+		self.docking_page = QWizardPage(self)
+		self.docking_page.setTitle("Set other docking parameters")
+		self.addPage(self.docking_page)
+		self.docking_layout = QFormLayout()
+		self.docking_page.setLayout(self.docking_layout)
+		self.create_parameter_widgets(self.docking_layout)
+
+	def create_finish_page(self):
+		self.finish_page = QWizardPage(self)
+		self.finish_page.setTitle("Start AutoDock")
+		self.addPage(self.finish_page)
+		self.finish_layout = QVBoxLayout()
+		self.finish_page.setLayout(self.finish_layout)
+		self.finish_layout.addWidget(
+			QLabel((
+				"<p>Everything is ready, please confirm the docking tasks<p>"
+				"<p>Receptors: <b>{}</b></p>"
+				"<p>Ligands: <b>{}</b></p>"
+				"<p>Search algorithm: <b>{}</b></p>"
+				"<p>Click <b>Finish</b> button to start docking tasks</p>".format(
+					1, 20, self.algorithms[self.params.algorithm])
+			), self)
+		)
