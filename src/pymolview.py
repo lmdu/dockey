@@ -408,18 +408,3 @@ class PymolGLWidget(QOpenGLWidget):
 		#h = int(self.fb_scale * self.height())
 		self.pymol.reshape(-1, -1, True)
 
-	def draw_bounding_box(self):
-		if not self.receptor:
-			return
-
-		points = self.cmd.get_extent(self.receptor)
-		GBD.update_dimension(points)
-		draw_gridbox(self.cmd, GBD)
-
-	def draw_custom_box(self):
-		if not self.receptor:
-			return
-
-		GBD.reset()
-		draw_gridbox(self.cmd, GBD)
-

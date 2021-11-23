@@ -14,23 +14,22 @@ def register_plugin(func):
 @register_plugin
 def draw_box(points=([0,0,0],[5,5,5]), show_face=True, bg_x=(1.0,0.0,0.0), bg_y=(0.0,1.0,0.0),
 			 bg_z=(0.0,0.0,1.0), show_edge=True, use_line=True, use_cylinder=True, radius=0.2,
-			 edge_width=2, edge_color=(1.0,1.0,1.0), padding=0, opacity=50.0):
+			 edge_width=2, edge_color=(1.0,1.0,1.0), opacity=50.0):
 
 	([xmin, ymin, zmin], [xmax, ymax, zmax]) = points
 
 	cmd.delete('gridbox')
 	view = cmd.get_view()
 
-	padding = float(padding)
 	opacity = float(opacity)/100.0
 	edge_width = float(edge_width)
 
-	xmin = float(xmin) - padding
-	ymin = float(ymin) - padding
-	zmin = float(zmin) - padding
-	xmax = float(xmax) + padding 
-	ymax = float(ymax) + padding
-	zmax = float(zmax) + padding
+	xmin = float(xmin)
+	ymin = float(ymin)
+	zmin = float(zmin)
+	xmax = float(xmax)
+	ymax = float(ymax)
+	zmax = float(zmax)
 
 	obj = []
 
@@ -88,6 +87,7 @@ def draw_box(points=([0,0,0],[5,5,5]), show_face=True, bg_x=(1.0,0.0,0.0), bg_y=
 
 	if show_edge and use_line:
 		obj.extend([
+			ALPHA, 1,
 			LINEWIDTH, edge_width,
 
 			BEGIN, LINES,

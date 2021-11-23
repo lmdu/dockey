@@ -2,16 +2,17 @@ from PySide6.QtGui import *
 from PySide6.QtCore import *
 from PySide6.QtWidgets import *
 
+from db import *
 from utils import *
 from config import *
 
-__all__ = ['GridBoxSettingPanel', 'GBD']
+__all__ = ['GridBoxSettingPanel']
 
-class GridBoxStorage(QObject):
+class GridBoxParamter(QObject):
 	updated = Signal()
 
 	def __init__(self):
-		super(GridBoxStorage, self).__init__()
+		super(GridBoxParamter, self).__init__()
 		self.initialize()
 
 	def __setitem__(self, k, v):
@@ -21,9 +22,9 @@ class GridBoxStorage(QObject):
 		return self.property(k)
 
 	def initialize(self):
-		self.x = 10
-		self.y = 10
-		self.z = 10
+		self.x = 0
+		self.y = 0
+		self.z = 0
 		self.cx = 0
 		self.cy = 0
 		self.cz = 0
@@ -33,14 +34,14 @@ class GridBoxStorage(QObject):
 		self.use_cylinder = False
 		self.edge_width = 1
 		self.edge_color = (1.0, 1.0, 1.0)
-		self.padding = 0
+		self.spacing = 0.375
 		self.opacity = 50
 		self.bg_x = (1.0, 0.0, 0.0)
 		self.bg_y = (0.0, 1.0, 0.0)
 		self.bg_z = (0.0, 0.0, 1.0)
 
 	def update_dimension(self, points):
-		x, y, z, cx, cy, cz = convert_coordinates_to_dimension(points)
+		x, y, z, cx, cy, cz = convert_coordinates_to_dimension(points, self.spacing)
 		self.x = x
 		self.y = y
 		self.z = z
@@ -49,11 +50,26 @@ class GridBoxStorage(QObject):
 		self.cz = cz
 		self.updated.emit()
 
+	def update_grid(self, data):
+		self.x = data.x
+		self.y = data.y
+		self.z = data.z
+		self.cx = data.cx
+		self.cy = data.cy
+		self.cz = data.cz
+		self.spacing = data.spacing
+		self.updated.emit()
+
 	def reset(self):
 		self.initialize()
 		self.updated.emit()
 
-GBD = GridBoxStorage()
+	def custom(self):
+		self.initialize()
+		self.x = 40
+		self.y = 40
+		self.z = 40
+		self.updated.emit()
 
 #https://www.pythonguis.com/widgets/qcolorbutton-a-color-selector-tool-for-pyqt/
 class ColorButton(QPushButton):
@@ -104,12 +120,15 @@ class GridBoxSettingPanel(QWidget):
 		super(GridBoxSettingPanel, self).__init__(parent)
 		self.parent = parent
 
+		self.params = GridBoxParamter()
+
 		self.layout = QFormLayout()
 		self.setLayout(self.layout)
 
 		self.create_controler()
 
 		self.updated.connect(self.redraw_box)
+		self.params.updated.connect(self.set_value)
 
 	def create_widgets(self):
 		#self.face_widget = QCheckBox("Show box face", self)
@@ -122,24 +141,24 @@ class GridBoxSettingPanel(QWidget):
 		pass
 
 	def redraw_box(self):
-		draw_gridbox(self.parent.cmd, GBD)
+		draw_gridbox(self.parent.cmd, self.params)
 
 	def update_value(self, k, v):
-		if GBD[k] == v:
+		if self.params[k] == v:
 			return
 
-		GBD[k] = v
+		self.params[k] = v
 		self.updated.emit()
 
 	@Slot()
 	def set_value(self):
-		self.size_x.setValue(GBD.x)
-		self.size_y.setValue(GBD.y)
-		self.size_z.setValue(GBD.z)
-		self.pos_x.setValue(GBD.cx)
-		self.pos_y.setValue(GBD.cy)
-		self.pos_z.setValue(GBD.cz)
-		self.wide.setValue(GBD.edge_width)
+		self.size_x.setValue(self.params.x)
+		self.size_y.setValue(self.params.y)
+		self.size_z.setValue(self.params.z)
+		self.pos_x.setValue(self.params.cx)
+		self.pos_y.setValue(self.params.cy)
+		self.pos_z.setValue(self.params.cz)
+		self.wide.setValue(self.params.edge_width)
 
 	def create_controler(self):
 		#show box face
@@ -150,11 +169,11 @@ class GridBoxSettingPanel(QWidget):
 		self.layout.addRow(self.face)
 
 		#face background
-		self.bg_x = ColorButton(self, color=QColor.fromRgbF(*GBD.bg_x).name())
+		self.bg_x = ColorButton(self, color=QColor.fromRgbF(*self.params.bg_x).name())
 		self.bg_x.colorChanged.connect(lambda x: self.update_value('bg_x', x))
-		self.bg_y = ColorButton(self, color=QColor.fromRgbF(*GBD.bg_y).name())
+		self.bg_y = ColorButton(self, color=QColor.fromRgbF(*self.params.bg_y).name())
 		self.bg_y.colorChanged.connect(lambda x: self.update_value('bg_y', x))
-		self.bg_z = ColorButton(self, color=QColor.fromRgbF(*GBD.bg_z).name())
+		self.bg_z = ColorButton(self, color=QColor.fromRgbF(*self.params.bg_z).name())
 		self.bg_z.colorChanged.connect(lambda x: self.update_value('bg_z', x))
 		bg_layout = QHBoxLayout()
 		bg_layout.addWidget(QLabel("Background", self))
@@ -165,7 +184,7 @@ class GridBoxSettingPanel(QWidget):
 
 		self.opacity = QSlider(Qt.Horizontal, self)
 		self.opacity.setRange(0, 99)
-		self.opacity.setValue(GBD.opacity)
+		self.opacity.setValue(self.params.opacity)
 		self.opacity.valueChanged.connect(lambda x: self.update_value('opacity', x))
 		self.layout.addRow(QLabel("Background opacity"))
 		self.layout.addRow(self.opacity)
@@ -193,30 +212,37 @@ class GridBoxSettingPanel(QWidget):
 		self.layout.addRow(type_layout)
 
 		self.wide = QSpinBox(self)
+		self.wide.setRange(1, 100)
 		self.wide.valueChanged.connect(lambda x: self.update_value('edge_width', x))
 		self.layout.addRow("Line width", self.wide)
-		self.color = ColorButton(self, color=QColor.fromRgbF(*GBD.edge_color).name())
+		self.color = ColorButton(self, color=QColor.fromRgbF(*self.params.edge_color).name())
 		self.color.colorChanged.connect(lambda x: self.update_value('edge_color', x))
 		color_layout = QHBoxLayout()
 		color_layout.addWidget(QLabel("Line color", self))
 		color_layout.addWidget(self.color)
 		self.layout.addRow(color_layout)
 
-		#padding controler
-		self.padding = QSlider(Qt.Horizontal, self)
-		self.padding.valueChanged.connect(lambda x: self.update_value('padding', x))
-		self.layout.addRow(QLabel('Padding space', self))
-		self.layout.addRow(self.padding)
+		#spacing controler
+		self.spacing = QDoubleSpinBox(self)
+		self.spacing.setValue(self.params.spacing)
+		self.spacing.setRange(0, 1)
+		self.spacing.setDecimals(3)
+		self.spacing.setSingleStep(0.005)
+		self.spacing.valueChanged.connect(lambda x: self.update_value('spacing', x))
+		#self.layout.addRow(QLabel('Padding space', self))
+		self.layout.addRow("Spacing", self.spacing)
 
-		self.size_x = QDoubleSpinBox(self)
+		self.size_x = QSpinBox(self)
+		self.size_x.setRange(0, 100000)
 		self.size_x.valueChanged.connect(lambda x: self.update_value('x', x))
-		self.size_y = QDoubleSpinBox(self)
+		self.size_y = QSpinBox(self)
+		self.size_y.setRange(0, 100000)
 		self.size_y.valueChanged.connect(lambda x: self.update_value('y', x))
-		self.size_z = QDoubleSpinBox(self)
+		self.size_z = QSpinBox(self)
+		self.size_z.setRange(0, 100000)
 		self.size_z.valueChanged.connect(lambda x: self.update_value('z', x))
-
 		
-		self.layout.addRow(QLabel("Box size", self))
+		self.layout.addRow(QLabel("Points in each dimension", self))
 		size_layout = QGridLayout()
 		size_layout.setColumnStretch(1, 1)
 		size_layout.addWidget(QLabel("x", self), 0, 0)
@@ -228,13 +254,19 @@ class GridBoxSettingPanel(QWidget):
 		self.layout.addRow(size_layout)
 
 		self.pos_x = QDoubleSpinBox(self)
+		self.pos_x.setRange(-100000, 100000)
+		self.pos_x.setDecimals(3)
 		self.pos_x.valueChanged.connect(lambda x: self.update_value('cx', x))
 		self.pos_y = QDoubleSpinBox(self)
+		self.pos_y.setRange(-100000, 100000)
+		self.pos_y.setDecimals(3)
 		self.pos_y.valueChanged.connect(lambda x: self.update_value('cy', x))
 		self.pos_z = QDoubleSpinBox(self)
+		self.pos_z.setRange(-100000, 100000)
+		self.pos_z.setDecimals(3)
 		self.pos_z.valueChanged.connect(lambda x: self.update_value('cz', x))
 
-		self.layout.addRow(QLabel("Centre position", self))
+		self.layout.addRow(QLabel("Centre coordinates", self))
 		pos_layout = QGridLayout()
 		pos_layout.setColumnStretch(1, 1)
 		pos_layout.addWidget(QLabel("x", self), 0, 0)
@@ -244,4 +276,36 @@ class GridBoxSettingPanel(QWidget):
 		pos_layout.addWidget(QLabel("z", self), 2, 0)
 		pos_layout.addWidget(self.pos_z, 2, 1)
 		self.layout.addRow(pos_layout)
+
+		self.save_btn = QPushButton("Save grid box", self)
+		self.save_btn.clicked.connect(self.on_save)
+		self.layout.addRow(self.save_btn)
+
+	@Slot()
+	def on_save(self):
+		if self.parent.current_molecular:
+			if self.parent.current_molecular.type == 1:
+				DB.update_grid_box(
+					self.parent.current_molecular.id,
+					self.params.x,
+					self.params.y,
+					self.params.z,
+					self.params.cx,
+					self.params.cy,
+					self.params.cz,
+					self.params.spacing
+				)
+
+				QMessageBox.information(self.parent, "Grid box saved",
+					"Successfully set grid box for receptor {}".format(
+						self.parent.current_molecular.name)
+				)
+			else:
+				QMessageBox.warning(self.parent, "Warning",
+					"Could not save grid box for ligand"
+				)
+		else:
+			QMessageBox.warning(self.parent, "Warning",
+				"Please select a receptor to add grid box"
+			)
 

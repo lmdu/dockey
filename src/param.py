@@ -77,6 +77,8 @@ class AutogridParameter:
 				field = row.split()[0]
 				fw.write("{:<{}}{}".format(row, max_len, self.comments[field]))
 
+		return self.gpf_file
+
 class AutodockParameter:
 	def __init__(self):
 		self.num = 0

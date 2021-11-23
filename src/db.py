@@ -1,70 +1,174 @@
 from PySide6.QtSql import *
 
-__all__ = ['DockeyDatabase']
+from utils import AttrDict
+
+__all__ = ['DB']
 
 DB_TABLES = {
 	'molecular': [
 		('id', 'INTEGER PRIMARY KEY'),
 		('name', 'TEXT'),
 		('type', 'INTEGER'),
-		('content', 'TEXT')
+		('content', 'TEXT'),
+		('format', 'TEXT')
 	],
-	'tasks': [
+	'grid': [
 		('id', 'INTEGER PRIMARY KEY'),
-		('receptor', 'TEXT'),
-		('ligand', 'TEXT'),
-		('status', 'TEXT'),
-		('created', 'INTEGER'),
-		('finished', 'INTEGER')
+		('rid', 'INTEGER'),
+		('x', 'INTEGER'),
+		('y', 'INTEGER'),
+		('z', 'INTEGER'),
+		('cx', 'REAL'),
+		('cy', 'REAL'),
+		('cz', 'REAL'),
+		('spacing', 'REAL')
+	],
+	'jobs': [
+		('id', 'INTEGER PRIMARY KEY'),
+		('rid', 'INTEGER'),
+		('lid', 'INTEGER'),
+		('status', 'TEXT')
 	]
 }
 
-class DockeyDatabase:
-	_conn = None
+class DB:
 
-	def __init__(self):
-		self.query = None
+	@staticmethod
+	def connect(db_file):
+		db = QSqlDatabase.addDatabase("QSQLITE")
+		db.setDatabaseName(db_file)
+		if db.open():
+			query = QSqlQuery()
 
-	def __del__(self):
-		self._conn.commit()
+			for table, fields in DB_TABLES.items():
+				columns = ','.join(["{} {}".format(*field) for field in fields])
+				sql = "CREATE TABLE IF NOT EXISTS {} ({})".format(table, columns)
+				query.exec(sql)
 
-	def __initialize_db(self):
-		self.query = QSqlQuery()
-
-		for table, fields in DB_TABLES.items():
-			columns = ','.join(["{} {}".format(*field) for field in fields])
-			sql = "CREATE TABLE IF NOT EXISTS {} ({})".format(table, columns)
-			self.query.exec(sql)
-
-	def connect(self, db_file):
-		self._conn = QSqlDatabase.addDatabase("QSQLITE")
-		self._conn.setDatabaseName(db_file)
-		if self._conn.open():
-			self.__initialize_db()
 			return True
 		else:
 			return False
 
-	def prepare(self, table):
-		self.query = QSqlQuery()
+	@staticmethod
+	def prepare(table):
+		query = QSqlQuery()
 		signs = ','.join(['?'] * len(DB_TABLES[table]))
 		sql = "INSERT INTO {} VALUES ({})".format(table, signs)
-		self.query.prepare(sql)
+		query.prepare(sql)
+		return query
 
-	def insert(self, *args):
-		self.query.addBindValue(None)
+	@staticmethod
+	def insert(query, *args):
+		query.addBindValue(None)
 		for arg in args:
-			self.query.addBindValue(arg)
-		self.query.exec()
+			query.addBindValue(arg)
+		query.exec()
 
-		return self.query.lastInsertId()
+		return query.lastInsertId()
 
-	def get_content(self, name):
+	@staticmethod
+	def get_receptors():
 		query = QSqlQuery()
-		query.prepare("SELECT content FROM molecular WHERE name=?")
+		query.exec("SELECT * FROM molecular WHERE type=1")
+		while query.next():
+			yield AttrDict({
+				'id': query.value('id'),
+				'name': query.value('name')
+			})
+
+	@staticmethod
+	def get_ligands():
+		query = QSqlQuery()
+		query.exec("SELECT * FROM molecular WHERE type=2")
+		while query.next():
+			yield AttrDict({
+				'id': query.value('id'),
+				'name': query.value('name')
+			})
+
+	@staticmethod
+	def get_molecular_by_id(_id):
+		query = QSqlQuery()
+		query.prepare("SELECT * FROM molecular WHERE id=? LIMIT 1")
+		query.addBindValue(_id)
+		query.exec()
+
+		while query.next():
+			return AttrDict({
+				'id': query.value('id'),
+				'name': query.value('name'),
+				'type': query.value('type'),
+				'content': query.value('content'),
+				'format': query.value('format')
+			})
+
+	@staticmethod
+	def get_molecular_by_name(name):
+		query = QSqlQuery()
+		query.prepare("SELECT * FROM molecular WHERE name=? LIMIT 1")
 		query.addBindValue(name)
 		query.exec()
 
 		while query.next():
-			return query.value('content')
+			return AttrDict({
+				'id': query.value('id'),
+				'name': name,
+				'type': query.value('type'),
+				'content': query.value('content'),
+				'format': query.value('format')
+			})
 
+	@staticmethod
+	def get_grid_box(_id):
+		query = QSqlQuery()
+		query.prepare("SELECT * FROM grid WHERE id=? LIMIT 1")
+		query.addBindValue(_id)
+		query.exec()
+
+		while query.next():
+			return AttrDict({
+				'x': query.value('x'),
+				'y': query.value('y'),
+				'z': query.value('z'),
+				'cx': query.value('cx'),
+				'cy': query.value('cy'),
+				'cz': query.value('cz'),
+				'spacing': query.value('spacing')
+			})
+		else:
+			return None
+
+	@staticmethod
+	def update_grid_box(*args):
+		query = QSqlQuery()
+		query.prepare("SELECT 1 FROM grid WHERE id=?")
+		query.addBindValue(args[-1])
+
+		if query.first():
+			query.prepare(
+				"UPDATE grid SET x=?, y=?, z=?, "
+				"cx=?, cy=?, cz=?, spacing=? "
+				"WHERE rid=?"
+			)
+
+			for v in args[1:]:
+				query.addBindValue(v)
+
+			query.addBindValue(args[0])
+			query.exec()
+
+		else:
+			query.prepare("INSERT INTO grid VALUES (?,?,?,?,?,?,?,?,?)")
+			query.addBindValue(None)
+
+			for v in args:
+				query.addBindValue(v)
+
+			query.exec()
+
+	@staticmethod
+	def delete_grid_box(_id):
+		query = QSqlQuery()
+		query.prepare("DELETE FROM grid WHERE rid=?")
+		query.addBindValue(_id)
+		query.exec()
