@@ -26,8 +26,16 @@ DB_TABLES = {
 		('rid', 'INTEGER'),
 		('lid', 'INTEGER'),
 		('status', 'TEXT')
+	],
+	'option': [
+		('id', 'INTEGER PRIMARY KEY'),
+		('name', 'TEXT'),
+		('value', 'TEXT')
 	]
 }
+
+def get_fields(table):
+	return [field[0] for field in DB_TABLES[table]]
 
 class DataRow(dict):
 	def __getattr__(self, attr):
@@ -84,6 +92,11 @@ class DataBackend:
 		except:
 			return False
 
+	def get_exists(self, sql, paras=None):
+		for _ in self.query(sql, paras):
+			return True
+		return False
+
 	def get_one(self, sql, paras=None):
 		for row in self.query(sql, paras):
 			return row[0]
@@ -91,6 +104,14 @@ class DataBackend:
 	def get_row(self, sql, paras=None):
 		for row in self.query(sql, paras):
 			return row
+
+	def get_dict(self, sql, paras=None):
+		cur = self.query(sql, paras)
+		table = sql.split()[3]
+		fields = get_fields(table)
+		row = cur.fetchone()
+		if row:
+			return DataRow(zip(fields, row))
 
 	def get_column(self, sql, paras=None):
 		return [row[0] for row in self.query(sql, paras)]
@@ -113,5 +134,10 @@ class DataBackend:
 	def get_tables(self):
 		sql = "SELECT name FROM sqlite_master WHERE type=?"
 		return self.get_column(sql, ('table',))
+
+	def get_option(self, name):
+		sql = "SELECT value FROM option WHERE name=? LIMIT 1"
+		return self.get_one(sql, (name,))
+
 
 DB = DataBackend()

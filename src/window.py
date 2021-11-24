@@ -38,6 +38,11 @@ class DockeyMainWindow(QMainWindow):
 
 		self.project_folder = None
 		self.current_molecular = None
+		self.dock_engine = None
+		self.job_num = 0
+		self.job_id = 0
+
+		self.pool = QThreadPool()
 
 	def create_pymol_viewer(self):
 		self.pymol_viewer = PymolGLWidget(self)
@@ -62,14 +67,14 @@ class DockeyMainWindow(QMainWindow):
 		self.cmd.reinitialize()
 
 		name = index.data(Qt.DisplayRole)
-		mol = DB.get_molecular_by_name(name)
+		sql = "SELECT * FROM molecular WHERE id=?"
+		mol = DB.get_dict(sql, (index.row()+1,))
 
+		self.cmd.load(mol.path)
 		self.current_molecular = mol
-		
-		if mol.content:
-			self.cmd.read_pdbstr(mol.content, name)
 
-		data = DB.get_grid_box(mol.id)
+		sql = "SELECT * FROM grid WHERE rid=?"
+		data = DB.get_dict(sql, (mol.id,))
 
 		if data:
 			self.box_adjuster.params.update_grid(data)
@@ -77,11 +82,10 @@ class DockeyMainWindow(QMainWindow):
 
 	def create_gridbox_adjuster(self):
 		self.box_adjuster = GridBoxSettingPanel(self)
-
 		self.box_dock = QDockWidget("Gridbox", self)
 		self.box_dock.setAllowedAreas(Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea)
 		self.box_dock.setWidget(self.box_adjuster)
-		self.addDockWidget(Qt.LeftDockWidgetArea, self.box_dock)
+		self.addDockWidget(Qt.RightDockWidgetArea, self.box_dock)
 		self.box_dock.setVisible(False)
 
 	def create_job_table(self):
@@ -231,6 +235,10 @@ class DockeyMainWindow(QMainWindow):
 	def show_message(self, msg):
 		self.statusbar.showMessage(msg)
 
+	@Slot()
+	def show_error_message(self, msg):
+		QMessageBox.critical(self, "Error", msg)
+
 	def create_db_connect(self, db_file):
 		#if not DB.connect(db_file):
 		#	QMessageBox.critical(self, "Error",
@@ -248,10 +256,12 @@ class DockeyMainWindow(QMainWindow):
 			os.mkdir(folder)
 
 			#make data folder
-			os.mkdir(os.path.join(folder, 'data'))
+			data_dir = os.path.join(folder, 'data')
+			os.mkdir(data_dir)
 
 			#make jobs folder
-			os.mkdir(os.path.join(folder, 'jobs'))
+			jobs_dir = os.path.join(folder, 'jobs')
+			os.mkdir(jobs_dir)
 
 		except:
 			return QMessageBox.critical(self, "Error",
@@ -259,7 +269,13 @@ class DockeyMainWindow(QMainWindow):
 
 		db_file = os.path.join(folder, 'dockey.db')
 		self.create_db_connect(db_file)
-		self.project_folder = create_project_folder(folder)
+		self.project_folder = folder
+
+		DB.insert_rows("INSERT INTO option VALUES (?,?,?)", [
+			(None, 'root_dir', folder),
+			(None, 'data_dir', data_dir),
+			(None, 'jobs_dir', jobs_dir)
+		])
 
 	def open_project(self):
 		folder = QFileDialog.getExistingDirectory(self)
@@ -274,7 +290,7 @@ class DockeyMainWindow(QMainWindow):
 				"Could not find dockey.db file in {}".format(folder))
 
 		self.create_db_connect(db_file)
-		self.project_folder = create_project_folder(folder)
+		self.project_folder = folder
 
 		self.mol_model.select()
 		self.job_model.select()
@@ -295,7 +311,7 @@ class DockeyMainWindow(QMainWindow):
 			file_name = qfi.fileName()
 			suffix = qfi.suffix()
 
-			new_path = os.path.join(self.project_folder.data, file_name)
+			new_path = os.path.join(self.project_folder, 'data', file_name)
 			QFile(mol).copy(new_path)
 
 			rows.append([None, base_name, _type, suffix, new_path])
@@ -310,7 +326,6 @@ class DockeyMainWindow(QMainWindow):
 			self.show_message("Import {} {}s".format(len(rows), molname))
 
 		self.mol_model.select()
-
 
 	def import_receptors(self):
 		receptors, _ = QFileDialog.getOpenFileNames(self,
@@ -373,16 +388,98 @@ class DockeyMainWindow(QMainWindow):
 	def delete_grid_box(self):
 		self.cmd.delete('gridbox')
 		self.box_adjuster.params.reset()
-		DB.delete_grid_box(self.current_molecular.id)
+		sql = "DELETE FROM grid WHERE id=?"
+		DB.query(sql, (self.current_molecular.id,))
 
-	def do_jobs(self, worker):
-		self.worker = worker
-		self.threader = QThread(self)
-		self.threader.started.connect(self.worker.run)
-		self.worker.finished.connect(self.threader.quit)
-		self.worker.finished.connect(self.worker.deleteLater)
-		self.worker.moveToThread(self.threader)
-		self.threader.start()
+	def get_job(self):
+		if not self.job_num:
+			self.job_num = DB.get_count('jobs')
+
+		self.job_id += 1
+
+		if self.job_id > self.job_num:
+			return None
+
+		sql = (
+			"SELECT j.id,j.rid,j.lid,m1.name,m1.path,m1.format,m2.name,m2.path,m2.format "
+			"FROM jobs AS j LEFT JOIN molecular AS m1 ON m1.id=j.rid "
+			"LEFT JOIN molecular AS m2 ON m2.id=j.lid WHERE j.id=?"
+		)
+		job = DB.get_row(sql, (self.job_id,))
+
+		sql = "SELECT * FROM grid WHERE rid=?"
+		grid = DB.get_row(sql, (job[1],))
+
+		return AttrDict({
+			'id': job[0],
+			'ri': job[1],
+			'rn': job[3],
+			'rp': job[4],
+			'rf': job[5],
+			'li': job[2],
+			'ln': job[6],
+			'lp': job[7],
+			'lf': job[8],
+			'x': grid[2],
+			'y': grid[3],
+			'z': grid[4],
+			'cx': grid[5],
+			'cy': grid[6],
+			'cz': grid[7],
+			'spacing': grid[8],
+			'root': self.project_folder
+		})
+
+	def generate_job_list(self):
+		receptors = DB.get_column("SELECT id FROM molecular WHERE type=1")
+		ligands = DB.get_column("SELECT id FROM molecular WHERE type=2")
+
+		# check grid box of receptors
+		grids = DB.get_column("SELECT rid FROM grid")
+
+		# receptors with no grid box
+		rng = set(receptors) - set(grids)
+
+		if rng:
+			sql = "SELECT name FROM molecular WHERE id IN ({})".format(
+				','.join(map(str,rng))
+			)
+			rs = DB.get_column(sql)
+			QMessageBox.critical(self, 'Error',
+				"No grid box was set for receptor {}".format(','.join(rs))
+			)
+			return False
+
+
+
+		rows = []
+		for r in receptors:
+			for l in ligands:
+				rows.append((None, r, l, 'waiting'))
+
+		sql = "INSERT INTO jobs VALUES (?,?,?,?)"
+		DB.insert_rows(sql, rows)
+
+		self.job_model.select()
+
+		return True
+
+	@Slot()
+	def submit_job(self):
+		job = self.get_job()
+
+		if job is None:
+			return
+
+		if self.dock_engine == 'autodock':
+			worker = AutodockWorker(job)
+		elif self.dock_engine == 'vina':
+			worker = AutodockVinaWorker(job)
+
+		worker.signals.finished.connect(self.submit_job)
+		worker.signals.error.connect(self.show_error_message)
+
+		self.pool.start(worker)
 
 	def run_autodock(self):
 		#dlg = AutodockParameterDialog(self)
@@ -390,19 +487,10 @@ class DockeyMainWindow(QMainWindow):
 		if not dlg.exec():
 			return
 
-		receptors = DB.get_receptors()
-		ligands = DB.get_ligands()
+		self.dock_engine = 'autodock'
 
-		query = DB.prepare('jobs')
-
-		for r in receptors:
-			for l in ligands:
-				DB.insert(query, r.id, l.id, 'waiting')
-
-		self.job_model.select()
-
-		worker = AutodockWorker(self)
-		self.do_jobs(worker)
+		if self.generate_job_list():
+			self.submit_job()
 
 	def open_about(self):
 		QMessageBox.about(self, "About dockey", DOCKEY_ABOUT)
@@ -635,7 +723,7 @@ class JobsTableModel(DockeyTableModel):
 	@property
 	def get_sql(self):
 		return (
-			"SELECT j.id,m1.name,m2.name FROM jobs AS j "
+			"SELECT j.id,m1.name,m2.name,j.status FROM jobs AS j "
 			"LEFT JOIN molecular AS m1 ON m1.id=j.rid "
 			"LEFT JOIN molecular AS m2 ON m2.id=j.lid "
 			"WHERE j.id=? LIMIT 1"

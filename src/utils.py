@@ -2,8 +2,7 @@ import os
 from openbabel import openbabel
 
 __all__ = ['AttrDict', 'draw_gridbox', 'convert_dimension_to_coordinates',
-	'convert_coordinates_to_dimension', 'convert_other_to_pdbqt',
-	'create_project_folder'
+	'convert_coordinates_to_dimension', 'convert_other_to_pdbqt'
 ]
 
 class AttrDict(dict):
@@ -15,13 +14,6 @@ class AttrDict(dict):
 
 	def __setattr__(self, attr, val):
 		self[attr] = val
-
-def create_project_folder(folder):
-	return AttrDict({
-		'root': folder,
-		'data': os.path.join(folder, 'data'),
-		'jobs': os.path.join(folder, 'jobs')
-	})
 
 def convert_dimension_to_coordinates(x, y, z, cx, cy, cz, spacing):
 	spacing = float(spacing)
@@ -85,9 +77,9 @@ def get_atom_types_from_pdbqt(pdbqt_file):
 
 	return sorted(atom_types)
 
-def convert_other_to_pdbqt(pstr, pformat, outfile):
+def convert_other_to_pdbqt(infile, informat, outfile):
 	obc = openbabel.OBConversion()
-	obc.SetInAndOutFormats(pformat, "pdbqt")
+	obc.SetInAndOutFormats(informat, "pdbqt")
 	mol = openbabel.OBMol()
-	obc.ReadString(mol, pstr)
+	obc.ReadFile(mol, infile)
 	obc.WriteFile(mol, outfile)

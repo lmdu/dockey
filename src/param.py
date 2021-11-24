@@ -25,20 +25,20 @@ class AutogridParameter:
 		'dielectric': "# <0, AD4 distance-dep.diel;>0, constant"
 	}
 
-	def __init__(self, receptor, ligand, size, center, spacing=0.375,
+	def __init__(self, receptor_file, ligand_file, size, center, spacing=0.375,
 				 smooth=0.5, dielectric=-0.1465):
-		self.receptor = receptor
-		self.ligand = ligand
+		self.receptor_file = receptor_file
+		self.ligand_file = ligand_file
 		self.size = size
 		self.center = center
 		self.spacing = spacing
 		self.smooth = smooth
 		self.dielectric = dielectric
 
-		self.receptor_name = os.path.splitext(self.receptor)[0]
-		self.receptor_types = self.get_atom_types(self.receptor)
-		self.ligand_types = self.get_atom_types(self.ligand)
-		self.gpf_file = self.receptor.replace('.pdbqt', '.gpf')
+		self.receptor_name = os.path.splitext(os.path.basename(self.receptor_file))[0]
+		self.receptor_types = self.get_atom_types(self.receptor_file)
+		self.ligand_types = self.get_atom_types(self.ligand_file)
+		self.gpf_file = self.receptor_file.replace('.pdbqt', '.gpf')
 
 	def get_atom_types(self, pdbqt_file):
 		atom_types = set()
@@ -58,7 +58,7 @@ class AutogridParameter:
 			"spacing {}".format(self.spacing),
 			"receptor_types {}".format(' '.join(self.receptor_types)),
 			"ligand_types {}".format(' '.join(self.ligand_types)),
-			"receptor {}".format(self.receptor),
+			"receptor {}".format(os.path.basename(self.receptor_file)),
 			"gridcenter {0[0]} {0[1]} {0[2]}".format(self.center),
 			"smooth {}".format(self.smooth),
 		]
@@ -75,7 +75,7 @@ class AutogridParameter:
 		with open(self.gpf_file, 'w') as fw:
 			for row in self.rows:
 				field = row.split()[0]
-				fw.write("{:<{}}{}".format(row, max_len, self.comments[field]))
+				fw.write("{:<{}}{}\n".format(row, max_len, self.comments[field]))
 
 		return self.gpf_file
 

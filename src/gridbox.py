@@ -2,9 +2,9 @@ from PySide6.QtGui import *
 from PySide6.QtCore import *
 from PySide6.QtWidgets import *
 
-from db import *
 from utils import *
 from config import *
+from backend import *
 
 __all__ = ['GridBoxSettingPanel']
 
@@ -285,7 +285,9 @@ class GridBoxSettingPanel(QWidget):
 	def on_save(self):
 		if self.parent.current_molecular:
 			if self.parent.current_molecular.type == 1:
-				DB.update_grid_box(
+				sql = "INSERT INTO grid VALUES (?,?,?,?,?,?,?,?,?)"
+				DB.query(sql, (
+					None,
 					self.parent.current_molecular.id,
 					self.params.x,
 					self.params.y,
@@ -294,7 +296,7 @@ class GridBoxSettingPanel(QWidget):
 					self.params.cy,
 					self.params.cz,
 					self.params.spacing
-				)
+				))
 
 				QMessageBox.information(self.parent, "Grid box saved",
 					"Successfully set grid box for receptor {}".format(
