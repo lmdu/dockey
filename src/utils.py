@@ -66,20 +66,26 @@ def draw_gridbox(cmd, data):
 		bg_z = data.bg_z
 	)
 
-def get_atom_types_from_pdbqt(pdbqt_file):
-	atom_types = set()
-	with open(pdbqt_file) as fh:
-		for line in fh:
-			if not line.startswith(('ATOM', 'HETATM')):
-				continue
-
-			atom_types.add(line[78:80].strip())
-
-	return sorted(atom_types)
-
 def convert_other_to_pdbqt(infile, informat, outfile):
 	obc = openbabel.OBConversion()
 	obc.SetInAndOutFormats(informat, "pdbqt")
 	mol = openbabel.OBMol()
 	obc.ReadFile(mol, infile)
+
+	#correct for ph
+	#mol.CorrectForPH()
+
+	#add hydrogens
+	mol.AddHydrogens()
+	#mol.AddPolarHydrogens()
+
+	cmodel = openbabel.OBChargeModel.FindType('gasteiger')
+	cmodel.ComputeCharges(mol)
+
+	#set to be rigid
+	obc.AddOption('r')
+	obc.AddOption('x')
+	obc.AddOption('h')
+	obc.AddOption('p')
+
 	obc.WriteFile(mol, outfile)

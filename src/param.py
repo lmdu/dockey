@@ -47,7 +47,7 @@ class AutogridParameter:
 				if not line.startswith(('ATOM', 'HETATM')):
 					continue
 
-				atom_types.add(line[78:80].strip())
+				atom_types.add(line[76:79].strip())
 
 		return sorted(atom_types)
 
