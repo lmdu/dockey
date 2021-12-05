@@ -21,7 +21,6 @@ class DockeyMainWindow(QMainWindow):
 
 		self.setWindowTitle("Dockey v{}".format(DOCKEY_VERSION))
 		self.setWindowIcon(QIcon('icons/logo.svg'))
-		self.resize(QSize(900, 600))
 
 		self.create_pymol_viewer()
 		self.create_molecular_viewer()
@@ -43,6 +42,27 @@ class DockeyMainWindow(QMainWindow):
 		self.job_id = 0
 
 		self.pool = QThreadPool()
+
+		self.read_settings()
+
+	def closeEvent(self, event):
+		self.write_settings()
+
+	def read_settings(self):
+		settings = QSettings()
+		settings.beginGroup('Window')
+		self.resize(settings.value('size', QSize(900, 600)))
+		self.move(settings.value('pos', QPoint(200, 200)))
+		settings.endGroup()
+
+	def write_settings(self):
+		settings = QSettings()
+
+		if not self.isMaximized():
+			settings.beginGroup('Window')
+			settings.setValue('size', self.size())
+			settings.setValue('pos', self.pos())
+			settings.endGroup()
 
 	def create_pymol_viewer(self):
 		self.pymol_viewer = PymolGLWidget(self)
@@ -170,6 +190,11 @@ class DockeyMainWindow(QMainWindow):
 		self.run_autodock_act = QAction("Autodock", self)
 		self.run_autodock_act.triggered.connect(self.run_autodock)
 
+		#tool actions
+		self.dock_config_act = QAction("Docking tools config", self,
+			triggered = self.dock_tools_config
+		)
+
 		#help actions
 		self.about_act = QAction("&About", self,
 			triggered = self.open_about
@@ -213,6 +238,9 @@ class DockeyMainWindow(QMainWindow):
 		self.grid_menu.addSeparator()
 		self.grid_menu.addAction(self.delete_box_act)
 
+		self.tool_menu = self.menuBar().addMenu("&Tool")
+		self.tool_menu.addAction(self.dock_config_act)
+
 		self.run_menu = self.menuBar().addMenu("&Run")
 		self.run_menu.addAction(self.run_autodock_act)
 
@@ -238,6 +266,10 @@ class DockeyMainWindow(QMainWindow):
 	@Slot()
 	def show_error_message(self, msg):
 		QMessageBox.critical(self, "Error", msg)
+
+	def dock_tools_config(self):
+		dlg = ConfigDialog(self)
+		dlg.exec()
 
 	def create_db_connect(self, db_file):
 		#if not DB.connect(db_file):
@@ -728,3 +760,111 @@ class JobsTableModel(DockeyTableModel):
 			"LEFT JOIN molecular AS m2 ON m2.id=j.lid "
 			"WHERE j.id=? LIMIT 1"
 		)
+
+class BrowseInput(QWidget):
+	def __init__(self, parent=None):
+		super(BrowseInput, self).__init__(parent)
+		self.input = QLineEdit(self)
+		self.input.setReadOnly(True)
+		self.browse = QPushButton(self)
+		self.browse.setFlat(True)
+		self.browse.setIcon(QIcon("icons/folder.svg"))
+		self.browse.clicked.connect(self.select_location)
+
+		layout = QHBoxLayout()
+		layout.setSpacing(0)
+		layout.setContentsMargins(0,0,0,0)
+		layout.addWidget(self.input)
+		layout.addWidget(self.browse)
+
+		self.setLayout(layout)
+
+	@Slot()
+	def select_location(self):
+		folder = QFileDialog.getExistingDirectory(self)
+
+		if folder:
+			self.input.setText(folder)
+
+	def get_text(self):
+		return self.input.text()
+
+	def set_text(self, text):
+		self.input.setText(text)
+
+class ConfigDialog(QDialog):
+	def __init__(self, parent=None):
+		super(ConfigDialog, self).__init__(parent)
+
+		self.setWindowTitle("Configuration")
+		self.resize(QSize(500, -1))
+
+		self.autodock_4_input = BrowseInput(self)
+		self.autodock_vina_input = BrowseInput(self)
+		self.autodock_gpu_input = BrowseInput(self)
+		self.mgltools_input = BrowseInput(self)
+
+		action_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+		action_box.accepted.connect(self.save_config)
+		action_box.rejected.connect(self.reject)
+
+		tips = (
+			"Specify the location of tools ("
+			"<sup><font color='green'>#</font></sup>any one of them, "
+			"<sup><font color='red'>*</font></sup>required)"
+		)
+
+		layout = QVBoxLayout()
+		layout.addWidget(QLabel(tips, self))
+		layout.addWidget(QLabel("Autodock 4<sup><font color='green'>#</font></sup>", self))
+		layout.addWidget(self.autodock_4_input)
+		layout.addWidget(QLabel("Autodock Vina<sup><font color='green'>#</font></sup>", self))
+		layout.addWidget(self.autodock_vina_input)
+		layout.addWidget(QLabel("Autodock GPU<sup><font color='green'>#</font></sup>", self))
+		layout.addWidget(self.autodock_gpu_input)
+		layout.addWidget(QLabel("MGLTools<sup><font color='red'>*</font></sup>", self))
+		layout.addWidget(self.mgltools_input)
+		layout.addWidget(action_box)
+		self.setLayout(layout)
+
+		self.read_config()
+
+	def save_config(self):
+		autodock = self.autodock_4_input.get_text()
+		vina = self.autodock_vina_input.get_text()
+		adgpu = self.autodock_gpu_input.get_text()
+		mgltools = self.mgltools_input.get_text()
+
+		if not any((autodock, vina, adgpu)):
+			return QMessageBox.critical(self, "Config Error",
+				"Please specify location for one of Autodock 4, Autodock Vina and Autodock GPU"
+			)
+
+		if not mgltools:
+			return QMessageBox.critical(self, "Config Error",
+				"You must specify install location for MGLTools"
+			)
+
+		settings = QSettings()
+		settings.beginGroup('Tools')
+		settings.setValue('autodock_4', autodock)
+		settings.setValue('autodock_vina', vina)
+		settings.setValue('autodock_gpu', adgpu)
+		settings.setValue('mgltools', mgltools)
+		settings.endGroup()
+
+		self.accept()
+
+	def read_config(self):
+		settings = QSettings()
+		settings.beginGroup('Tools')
+		autodock = settings.value('autodock_4', '')
+		vina = settings.value('autodock_vina', '')
+		adgpu = settings.value('autodock_gpu', '')
+		mgltools = settings.value('mgltools', '')
+		settings.endGroup()
+
+		self.autodock_4_input.set_text(autodock)
+		self.autodock_vina_input.set_text(vina)
+		self.autodock_gpu_input.set_text(adgpu)
+		self.mgltools_input.set_text(mgltools)

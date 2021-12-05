@@ -72,8 +72,23 @@ def convert_other_to_pdbqt(infile, informat, outfile):
 	mol = openbabel.OBMol()
 	obc.ReadFile(mol, infile)
 
+	non_bond = 0
+
+	for atom in openbabel.OBMolAtomIter(mol):
+		flag = 0
+		for bond in openbabel.OBAtomBondIter(atom):
+			flag = 1
+			break
+
+		if flag == 0:
+			non_bond += 1
+			
+
+	print(non_bond)
+
+
 	#correct for ph
-	#mol.CorrectForPH()
+	mol.CorrectForPH()
 
 	#add hydrogens
 	mol.AddHydrogens()
@@ -85,7 +100,14 @@ def convert_other_to_pdbqt(infile, informat, outfile):
 	#set to be rigid
 	obc.AddOption('r')
 	obc.AddOption('x')
-	obc.AddOption('h')
+	#obc.AddOption('h')
+	obc.AddOption('b')
 	obc.AddOption('p')
 
 	obc.WriteFile(mol, outfile)
+
+if __name__ == '__main__':
+	import sys
+	infile = sys.argv[1]
+	outfile = infile.replace('pdb', 'pdbqt')
+	convert_other_to_pdbqt(infile, 'pdb', outfile)
