@@ -38,6 +38,7 @@ class DockeyMainWindow(QMainWindow):
 		self.project_folder = None
 		self.current_molecular = None
 		self.dock_engine = None
+		self.dock_params = None
 		self.job_num = 0
 		self.job_id = 0
 
@@ -504,7 +505,7 @@ class DockeyMainWindow(QMainWindow):
 			return
 
 		if self.dock_engine == 'autodock':
-			worker = AutodockWorker(job)
+			worker = AutodockWorker(job, self.dock_params)
 		elif self.dock_engine == 'vina':
 			worker = AutodockVinaWorker(job)
 
@@ -513,13 +514,33 @@ class DockeyMainWindow(QMainWindow):
 
 		self.pool.start(worker)
 
+	def check_tool_before_run(self, tool):
+		settings = QSettings()
+		folder = settings.value('Tools/{}'.format(tool))
+
+		if not folder:
+			dlg = ConfigDialog(self)
+			dlg.exec()
+
+	def check_jobs(self):
+		jobs = DB.get_one("SELECT COUNT(1) FROM jobs LIMIT 1")
+
+		if jobs:
+			QMessageBox.warning(self, "Warning", "ddd")
+
+		DB.query("DELETE FROM jobs")
+
+
 	def run_autodock(self):
-		#dlg = AutodockParameterDialog(self)
+		self.check_jobs()
+		self.check_tool_before_run('autodock_4')
+
 		dlg = AutodockParamterWizard(self)
 		if not dlg.exec():
 			return
 
 		self.dock_engine = 'autodock'
+		self.dock_params = dlg.params
 
 		if self.generate_job_list():
 			self.submit_job()
@@ -762,14 +783,18 @@ class JobsTableModel(DockeyTableModel):
 		)
 
 class BrowseInput(QWidget):
-	def __init__(self, parent=None):
+	def __init__(self, parent=None, is_file=True):
 		super(BrowseInput, self).__init__(parent)
 		self.input = QLineEdit(self)
 		self.input.setReadOnly(True)
 		self.browse = QPushButton(self)
 		self.browse.setFlat(True)
 		self.browse.setIcon(QIcon("icons/folder.svg"))
-		self.browse.clicked.connect(self.select_location)
+
+		if is_file:
+			self.browse.clicked.connect(self.select_file)
+		else:
+			self.browse.clicked.connect(self.select_folder)
 
 		layout = QHBoxLayout()
 		layout.setSpacing(0)
@@ -780,7 +805,14 @@ class BrowseInput(QWidget):
 		self.setLayout(layout)
 
 	@Slot()
-	def select_location(self):
+	def select_file(self):
+		exe, _ = QFileDialog.getOpenFileName(self)
+
+		if exe:
+			self.input.setText(exe)
+
+	@Slot()
+	def select_folder(self):
 		folder = QFileDialog.getExistingDirectory(self)
 
 		if folder:
@@ -800,9 +832,10 @@ class ConfigDialog(QDialog):
 		self.resize(QSize(500, -1))
 
 		self.autodock_4_input = BrowseInput(self)
+		self.autogrid_4_input = BrowseInput(self)
 		self.autodock_vina_input = BrowseInput(self)
 		self.autodock_gpu_input = BrowseInput(self)
-		self.mgltools_input = BrowseInput(self)
+		self.mgltools_input = BrowseInput(self, False)
 
 		action_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
 		action_box.accepted.connect(self.save_config)
@@ -810,19 +843,21 @@ class ConfigDialog(QDialog):
 
 		tips = (
 			"Specify the location of tools ("
-			"<sup><font color='green'>#</font></sup>any one of them, "
-			"<sup><font color='red'>*</font></sup>required)"
+			"<font color='green'>#</font> any one of them, "
+			"<font color='red'>*</font> required)"
 		)
 
 		layout = QVBoxLayout()
 		layout.addWidget(QLabel(tips, self))
-		layout.addWidget(QLabel("Autodock 4<sup><font color='green'>#</font></sup>", self))
+		layout.addWidget(QLabel("Autodock 4 (<font color='green'>#</font>)", self))
 		layout.addWidget(self.autodock_4_input)
-		layout.addWidget(QLabel("Autodock Vina<sup><font color='green'>#</font></sup>", self))
+		layout.addWidget(QLabel("Autogrid 4", self))
+		layout.addWidget(self.autogrid_4_input)
+		layout.addWidget(QLabel("Autodock Vina (<font color='green'>#</font>)", self))
 		layout.addWidget(self.autodock_vina_input)
-		layout.addWidget(QLabel("Autodock GPU<sup><font color='green'>#</font></sup>", self))
+		layout.addWidget(QLabel("Autodock GPU (<font color='green'>#</font>)", self))
 		layout.addWidget(self.autodock_gpu_input)
-		layout.addWidget(QLabel("MGLTools<sup><font color='red'>*</font></sup>", self))
+		layout.addWidget(QLabel("MGLTools Directory (<font color='red'>*</font>)", self))
 		layout.addWidget(self.mgltools_input)
 		layout.addWidget(action_box)
 		self.setLayout(layout)
@@ -831,6 +866,7 @@ class ConfigDialog(QDialog):
 
 	def save_config(self):
 		autodock = self.autodock_4_input.get_text()
+		autogrid = self.autogrid_4_input.get_text()
 		vina = self.autodock_vina_input.get_text()
 		adgpu = self.autodock_gpu_input.get_text()
 		mgltools = self.mgltools_input.get_text()
@@ -848,6 +884,7 @@ class ConfigDialog(QDialog):
 		settings = QSettings()
 		settings.beginGroup('Tools')
 		settings.setValue('autodock_4', autodock)
+		settings.setValue('autogrid_4', autogrid)
 		settings.setValue('autodock_vina', vina)
 		settings.setValue('autodock_gpu', adgpu)
 		settings.setValue('mgltools', mgltools)
@@ -859,12 +896,14 @@ class ConfigDialog(QDialog):
 		settings = QSettings()
 		settings.beginGroup('Tools')
 		autodock = settings.value('autodock_4', '')
+		autogrid = settings.value('autogrid_4', '')
 		vina = settings.value('autodock_vina', '')
 		adgpu = settings.value('autodock_gpu', '')
 		mgltools = settings.value('mgltools', '')
 		settings.endGroup()
 
 		self.autodock_4_input.set_text(autodock)
+		self.autogrid_4_input.set_text(autogrid)
 		self.autodock_vina_input.set_text(vina)
 		self.autodock_gpu_input.set_text(adgpu)
 		self.mgltools_input.set_text(mgltools)
