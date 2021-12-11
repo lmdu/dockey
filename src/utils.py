@@ -2,7 +2,8 @@ import os
 from openbabel import openbabel
 
 __all__ = ['AttrDict', 'draw_gridbox', 'convert_dimension_to_coordinates',
-	'convert_coordinates_to_dimension', 'convert_other_to_pdbqt'
+	'convert_coordinates_to_dimension', 'get_atom_types_from_pdbqt',
+	'get_molecule_center_from_pdbqt'
 ]
 
 class AttrDict(dict):
@@ -105,6 +106,42 @@ def convert_other_to_pdbqt(infile, informat, outfile):
 	obc.AddOption('p')
 
 	obc.WriteFile(mol, outfile)
+
+def get_atom_types_from_pdbqt(pdbqt_file):
+	atom_types = set()
+	with open(pdbqt_file) as fh:
+		for line in fh:
+			if not line.startswith(('ATOM', 'HETATM')):
+				continue
+
+			cols = line.strip().split()
+
+			atom_types.add(cols[-1])
+
+	return sorted(atom_types)
+
+def get_molecule_center_from_pdbqt(pdbqt_file):
+	c = 0
+	x = 0
+	y = 0
+	z = 0
+	with open(pdbqt_file) as fh:
+		for line in fh:
+			if not line.startswith(('ATOM', 'HETATM')):
+				continue
+
+			cols = line.strip().split()
+			c += 1 
+			x += float(cols[6])
+			y += float(cols[7])
+			z += float(cols[8])
+
+	x = round(x/c, 3)
+	y = round(y/c, 3)
+	z = round(z/c, 3)
+
+	return x, y, z
+
 
 if __name__ == '__main__':
 	import sys

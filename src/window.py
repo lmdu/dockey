@@ -42,7 +42,8 @@ class DockeyMainWindow(QMainWindow):
 		self.job_num = 0
 		self.job_id = 0
 
-		self.pool = QThreadPool()
+		self.pool = QThreadPool(self)
+		self.pool.setMaxThreadCount(3)
 
 		self.read_settings()
 
@@ -111,12 +112,14 @@ class DockeyMainWindow(QMainWindow):
 
 	def create_job_table(self):
 		self.job_table = QTableView(self)
+		self.job_table.setItemDelegateForColumn(2, JobsTableDelegate(self))
 		self.job_table.setSelectionBehavior(QAbstractItemView.SelectRows)
 		self.job_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
+		self.job_table.setAlternatingRowColors(True)
 		self.job_dock = QDockWidget("Jobs", self)
 		self.job_dock.setWidget(self.job_table)
-		self.job_dock.setAllowedAreas(Qt.TopDockWidgetArea | Qt.BottomDockWidgetArea)
-		self.addDockWidget(Qt.BottomDockWidgetArea, self.job_dock)
+		self.job_dock.setAllowedAreas(Qt.TopDockWidgetArea | Qt.BottomDockWidgetArea | Qt.RightDockWidgetArea)
+		self.addDockWidget(Qt.RightDockWidgetArea, self.job_dock)
 		self.job_dock.setVisible(True)
 
 	def create_molecular_model(self):
@@ -128,6 +131,8 @@ class DockeyMainWindow(QMainWindow):
 		self.job_model = JobsTableModel()
 		self.job_table.setModel(self.job_model)
 		self.job_table.hideColumn(0)
+		self.job_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
+		self.job_table.verticalHeader().hide()
 
 	def create_actions(self):
 		self.new_project_act = QAction("&New project", self,
@@ -488,16 +493,20 @@ class DockeyMainWindow(QMainWindow):
 		rows = []
 		for r in receptors:
 			for l in ligands:
-				rows.append((None, r, l, 'waiting'))
+				rows.append((None, r, l, 'waiting', 0))
 
-		sql = "INSERT INTO jobs VALUES (?,?,?,?)"
+		sql = "INSERT INTO jobs VALUES (?,?,?,?,?)"
 		DB.insert_rows(sql, rows)
 
 		self.job_model.select()
 
-		return True
+		return len(rows)
 
-	@Slot()
+	#@Slot()
+	#def new_job(self):
+	#	self.submit_job()
+
+	#@Slot()
 	def submit_job(self):
 		job = self.get_job()
 
@@ -509,10 +518,12 @@ class DockeyMainWindow(QMainWindow):
 		elif self.dock_engine == 'vina':
 			worker = AutodockVinaWorker(job)
 
-		worker.signals.finished.connect(self.submit_job)
-		worker.signals.error.connect(self.show_error_message)
-
 		self.pool.start(worker)
+
+		#worker.signals.finished.connect(self.new_job)
+		worker.signals.error.connect(self.show_error_message)
+		worker.signals.progress.connect(self.job_model.update)
+		
 
 	def check_tool_before_run(self, tool):
 		settings = QSettings()
@@ -529,6 +540,7 @@ class DockeyMainWindow(QMainWindow):
 			QMessageBox.warning(self, "Warning", "ddd")
 
 		DB.query("DELETE FROM jobs")
+		self.job_model.select()
 
 
 	def run_autodock(self):
@@ -542,7 +554,8 @@ class DockeyMainWindow(QMainWindow):
 		self.dock_engine = 'autodock'
 		self.dock_params = dlg.params
 
-		if self.generate_job_list():
+		num = self.generate_job_list()
+		for i in range(num):
 			self.submit_job()
 
 	def open_about(self):
@@ -687,6 +700,9 @@ class DockeyTableModel(QAbstractTableModel):
 		if orientation == Qt.Horizontal and role == Qt.DisplayRole:
 			return self.custom_headers[section]
 
+		elif orientation == Qt.Vertical and role == Qt.DisplayRole:
+			return section+1
+
 	def canFetchMore(self, parent):
 		if parent.isValid():
 			return False
@@ -753,6 +769,12 @@ class DockeyTableModel(QAbstractTableModel):
 
 		self.row_count.emit(self.total_count)
 
+	@Slot()
+	def update(self, rowid):
+		self.update_cache(rowid-1)
+		index = self.index(rowid-1, 4)
+		self.dataChanged.emit(index, index)
+
 class MolecularTableModel(DockeyTableModel):
 	table = 'molecular'
 	custom_headers = ['ID','Name', 'Type']
@@ -771,16 +793,41 @@ class MolecularTableModel(DockeyTableModel):
 
 class JobsTableModel(DockeyTableModel):
 	table = 'jobs'
-	custom_headers = ['ID', 'Receptor', 'Ligand', 'Status']
+	custom_headers = ['ID', 'Receptor vs Ligand', 'Progress']
 
 	@property
 	def get_sql(self):
 		return (
-			"SELECT j.id,m1.name,m2.name,j.status FROM jobs AS j "
+			"SELECT j.id,m1.name,m2.name,j.status,j.progress FROM jobs AS j "
 			"LEFT JOIN molecular AS m1 ON m1.id=j.rid "
 			"LEFT JOIN molecular AS m2 ON m2.id=j.lid "
 			"WHERE j.id=? LIMIT 1"
 		)
+
+	def update_cache(self, row):
+		_id = self.displayed[row]
+		self.cache_row[0] = row
+		d = DB.get_row(self.get_sql, (_id,))
+
+		self.cache_row[1] = [d[0], "{} vs {}".format(d[1], d[2]), d[4]]
+
+class JobsTableDelegate(QStyledItemDelegate):
+	def paint(self, painter, option, index):
+		percent = index.model().data(index, Qt.DisplayRole)
+		percent = percent if percent else 0
+		bar = QStyleOptionProgressBar(2)
+		bar.rect = option.rect.adjusted(0, 5, 0, -5)
+		#bar.rect = QRect(option.rect.x(), option.rect.y()+5, option.rect.width(), option.rect.height()/1.5)
+		#bar.rect = option.rect
+		bar.minimum = 0
+		bar.maximum = 100
+		bar.progress = percent
+		bar.text = "{}%".format(percent)
+		bar.textVisible = True
+		bar.textAlignment = Qt.AlignCenter
+		bar.state |= QStyle.StateFlag.State_Horizontal
+
+		QApplication.style().drawControl(QStyle.CE_ProgressBar, bar, painter)
 
 class BrowseInput(QWidget):
 	def __init__(self, parent=None, is_file=True):

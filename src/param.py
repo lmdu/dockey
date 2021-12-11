@@ -6,6 +6,7 @@ from PySide6.QtCore import *
 from PySide6.QtWidgets import *
 
 from utils import *
+from backend import *
 
 __all__ = ['AutogridParameter', 'AutodockParamterWizard']
 
@@ -36,20 +37,9 @@ class AutogridParameter:
 		self.dielectric = dielectric
 
 		self.receptor_name = os.path.splitext(os.path.basename(self.receptor_file))[0]
-		self.receptor_types = self.get_atom_types(self.receptor_file)
-		self.ligand_types = self.get_atom_types(self.ligand_file)
+		self.receptor_types = get_atom_types_from_pdbqt(self.receptor_file)
+		self.ligand_types = get_atom_types_from_pdbqt(self.ligand_file)
 		self.gpf_file = self.receptor_file.replace('.pdbqt', '.gpf')
-
-	def get_atom_types(self, pdbqt_file):
-		atom_types = set()
-		with open(pdbqt_file) as fh:
-			for line in fh:
-				if not line.startswith(('ATOM', 'HETATM')):
-					continue
-
-				atom_types.add(line[76:79].strip())
-
-		return sorted(atom_types)
 
 	def make_gpf_file(self):
 		self.rows = [
@@ -106,7 +96,7 @@ class AutodockParameter:
 			}),
 			'parameter_file': AttrDict({
 				'type': str,
-				'default': 'AD4.1_bound.dat',
+				'default': '',
 				'value': '',
 				'comment': 'parameter library filename',
 				'scope': 'global',
@@ -129,6 +119,7 @@ class AutodockParameter:
 				'default': [],
 				'value': [],
 				'comment': 'internal energy potential for a given class of interactions',
+				'scope': 'global',
 				'required': False,
 				'user': False,
 				'order': self.order
@@ -138,7 +129,8 @@ class AutodockParameter:
 				'default': 0,
 				'value': 0,
 				'comment': 'torsional degrees of freedom',
-				'required': True,
+				'scope': 'global',
+				'required': False,
 				'user': False,
 				'order': self.order
 			}),
@@ -228,7 +220,7 @@ class AutodockParameter:
 				'value': [],
 				'comment': 'small molecule center',
 				'scope': 'global',
-				'required': True,
+				'required': False,
 				'user': False,
 				'order': self.order
 			}),
@@ -655,20 +647,20 @@ class AutodockParameter:
 				'type': bool,
 				'default': False,
 				'value': False,
-				'comment': 'set the above classical Solis & Wets parameters',
+				'comment': 'Solis & Wets with uniform variances',
 				'scope': ['LGA', 'LS'],
 				'required': True,
-				'user': False,
+				'user': True,
 				'order': self.order
 			}),
 			'set_psw1': AttrDict({
 				'type': bool,
-				'default': False,
-				'value': False,
-				'comment': 'set the above pseudo-Solis & Wets parameters',
+				'default': True,
+				'value': True,
+				'comment': 'Solis and Wets local searcher',
 				'scope': ['LGA', 'LS'],
 				'required': True,
-				'user': False,
+				'user': True,
 				'order': self.order
 			}),
 			'unbound_model': AttrDict({
@@ -778,9 +770,57 @@ class AutodockParameter:
 
 		return sorted(params.items(), key=lambda x: x[1]['order'])
 
-	def make_gdf_file(self):
-		pass
+	def make_dpf_file(self, receptor_file, ligand_file):
+		ligand_types = get_atom_types_from_pdbqt(ligand_file)
+		self.params['ligand_types']['value'] = ligand_types
 
+		receptor_name = QFileInfo(receptor_file).baseName()
+		ligand_name = QFileInfo(ligand_file).fileName()
+
+		self.params['fld']['value'] = "{}.maps.fld".format(receptor_name)
+		self.params['map']['value'] = ["{}.{}.map".format(receptor_name, ligand_type) for ligand_type in ligand_types]
+		self.params['elecmap']['value'] = "{}.e.map".format(receptor_name)
+		self.params['desolvmap']['value'] = "{}.d.map".format(receptor_name)
+		self.params['move']['value'] = ligand_name
+		self.params['about']['value'] = get_molecule_center_from_pdbqt(ligand_file)
+
+		algorithm = ['LGA', 'GA', 'SA', 'LS'][self.algorithm]
+		
+		params = {}
+		for k in self.params:
+			if self.params[k]['scope'] == 'global' or algorithm in self.params[k]['scope']:
+				params[k] = self.params[k]
+		params = sorted(params.items(), key=lambda x: x[1]['order'])
+
+		rows = []
+		for k, v in params:
+			if not v.required and v.value == v.default:
+				continue
+
+			if k == 'map':
+				for m in v.value:
+					rows.append("map {}".format(m))
+
+			elif v.type in (int, str):
+				rows.append("{} {}".format(k, v.value))
+
+			elif v.type is list:
+				rows.append("{} {}".format(k, ' '.join(map(str, v.value))))
+
+			elif v.type is bool:
+				if v.value:
+					rows.append(k)
+
+		max_len = max([len(row) for row in rows]) + 6
+
+		gdf_file = receptor_file.replace('.pdbqt', '.dpf')
+
+		with open(gdf_file, 'w') as fw:
+			for row in rows:
+				field = row.split()[0]
+				fw.write("{:<{}}#{}\n".format(row, max_len, self.params[field].comment))
+
+		return gdf_file
 
 class AutodockParamterWizard(QWizard):
 	params = AutodockParameter()
@@ -821,7 +861,7 @@ class AutodockParamterWizard(QWizard):
 			"combination.</p><p><b>Simulated Annealing</b> is also less efficient that the "
 			"Lamarckian Genetic Algorithm, but it can be useful in applications where search "
 			"starting from a given point is desired.</p><p><b>Local Search</b> may be used "
-			"to optimize a molecule in its local environment.</p>"
+			"to optimize a molecule in its local environment.</p><p></p>"
 		), self)
 		tips.setWordWrap(True)
 
@@ -875,23 +915,39 @@ class AutodockParamterWizard(QWizard):
 				editor.valueChanged.connect(lambda x: self.update_parameter(cmd, x))
 				layout.addRow(meta.comment, editor)
 
-			elif cmd == 'geometric_schedule':
+			elif cmd in ('geometric_schedule', 'set_sw1'):
 				pass
 
 			elif cmd == 'linear_schedule':
-				slay = QHBoxLayout()
-				bgrp = QButtonGroup()
-				lbtn = QRadioButton("Linear", self)
-				lbtn.setChecked(meta.value)
-				lbtn.toggled.connect(lambda x: self.update_parameter('linear_schedule', x))
-				gbtn = QRadioButton("Geometric", self)
-				gbtn.toggled.connect(lambda x: self.update_parameter('geometric_schedule', x))
-				slay.addWidget(lbtn)
-				bgrp.addButton(lbtn)
-				slay.addWidget(gbtn)
-				bgrp.addButton(gbtn)
-				bgrp.setExclusive(True)
-				layout.addRow(meta.comment, slay)
+				btn_layout = QHBoxLayout()
+				btn_group = QButtonGroup()
+				line_btn = QRadioButton("Linear", self)
+				line_btn.setChecked(meta.value)
+				line_btn.toggled.connect(lambda x: self.update_parameter('linear_schedule', x))
+				geome_btn = QRadioButton("Geometric", self)
+				geome_btn.toggled.connect(lambda x: self.update_parameter('geometric_schedule', x))
+				btn_layout.addWidget(line_btn)
+				btn_group.addButton(line_btn)
+				btn_layout.addWidget(geome_btn)
+				btn_group.addButton(geome_btn)
+				btn_group.setExclusive(True)
+				layout.addRow(meta.comment, btn_layout)
+
+			elif cmd == 'set_psw1':
+				btn_layout = QHBoxLayout()
+				btn_group = QButtonGroup()
+				sw_btn = QRadioButton("classic", self)
+				sw_btn.toggled.connect(lambda x: self.update_parameter('set_sw1', x))
+				btn_group.addButton(sw_btn)
+				btn_layout.addWidget(sw_btn)
+
+				psw_btn = QRadioButton("pseudo", self)
+				psw_btn.setChecked(meta.value)
+				psw_btn.toggled.connect(lambda x: self.update_parameter('set_psw1', x))
+				btn_group.addButton(psw_btn)
+				btn_layout.addWidget(psw_btn)
+				btn_group.setExclusive(True)
+				layout.addRow(meta.comment, btn_layout)
 
 			elif meta.type is bool:
 				editor = QCheckBox(self)
@@ -954,13 +1010,16 @@ class AutodockParamterWizard(QWizard):
 		self.addPage(self.finish_page)
 		self.finish_layout = QVBoxLayout()
 		self.finish_page.setLayout(self.finish_layout)
-		self.finish_layout.addWidget(
-			QLabel((
-				"<p>Everything is ready, please confirm the docking tasks<p>"
-				"<p>Receptors: <b>{}</b></p>"
-				"<p>Ligands: <b>{}</b></p>"
-				"<p>Search algorithm: <b>{}</b></p>"
-				"<p>Click <b>Finish</b> button to start docking tasks</p>".format(
-					1, 20, self.algorithms[self.params.algorithm])
-			), self)
-		)
+		rnum = DB.get_one("SELECT COUNT(1) FROM molecular WHERE type=1 LIMIT 1")
+		lnum = DB.get_one("SELECT COUNT(1) FROM molecular WHERE type=2 LIMIT 1")
+		info_wdg = QLabel((
+			"<p>Everything is ready, please confirm the docking jobs<p>"
+			"<p>Number of receptors: <b>{}</b></p>"
+			"<p>Number of ligands: <b>{}</b></p>"
+			"<p>Number of jobs: <b>{}</b></p>"
+			"<p>Search algorithm: <b>{}</b></p>"
+			"<p>Click <b>Finish</b> button to start docking jobs</p>".format(
+				rnum, lnum, rnum*lnum, self.algorithms[self.params.algorithm]
+			)
+		), self)
+		self.finish_layout.addWidget(info_wdg)
