@@ -112,14 +112,16 @@ class DockeyMainWindow(QMainWindow):
 
 	def create_job_table(self):
 		self.job_table = QTableView(self)
-		self.job_table.setItemDelegateForColumn(2, JobsTableDelegate(self))
+		self.job_table.setItemDelegateForColumn(4, JobsTableDelegate(self))
 		self.job_table.setSelectionBehavior(QAbstractItemView.SelectRows)
 		self.job_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
+		self.job_table.horizontalHeader().setStretchLastSection(True)
+		self.job_table.verticalHeader().hide()
 		self.job_table.setAlternatingRowColors(True)
 		self.job_dock = QDockWidget("Jobs", self)
 		self.job_dock.setWidget(self.job_table)
-		self.job_dock.setAllowedAreas(Qt.TopDockWidgetArea | Qt.BottomDockWidgetArea | Qt.RightDockWidgetArea)
-		self.addDockWidget(Qt.RightDockWidgetArea, self.job_dock)
+		self.job_dock.setAllowedAreas(Qt.TopDockWidgetArea | Qt.BottomDockWidgetArea)
+		self.addDockWidget(Qt.BottomDockWidgetArea, self.job_dock)
 		self.job_dock.setVisible(True)
 
 	def create_molecular_model(self):
@@ -130,9 +132,9 @@ class DockeyMainWindow(QMainWindow):
 	def create_job_model(self):
 		self.job_model = JobsTableModel()
 		self.job_table.setModel(self.job_model)
-		self.job_table.hideColumn(0)
-		self.job_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
-		self.job_table.verticalHeader().hide()
+		#self.job_table.hideColumn(0)
+		#self.job_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
+		
 
 	def create_actions(self):
 		self.new_project_act = QAction("&New project", self,
@@ -493,9 +495,9 @@ class DockeyMainWindow(QMainWindow):
 		rows = []
 		for r in receptors:
 			for l in ligands:
-				rows.append((None, r, l, 'waiting', 0))
+				rows.append((None, r, l, 0, 0, None, None, None))
 
-		sql = "INSERT INTO jobs VALUES (?,?,?,?,?)"
+		sql = "INSERT INTO jobs VALUES (?,?,?,?,?,?,?,?)"
 		DB.insert_rows(sql, rows)
 
 		self.job_model.select()
@@ -521,8 +523,8 @@ class DockeyMainWindow(QMainWindow):
 		self.pool.start(worker)
 
 		#worker.signals.finished.connect(self.new_job)
-		worker.signals.error.connect(self.show_error_message)
-		worker.signals.progress.connect(self.job_model.update)
+		#worker.signals.error.connect(self.show_error_message)
+		worker.signals.refresh.connect(self.job_model.update)
 		
 
 	def check_tool_before_run(self, tool):
@@ -769,12 +771,6 @@ class DockeyTableModel(QAbstractTableModel):
 
 		self.row_count.emit(self.total_count)
 
-	@Slot()
-	def update(self, rowid):
-		self.update_cache(rowid-1)
-		index = self.index(rowid-1, 4)
-		self.dataChanged.emit(index, index)
-
 class MolecularTableModel(DockeyTableModel):
 	table = 'molecular'
 	custom_headers = ['ID','Name', 'Type']
@@ -793,23 +789,71 @@ class MolecularTableModel(DockeyTableModel):
 
 class JobsTableModel(DockeyTableModel):
 	table = 'jobs'
-	custom_headers = ['ID', 'Receptor vs Ligand', 'Progress']
+	custom_headers = ['Job ID', 'Receptor', 'Ligand', 'Status', 'Progress',
+		'Start Time', 'Finish Time', 'Message']
+
+	status = {
+		0: 'Pending',
+		1: 'Success',
+		2: 'Running',
+		3: 'Error'
+	}
+	status_colors = {
+		0: QColor(255, 193, 7),
+		1: QColor(25, 135, 84),
+		2: QColor(13, 110, 253),
+		3: QColor(220, 53, 69)
+	}
+	status_icons = {
+		0: QIcon('icons/pend.svg'),
+		1: QIcon('icons/success.svg'),
+		2: QIcon('icons/run.svg'),
+		3: QIcon('icons/error.svg')
+	}
 
 	@property
 	def get_sql(self):
 		return (
-			"SELECT j.id,m1.name,m2.name,j.status,j.progress FROM jobs AS j "
+			"SELECT j.id,m1.name,m2.name,j.status,j.progress,"
+			"j.started,j.finished,j.message FROM jobs AS j "
 			"LEFT JOIN molecular AS m1 ON m1.id=j.rid "
 			"LEFT JOIN molecular AS m2 ON m2.id=j.lid "
 			"WHERE j.id=? LIMIT 1"
 		)
 
-	def update_cache(self, row):
-		_id = self.displayed[row]
-		self.cache_row[0] = row
-		d = DB.get_row(self.get_sql, (_id,))
+	def data(self, index, role=Qt.DisplayRole):
+		if not index.isValid():
+			return None
 
-		self.cache_row[1] = [d[0], "{} vs {}".format(d[1], d[2]), d[4]]
+		row = index.row()
+		col = index.column()
+		val = self.get_value(row, col)
+
+		if role == Qt.DisplayRole:
+			if col == 3:
+				return self.status[val]
+
+			elif col == 5 or col == 6:
+				return time_format(val)
+
+			return val
+
+		elif role == Qt.ForegroundRole:
+			if col == 3:
+				return self.status_colors[val]
+
+		elif role == Qt.DecorationRole:
+			if col == 3:
+				return self.status_icons[val]
+
+	@Slot()
+	def update(self, rowid):
+		rowid -= 1
+		colid = len(self.custom_headers)-1
+		self.update_cache(rowid)
+		index1 = self.index(rowid, 0)
+		index2 = self.index(rowid, colid)
+		self.dataChanged.emit(index1, index2)
 
 class JobsTableDelegate(QStyledItemDelegate):
 	def paint(self, painter, option, index):

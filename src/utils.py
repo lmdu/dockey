@@ -1,9 +1,10 @@
 import os
+import time
 from openbabel import openbabel
 
 __all__ = ['AttrDict', 'draw_gridbox', 'convert_dimension_to_coordinates',
 	'convert_coordinates_to_dimension', 'get_atom_types_from_pdbqt',
-	'get_molecule_center_from_pdbqt'
+	'get_molecule_center_from_pdbqt', 'time_format'
 ]
 
 class AttrDict(dict):
@@ -141,6 +142,11 @@ def get_molecule_center_from_pdbqt(pdbqt_file):
 	z = round(z/c, 3)
 
 	return x, y, z
+
+def time_format(seconds):
+	if seconds:
+		t = time.localtime(seconds)
+		return time.strftime("%Y-%m-%d %H:%M:%S", t)
 
 
 if __name__ == '__main__':

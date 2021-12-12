@@ -25,8 +25,11 @@ DB_TABLES = {
 		('id', 'INTEGER PRIMARY KEY'),
 		('rid', 'INTEGER'),
 		('lid', 'INTEGER'),
-		('status', 'TEXT'),
-		('progress', 'REAL')
+		('status', 'INTEGER'),
+		('progress', 'REAL'),
+		('started', 'INTEGER'),
+		('finished', 'INTEGER'),
+		('message', 'TEXT')
 	],
 	'option': [
 		('id', 'INTEGER PRIMARY KEY'),

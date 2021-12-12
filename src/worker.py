@@ -13,9 +13,10 @@ from backend import *
 __all__ = ['AutodockWorker']
 
 class WorkerSignals(QObject):
-	finished = Signal()
-	error = Signal(str)
-	progress = Signal(int)
+	#finished = Signal()
+	#error = Signal(str)
+	#progress = Signal(int)
+	refresh = Signal(int)
 
 class BaseWorker(QRunnable):
 	def __init__(self, *args, **kwargs):
@@ -25,16 +26,58 @@ class BaseWorker(QRunnable):
 		self.signals = WorkerSignals()
 		self.settings = QSettings()
 
+		self.job_id = args[0].id
+
+	def update_status(self, status):
+		sql = "UPDATE jobs SET status=? WHERE id=?"
+		DB.query(sql, (status, self.job_id))
+		self.signals.refresh.emit(self.job_id)
+
+	def update_progress(self, progress):
+		sql = "UPDATE jobs SET progress=? WHERE id=?"
+		DB.query(sql, (progress, self.job_id))
+		self.signals.refresh.emit(self.job_id)
+
+	def update_message(self, message):
+		sql = "UPDATE jobs SET message=? WHERE id=?"
+		DB.query(sql, (message, self.job_id))
+		self.signals.refresh.emit(self.job_id)
+
+	def update_started(self):
+		started = int(time.time())
+		sql = "UPDATE jobs SET status=?,progress=?,started=? WHERE id=?"
+		DB.query(sql, (2, 0, started, self.job_id))
+		self.signals.refresh.emit(self.job_id)
+
+	def update_finished(self):
+		finished = int(time.time())
+		sql = "UPDATE jobs SET progress=?,finished=? WHERE id=?"
+		DB.query(sql, (100, finished, self.job_id))
+		self.signals.refresh.emit(self.job_id)
+
+	def update_error(self, error):
+		sql = "UPDATE jobs SET status=?,message=? WHERE id=?"
+		DB.query(sql, (3, error, self.job_id))
+		self.signals.refresh.emit(self.job_id)
+
+	def update_success(self):
+		sql = "UPDATE jobs SET status=?,message=? WHERE id=?"
+		DB.query(sql, (1, "The job was successfully finished", self.job_id))
+		self.signals.refresh.emit(self.job_id)
+
+
 	@Slot()
 	def run(self):
+		self.update_started()
+
 		try:
 			self.pipline(*self.args, **self.kwargs)
 		except:
-			self.signals.error.emit(traceback.format_exc())
+			self.update_error(traceback.format_exc())
 		else:
-			pass #successfully
+			self.update_success()
 		finally:
-			self.signals.finished.emit()
+			self.update_finished()
 
 	def get_mgltools(self):
 		mgltools_path = self.settings.value('Tools/MGLTools')
@@ -64,42 +107,6 @@ class BaseWorker(QRunnable):
 class AutodockWorker(BaseWorker):
 	def __init__(self, *args, **kwargs):
 		super(AutodockWorker, self).__init__(*args, **kwargs)
-		self.log_size = 0
-		self.log_start = 0
-		self.log_file = None
-		self.job_id = 0
-		self.autogrid_stopped = False
-
-	@Slot()
-	def get_progress(self):
-		if self.log_file is None:
-			return
-
-		if not QFile.exists(self.log_file):
-			return
-
-		s = QFileInfo(self.log_file).size()
-
-		if s > self.log_size:
-			self.log_size = s
-		else:
-			return
-
-		with open(self.log_file) as fh:
-			fh.seek(self.log_start)
-			p = 0
-			for line in fh:
-				if '%' not in line:
-					continue
-
-				p = float(line.strip().split()[2].replace('%', ''))
-					
-			if p > 0:
-				DB.query("UPDATE jobs SET progress=? WHERE id=?", (p, self.job_id))
-				self.signals.progress.emit(self.job_id)
-				print(p)
-
-			self.log_start = fh.tell()
 
 	def get_commands(self):
 		autodock = self.settings.value('Tools/autodock_4')
@@ -108,8 +115,6 @@ class AutodockWorker(BaseWorker):
 		return autodock, autogrid
 
 	def pipline(self, job, params):
-		self.job_id = job.id
-
 		work_dir = os.path.join(job.root, 'jobs', "job.{}.{}.vs.{}".format(
 			job.id, job.rn, job.ln
 		))
@@ -142,6 +147,7 @@ class AutodockWorker(BaseWorker):
 
 		#proc = subprocess.Popen([autogrid, '-p', gpf_file, '-l', glg_file], cwd=work_dir)
 		#read_start = 0
+		self.update_message("Running autogrid")
 		parent = QObject()
 		proc = QProcess(parent)
 		proc.setWorkingDirectory(work_dir)
@@ -163,8 +169,7 @@ class AutodockWorker(BaseWorker):
 							p = float(line.strip().split()[2].replace('%', ''))
 
 					if p > 0:
-						DB.query("UPDATE jobs SET progress=? WHERE id=?", (p, job.id))
-						self.signals.progress.emit(job.id)
+						self.update_progress(p)
 
 					read_start = log.tell()
 
