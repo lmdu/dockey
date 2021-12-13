@@ -154,6 +154,10 @@ class AutodockWorker(BaseWorker):
 		proc.start(autogrid, ['-p', gpf_file, '-l', glg_file])
 		proc.waitForStarted(-1)
 
+		if proc.state() == QProcess.NotRunning:
+			err = proc.readAllStandardError()
+			raise Exception(str(err))
+
 		read_start = 0
 		p = 0
 
@@ -181,14 +185,13 @@ class AutodockWorker(BaseWorker):
 		proc.waitForFinished(-1)
 
 		#set autodock4 parameters and make dpf parameter file
-		#dpf_file = params.make_dpf_file(rpdbqt, lpdbqt)
-		#dlg_file = dpf_file.replace('.dpf', '.dlg')
+		dpf_file = params.make_dpf_file(rpdbqt, lpdbqt)
+		dlg_file = dpf_file.replace('.dpf', '.dlg')
 
 		#run autodock4
-		#proc = QProcess()
-		#proc.setWorkingDirectory(work_dir)
-		#proc.start(autodock, ['-p', dpf_file, '-l', dlg_file])
-		#proc.waitForFinished(-1)
+		self.update_message("Running autodock")
+		proc.start(autodock, ['-p', dpf_file, '-l', dlg_file])
+		proc.waitForFinished(-1)
 
 
 class AutodockVinaWorker(BaseWorker):

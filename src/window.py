@@ -21,14 +21,17 @@ class DockeyMainWindow(QMainWindow):
 
 		self.setWindowTitle("Dockey v{}".format(DOCKEY_VERSION))
 		self.setWindowIcon(QIcon('icons/logo.svg'))
+		self.setDockOptions(QMainWindow.AnimatedDocks | QMainWindow.AllowTabbedDocks)
 
 		self.create_pymol_viewer()
 		self.create_molecular_viewer()
 		self.create_gridbox_adjuster()
 		self.create_job_table()
+		self.create_pose_table()
 
 		self.create_molecular_model()
 		self.create_job_model()
+		self.create_dock_model()
 
 		self.create_actions()
 		self.create_menus()
@@ -75,7 +78,7 @@ class DockeyMainWindow(QMainWindow):
 		#self.mol_viewer = QTreeWidget(self)
 		#self.mol_viewer.setColumnCount(1)
 		#self.mol_viewer.header().hide()
-		self.mol_viewer = QListView(self)
+		self.mol_viewer = DockeyListView(self)
 		self.mol_viewer.clicked.connect(self.on_molecular_changed)
 		self.mol_dock = QDockWidget("Moleculars", self)
 		self.mol_dock.setAllowedAreas(Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea)
@@ -111,18 +114,47 @@ class DockeyMainWindow(QMainWindow):
 		self.box_dock.setVisible(False)
 
 	def create_job_table(self):
-		self.job_table = QTableView(self)
+		self.job_table = DockeyTableView(self)
+		self.job_table.clicked.connect(self.on_job_changed)
 		self.job_table.setItemDelegateForColumn(4, JobsTableDelegate(self))
 		self.job_table.setSelectionBehavior(QAbstractItemView.SelectRows)
 		self.job_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
 		self.job_table.horizontalHeader().setStretchLastSection(True)
-		self.job_table.verticalHeader().hide()
+		#self.job_table.verticalHeader().hide()
 		self.job_table.setAlternatingRowColors(True)
 		self.job_dock = QDockWidget("Jobs", self)
 		self.job_dock.setWidget(self.job_table)
-		self.job_dock.setAllowedAreas(Qt.TopDockWidgetArea | Qt.BottomDockWidgetArea)
-		self.addDockWidget(Qt.BottomDockWidgetArea, self.job_dock)
+		self.job_dock.setAllowedAreas(Qt.TopDockWidgetArea | Qt.BottomDockWidgetArea | Qt.LeftDockWidgetArea)
+		self.addDockWidget(Qt.BottomDockWidgetArea, self.job_dock, Qt.Vertical)
 		self.job_dock.setVisible(True)
+
+	def create_pose_table(self):
+		self.pose_table = DockeyTableView(self)
+		self.pose_table.setSelectionBehavior(QAbstractItemView.SelectRows)
+		self.pose_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
+		self.pose_error = DockeyTextBrowser(self)
+
+		self.pose_dock = QDockWidget("Poses", self)
+		self.pose_table.hide()
+		self.pose_dock.setWidget(self.pose_error)
+		self.pose_dock.setAllowedAreas(Qt.TopDockWidgetArea | Qt.BottomDockWidgetArea)
+		self.addDockWidget(Qt.BottomDockWidgetArea, self.pose_dock, Qt.Vertical)
+		self.pose_dock.setVisible(True)
+
+	@Slot()
+	def on_job_changed(self, index):
+		job_id = index.row() + 1
+		sql = "SELECT status,message FROM jobs WHERE id=? LIMIT 1"
+		status, message = DB.get_row(sql, (job_id,))
+
+		if status == 2:
+			pass
+
+		elif status == 3:
+			self.pose_error.setPlainText(message)
+			self.pose_dock.setWidget(self.pose_error)
+			self.pose_error.show()
+			self.pose_table.hide()
 
 	def create_molecular_model(self):
 		self.mol_model = MolecularTableModel()
@@ -134,7 +166,11 @@ class DockeyMainWindow(QMainWindow):
 		self.job_table.setModel(self.job_model)
 		#self.job_table.hideColumn(0)
 		#self.job_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
-		
+
+	def create_dock_model(self):
+		#self.dock_model = DocksTableModel()
+		#self.dock_table.setModel(self.dock_model)
+		pass
 
 	def create_actions(self):
 		self.new_project_act = QAction("&New project", self,
@@ -182,6 +218,9 @@ class DockeyMainWindow(QMainWindow):
 
 		self.job_table_act = self.job_dock.toggleViewAction()
 		self.job_table_act.setText("Show task table")
+
+		self.pose_table_act = self.pose_dock.toggleViewAction()
+		self.pose_table_act.setText("Show pose table")
 
 		self.bounding_box_act = QAction("Bounding box", self,
 			triggered = self.draw_bounding_box
@@ -236,6 +275,7 @@ class DockeyMainWindow(QMainWindow):
 		#self.view_menu.addSeparator()
 		self.view_menu.addAction(self.mol_list_act)
 		self.view_menu.addAction(self.job_table_act)
+		self.view_menu.addAction(self.pose_table_act)
 		self.view_menu.addSeparator()
 		self.view_menu.addAction(self.box_sidebar_act)
 		self.view_menu.addAction(self.pymol_sidebar_act)
@@ -544,7 +584,6 @@ class DockeyMainWindow(QMainWindow):
 		DB.query("DELETE FROM jobs")
 		self.job_model.select()
 
-
 	def run_autodock(self):
 		self.check_jobs()
 		self.check_tool_before_run('autodock_4')
@@ -649,6 +688,18 @@ class CreateProjectDialog(QDialog):
 			name = dlg.name_input.text()
 			location = dlg.location_input.text()
 			return os.path.join(location, name)
+
+class DockeyListView(QListView):
+	def sizeHint(self):
+		return QSize(150, 100)
+
+class DockeyTableView(QTableView):
+	def sizeHint(self):
+		return QSize(300, 100)
+
+class DockeyTextBrowser(QTextBrowser):
+	def sizeHint(self):
+		return QSize(300, 100)
 
 class DockeyTableModel(QAbstractTableModel):
 	table = None
@@ -821,6 +872,14 @@ class JobsTableModel(DockeyTableModel):
 			"WHERE j.id=? LIMIT 1"
 		)
 
+	def headerData(self, section, orientation, role=Qt.DisplayRole):
+		if orientation == Qt.Horizontal and role == Qt.DisplayRole:
+			return self.custom_headers[section]
+
+		elif orientation == Qt.Vertical and role == Qt.DecorationRole:
+			status = self.get_value(section, 3)
+			return self.status_icons[status]
+
 	def data(self, index, role=Qt.DisplayRole):
 		if not index.isValid():
 			return None
@@ -842,9 +901,13 @@ class JobsTableModel(DockeyTableModel):
 			if col == 3:
 				return self.status_colors[val]
 
-		elif role == Qt.DecorationRole:
-			if col == 3:
-				return self.status_icons[val]
+		#elif role == Qt.DecorationRole:
+		#	if col == 3:
+		#		return self.status_icons[val]
+
+		elif role == Qt.TextAlignmentRole:
+			if col != 7:
+				return Qt.AlignCenter
 
 	@Slot()
 	def update(self, rowid):
@@ -872,6 +935,7 @@ class JobsTableDelegate(QStyledItemDelegate):
 		bar.state |= QStyle.StateFlag.State_Horizontal
 
 		QApplication.style().drawControl(QStyle.CE_ProgressBar, bar, painter)
+
 
 class BrowseInput(QWidget):
 	def __init__(self, parent=None, is_file=True):
