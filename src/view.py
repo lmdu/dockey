@@ -9,7 +9,7 @@ from PySide6.QtWidgets import *
 from PySide6.QtOpenGLWidgets import *
 
 #install plugins
-import pymolplugins
+import plugins
 
 from utils import *
 from config import *

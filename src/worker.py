@@ -1,5 +1,6 @@
 import os
 import time
+import psutil
 import traceback
 import subprocess
 
@@ -77,7 +78,9 @@ class BaseWorker(QRunnable):
 		else:
 			self.update_success()
 		finally:
-			self.update_finished()
+			pass
+
+		self.update_finished()
 
 	def get_mgltools(self):
 		mgltools_path = self.settings.value('Tools/MGLTools')
@@ -145,23 +148,18 @@ class AutodockWorker(BaseWorker):
 		if QFile.exists(glg_file):
 			QFile.remove(glg_file)
 
-		#proc = subprocess.Popen([autogrid, '-p', gpf_file, '-l', glg_file], cwd=work_dir)
-		#read_start = 0
 		self.update_message("Running autogrid")
-		parent = QObject()
-		proc = QProcess(parent)
-		proc.setWorkingDirectory(work_dir)
-		proc.start(autogrid, ['-p', gpf_file, '-l', glg_file])
-		proc.waitForStarted(-1)
-
-		if proc.state() == QProcess.NotRunning:
-			err = proc.readAllStandardError()
-			raise Exception(str(err))
+		proc = psutil.Popen([autogrid, '-p', gpf_file, '-l', glg_file],
+			stdout = subprocess.PIPE,
+			stderr = subprocess.PIPE,
+			cwd = work_dir
+		)
 
 		read_start = 0
-		p = 0
 
-		while 1:
+		while proc.poll() is None:
+			QThread.sleep(1)
+
 			if QFileInfo(glg_file).size() > read_start:
 				p = 0
 
@@ -170,19 +168,16 @@ class AutodockWorker(BaseWorker):
 
 					for line in log:
 						if '%' in line:
-							p = float(line.strip().split()[2].replace('%', ''))
-
-					if p > 0:
-						self.update_progress(p)
+							p = round(float(line.strip().split()[2].replace('%', ''))*0.09, 2)
 
 					read_start = log.tell()
 
-			if p == 100:
-				break
+				if p > 0:
+					self.update_progress(p)
 
-			QThread.sleep(1)
 
-		proc.waitForFinished(-1)
+		if proc.returncode != 0:
+			raise Exception(proc.stderr.read())
 
 		#set autodock4 parameters and make dpf parameter file
 		dpf_file = params.make_dpf_file(rpdbqt, lpdbqt)
@@ -190,9 +185,75 @@ class AutodockWorker(BaseWorker):
 
 		#run autodock4
 		self.update_message("Running autodock")
-		proc.start(autodock, ['-p', dpf_file, '-l', dlg_file])
-		proc.waitForFinished(-1)
+		proc = psutil.Popen([autodock, '-p', dpf_file, '-l', dlg_file],
+			stdout = subprocess.PIPE,
+			stderr = subprocess.PIPE,
+			cwd = work_dir
+		)
 
+		read_start = 0
+
+		while proc.poll() is None:
+			QThread.sleep(1)
+
+			if QFileInfo(dlg_file).size() > read_start:
+				p = 0
+
+				with open(dlg_file) as log:
+					log.seek(read_start)
+
+					for line in log:
+						if line.startswith('Run:'):
+							cols = line.strip().split()
+							p = round(int(cols[1])/int(cols[9])*90, 2)
+
+					read_start = log.tell()
+
+				if p > 0:
+					self.update_progress(p)
+
+		if proc.returncode != 0:
+			raise Exception(proc.stderr.read())
+
+		#parse autodock dlg log file
+		self.update_message("Analyzing docking results")
+		runs = {}
+		rows = []
+
+		with open(dlg_file) as fh:
+			for line in fh:
+				if 'RMSD TABLE' in line:
+					break
+
+				if line.startswith("DOCKED: MODEL"):
+					rid = int(line.strip().split()[2])
+					runs[rid] = [0, []]
+
+				elif line.startswith("DOCKED: USER    Estimated Inhibition Constant"):
+					runs[rid][0] = line.split('=')[1].strip().split('(')[0].strip()
+
+				if line.startswith("DOCKED:"):
+					runs[rid][1].append(line[8:])
+
+			for line in fh:
+				if 'INFORMATION ENTROPY ANALYSIS' in line:
+					break
+
+				cols = line.strip().split()
+
+				if len(cols) == 7:
+					rid = int(cols[2])
+					rank = int(cols[0])
+					energy = float(cols[3])
+					ki = runs[rid][0]
+					crmsd = float(cols[4])
+					rrmsd = float(cols[5])
+					ligand = convert_pdbqt_to_pdb(''.join(runs[rid][1]))
+
+					rows.append((None, job.id, rid, energy, ki, crmsd, rrmsd, rank, ligand))
+
+		sql = "INSERT INTO pose VALUES (?,?,?,?,?,?,?,?,?)"
+		DB.insert_rows(sql, rows)
 
 class AutodockVinaWorker(BaseWorker):
 	pass

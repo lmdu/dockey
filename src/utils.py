@@ -4,7 +4,7 @@ from openbabel import openbabel
 
 __all__ = ['AttrDict', 'draw_gridbox', 'convert_dimension_to_coordinates',
 	'convert_coordinates_to_dimension', 'get_atom_types_from_pdbqt',
-	'get_molecule_center_from_pdbqt', 'time_format'
+	'get_molecule_center_from_pdbqt', 'time_format', 'convert_pdbqt_to_pdb'
 ]
 
 class AttrDict(dict):
@@ -43,6 +43,15 @@ def convert_coordinates_to_dimension(points, spacing):
 	y = int(y_size/spacing)
 	z = int(z_size/spacing)
 
+	if x % 2 != 0:
+		x -= 1
+
+	if y % 2 != 0:
+		y -= 1
+
+	if z % 2 != 0:
+		z -= 1
+
 	cx = xmin + x_size/2
 	cy = ymin + y_size/2
 	cz = zmin + z_size/2
@@ -67,6 +76,13 @@ def draw_gridbox(cmd, data):
 		bg_y = data.bg_y,
 		bg_z = data.bg_z
 	)
+
+def convert_pdbqt_to_pdb(pdbqt_str):
+	obc = openbabel.OBConversion()
+	obc.SetInAndOutFormats('pdbqt', 'pdb')
+	mol = openbabel.OBMol()
+	obc.ReadString(mol, pdbqt_str)
+	return obc.WriteString(mol)
 
 def convert_other_to_pdbqt(infile, informat, outfile):
 	obc = openbabel.OBConversion()

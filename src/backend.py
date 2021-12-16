@@ -31,6 +31,17 @@ DB_TABLES = {
 		('finished', 'INTEGER'),
 		('message', 'TEXT')
 	],
+	'pose': [
+		('id', 'INTEGER PRIMARY KEY'),
+		('jid', 'INTEGER'),
+		('run', 'INTEGER'),
+		('energy', 'REAL'),
+		('ki', 'TEXT'),
+		('crmsd', 'REAL'),
+		('rrmsd', 'REAL'),
+		('rank', 'INTEGER'),
+		('ligand', 'TEXT')
+	],
 	'option': [
 		('id', 'INTEGER PRIMARY KEY'),
 		('name', 'TEXT'),
