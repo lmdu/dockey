@@ -44,10 +44,6 @@ class DockeyMainWindow(QMainWindow):
 
 		self.project_folder = None
 		self.current_molecular = None
-		self.dock_engine = None
-		self.dock_params = None
-		self.job_num = 0
-		self.job_id = 0
 
 		self.pool = QThreadPool(self)
 		self.pool.setMaxThreadCount(3)
@@ -507,44 +503,38 @@ class DockeyMainWindow(QMainWindow):
 		sql = "DELETE FROM grid WHERE id=?"
 		DB.query(sql, (self.current_molecular.id,))
 
-	def get_job(self):
-		if not self.job_num:
-			self.job_num = DB.get_count('jobs')
-
-		self.job_id += 1
-
-		if self.job_id > self.job_num:
-			return None
+	def get_jobs(self):
+		num = DB.get_one("SELECT COUNT(1) FROM jobs")
+		if not num: return
 
 		sql = (
 			"SELECT j.id,j.rid,j.lid,m1.name,m1.path,m1.format,m2.name,m2.path,m2.format "
 			"FROM jobs AS j LEFT JOIN molecular AS m1 ON m1.id=j.rid "
-			"LEFT JOIN molecular AS m2 ON m2.id=j.lid WHERE j.id=?"
+			"LEFT JOIN molecular AS m2 ON m2.id=j.lid"
 		)
-		job = DB.get_row(sql, (self.job_id,))
 
-		sql = "SELECT * FROM grid WHERE rid=?"
-		grid = DB.get_row(sql, (job[1],))
+		for job in DB.query(sql):
+			grid = DB.get_row("SELECT * FROM grid WHERE rid=?", (job[1],))
 
-		return AttrDict({
-			'id': job[0],
-			'ri': job[1],
-			'rn': job[3],
-			'rp': job[4],
-			'rf': job[5],
-			'li': job[2],
-			'ln': job[6],
-			'lp': job[7],
-			'lf': job[8],
-			'x': grid[2],
-			'y': grid[3],
-			'z': grid[4],
-			'cx': grid[5],
-			'cy': grid[6],
-			'cz': grid[7],
-			'spacing': grid[8],
-			'root': self.project_folder
-		})
+			yield AttrDict({
+				'id': job[0],
+				'ri': job[1],
+				'rn': job[3],
+				'rp': job[4],
+				'rf': job[5],
+				'li': job[2],
+				'ln': job[6],
+				'lp': job[7],
+				'lf': job[8],
+				'x': grid[2],
+				'y': grid[3],
+				'z': grid[4],
+				'cx': grid[5],
+				'cy': grid[6],
+				'cz': grid[7],
+				'spacing': grid[8],
+				'root': self.project_folder
+			})
 
 	def generate_job_list(self):
 		receptors = DB.get_column("SELECT id FROM molecular WHERE type=1")
@@ -566,8 +556,6 @@ class DockeyMainWindow(QMainWindow):
 			)
 			return False
 
-
-
 		rows = []
 		for r in receptors:
 			for l in ligands:
@@ -580,36 +568,15 @@ class DockeyMainWindow(QMainWindow):
 
 		return len(rows)
 
-	#@Slot()
-	#def new_job(self):
-	#	self.submit_job()
+	def submit_jobs(self):
+		for job in self.get_jobs():
+			if self.dock_engine == 'autodock':
+				worker = AutodockWorker(job, self.dock_params)
+			elif self.dock_engine == 'vina':
+				worker = AutodockVinaWorker(job, self.dock_params)
 
-	#@Slot()
-	def submit_job(self):
-		job = self.get_job()
-
-		if job is None:
-			return
-
-		if self.dock_engine == 'autodock':
-			worker = AutodockWorker(job, self.dock_params)
-		elif self.dock_engine == 'vina':
-			worker = AutodockVinaWorker(job)
-
-		self.pool.start(worker)
-
-		#worker.signals.finished.connect(self.new_job)
-		#worker.signals.error.connect(self.show_error_message)
-		worker.signals.refresh.connect(self.job_model.update_row)
-		
-
-	def check_tool_before_run(self, tool):
-		settings = QSettings()
-		folder = settings.value('Tools/{}'.format(tool))
-
-		if not folder:
-			dlg = ConfigDialog(self)
-			dlg.exec()
+			worker.signals.refresh.connect(self.job_model.update_row)
+			self.pool.start(worker)
 
 	def check_jobs(self):
 		jobs = DB.get_one("SELECT COUNT(1) FROM jobs LIMIT 1")
@@ -637,21 +604,38 @@ class DockeyMainWindow(QMainWindow):
 		if not self.check_jobs():
 			return
 
-		self.check_tool_before_run('autodock_4')
-
-		dlg = AutodockParamterWizard(self)
+		dlg = AutodockParameterWizard(self)
 		if not dlg.exec():
 			return
 
-		self.dock_engine = 'autodock'
-		self.dock_params = dlg.params
+		params = dlg.params
 
-		num = self.generate_job_list()
-		for i in range(num):
-			self.submit_job()
+		self.generate_job_list()
+		
+		for job in self.get_jobs():
+			worker = AutodockWorker(job, params)
+			worker.signals.refresh.connect(self.job_model.update_row)
+			self.pool.start(worker)
 
 	def run_autodock_vina(self):
-		pass
+		if not AutodockVinaConfigDialog.check_executable(self):
+			return
+
+		if not self.check_jobs():
+			return
+
+		dlg = AutodockVinaParameterWizard(self)
+		if not dlg.exec():
+			return
+
+		params = dlg.params
+
+		self.generate_job_list()
+		
+		for job in self.get_jobs():
+			worker = AutodockVinaWorker(job, params)
+			worker.signals.refresh.connect(self.job_model.update_row)
+			self.pool.start(worker)
 
 	def open_about(self):
 		QMessageBox.about(self, "About dockey", DOCKEY_ABOUT)

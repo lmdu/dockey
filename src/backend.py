@@ -31,7 +31,7 @@ DB_TABLES = {
 		('finished', 'INTEGER'),
 		('message', 'TEXT')
 	],
-	'pose': [
+	'pose_ad4': [
 		('id', 'INTEGER PRIMARY KEY'),
 		('jid', 'INTEGER'),
 		('run', 'INTEGER'),
@@ -40,7 +40,16 @@ DB_TABLES = {
 		('crmsd', 'REAL'),
 		('rrmsd', 'REAL'),
 		('rank', 'INTEGER'),
-		('ligand', 'TEXT')
+		('pose', 'TEXT')
+	],
+	'pose_vina': [
+		('id', 'INTEGER PRIMARY KEY'),
+		('jid', 'INTEGER'),
+		('mode', 'INTEGER'),
+		('affinity', 'REAL'),
+		('lrmsd', 'REAL'),
+		('urmsd', 'REAL'),
+		('pose', 'REAL')
 	],
 	'option': [
 		('id', 'INTEGER PRIMARY KEY'),

@@ -2,7 +2,8 @@ from PySide6.QtGui import *
 from PySide6.QtCore import *
 from PySide6.QtWidgets import *
 
-__all__ = ['BrowseInput', 'AutodockConfigDialog', 'CreateProjectDialog']
+__all__ = ['BrowseInput', 'CreateProjectDialog', 'AutodockConfigDialog',
+			'AutodockVinaConfigDialog']
 
 class BrowseInput(QWidget):
 	def __init__(self, parent=None, is_file=True):
@@ -115,41 +116,31 @@ class CreateProjectDialog(QDialog):
 			location = dlg.location_input.get_text()
 			return os.path.join(location, name)
 
+class ProgramConfigDialog(QDialog):
+	title = ""
+	progs = []
 
-class AutodockConfigDialog(QDialog):
 	def __init__(self, parent=None):
-		super(AutodockConfigDialog, self).__init__(parent)
-		self.setWindowTitle("Autodock config")
-		self.resize(QSize(500, -1))
+		super(ProgramConfigDialog, self).__init__(parent)
+		self.setWindowTitle(self.title)
+		self.resize(QSize(500, 10))
 		self.settings = QSettings()
 
 		layout = QVBoxLayout()
 		self.setLayout(layout)
 
-		autodock = self.settings.value('Tools/autodock_4', '')
-		autogrid = self.settings.value('Tools/autogrid_4', '')
-		mgltools = self.settings.value('Tools/mgltools', '')
+		self.inputs = []
 
-		if not autodock:
-			self.autodock_input = BrowseInput(self)
-			layout.addWidget(QLabel("Autodock executable"))
-			layout.addWidget(self.autodock_input)
-		else:
-			self.autodock_input = None
+		for i, prog in enumerate(self.progs):
+			k, l = prog
+			v = self.settings.value(k, '')
 
-		if not autogrid:
-			self.autogrid_input = BrowseInput(self)
-			layout.addWidget(QLabel("Autogrid executable"))
-			layout.addWidget(self.autogrid_input)
-		else:
-			self.autogrid_input = None
-
-		if not mgltools:
-			self.mgltools_input = BrowseInput(self, False)
-			layout.addWidget(QLabel("MGLTools directory"))
-			layout.addWidget(self.mgltools_input)
-		else:
-			self.mgltools_input = None
+			if v:
+				self.inputs.append(None)
+			else:
+				self.inputs.append(BrowseInput(self))
+				layout.addWidget(QLabel(l, self))
+				layout.addWidget(self.inputs[i])
 
 		action_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
 		action_box.accepted.connect(self.save_config)
@@ -159,35 +150,48 @@ class AutodockConfigDialog(QDialog):
 
 	@Slot()
 	def save_config(self):
-		configs = {}
+		for put in self.inputs:
+			if put is None:
+				continue
 
-		if self.autogrid_input:
-			configs['autogrid_4'] = self.autogrid_input.get_text()
+			v = put.get_text()
 
-		if self.autodock_input:
-			configs['autodock_4'] = self.autodock_input.get_text()
-
-		if self.mgltools_input:
-			configs['mgltools'] = self.mgltools_input.get_text()
-
-		for k in configs:
-			if not configs[k]:
+			if not v:
 				return
 
-		for k in configs:
-			self.settings.setValue('Tools/{}'.format(k), configs[k])
+		for i, put in enumerate(self.inputs):
+			if put is None:
+				continue
+
+			v = put.get_text()
+			k = self.progs[i][0]
+
+			self.settings.setValue(k, v)
 
 		self.accept()
 
 	@classmethod
 	def check_executable(cls, parent):
 		settings = QSettings()
-		autodock = settings.value('Tools/autodock_4', '')
-		autogrid = settings.value('Tools/autogrid_4', '')
-		mgltools = settings.value('Tools/mgltools', '')
+		configs = [settings.value(k) for k, l in cls.progs]
 
-		if all([autodock, autogrid, mgltools]):
+		if all(configs):
 			return True
 
 		dlg = cls(parent)
 		return dlg.exec()
+
+class AutodockConfigDialog(ProgramConfigDialog):
+	title = "Autodock Config"
+	progs = [
+		('Tools/autodock_4', 'Autodock executable'),
+		('Tools/autogrid_4', 'Autogrid executable'),
+		('Tools/mgltools', 'MGLTools directory')
+	]
+
+class AutodockVinaConfigDialog(ProgramConfigDialog):
+	title = "Autodock Vina Config"
+	progs = [
+		('Tools/autodock_vina', 'Autodock Vina executable'),
+		('Tools/mgltools', 'MGLTools directory')
+	]
