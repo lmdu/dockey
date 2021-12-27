@@ -1,10 +1,12 @@
 import os
 import time
+import math
 from openbabel import openbabel
 
 __all__ = ['AttrDict', 'draw_gridbox', 'convert_dimension_to_coordinates',
 	'convert_coordinates_to_dimension', 'get_atom_types_from_pdbqt',
-	'get_molecule_center_from_pdbqt', 'time_format', 'convert_pdbqt_to_pdb'
+	'get_molecule_center_from_pdbqt', 'time_format', 'convert_pdbqt_to_pdb',
+	'ligand_efficiency_assessment', 'get_molecule_information'
 ]
 
 class AttrDict(dict):
@@ -164,6 +166,78 @@ def time_format(seconds):
 		t = time.localtime(seconds)
 		return time.strftime("%Y-%m-%d %H:%M:%S", t)
 
+def convert_ki_to_log(ki, unit):
+	scales = {
+		'M': 0, 'mM': 3, 'µM': 6, 'nM': 9, 'pM': 12,
+		'fM': 15, 'aM': 18, 'zM': 21, 'yM': 24
+	}
+	ki = ki/math.pow(10, scales[unit])
+	return round(math.log10(ki), 3)
+
+def convert_energy_to_ki(energy):
+	R = 0.001987207
+	T = 298.15
+	ki = math.exp(energy/(R*T))
+	return round(math.log10(ki), 3)
+
+def get_molecule_information(mol_file):
+	mol_name, mol_format = os.path.splitext(os.path.basename(mol_file))
+	mol_format = mol_format.lstrip('.')
+
+	obc = openbabel.OBConversion()
+	obc.SetInAndOutFormats(mol_format, 'pdb')
+	mol = openbabel.OBMol()
+	obc.ReadFile(mol, mol_file)
+	des = openbabel.OBDescriptor.FindType('logP')
+
+	return AttrDict(
+		name = mol_name,
+		atoms = mol.NumAtoms(),
+		bonds = mol.NumBonds(),
+		hvyatoms = mol.NumHvyAtoms(),
+		residues = mol.NumResidues(),
+		rotors = mol.NumRotors(),
+		formula = mol.GetFormula(),
+		energy = mol.GetEnergy(),
+		weight = mol.GetMolWt(),
+		logp = des.Predict(mol),
+		pdb = obc.WriteString(mol)
+	)
+
+def ligand_efficiency_assessment(pdb_str, energy, ki=0):
+	if ki:
+		logki = convert_ki_to_log(ki)
+	else:
+		logki = convert_energy_to_ki(energy)
+
+	if pdb_str:
+		obc = openbabel.OBConversion()
+		obc.SetInFormat("pdb")
+		mol = openbabel.OBMol()
+		obc.ReadString(mol, pdb_str)
+		ha = mol.NumHvyAtoms()
+		mw = mol.GetMolWt()
+
+		#calculate ligand efficiency
+		le = round(energy/ha*-1, 3)
+
+		#calculate logP
+		des = openbabel.OBDescriptor.FindType('logP')
+		logp = des.Predict(mol)
+
+		#calculate ligand lipophilic efficiency
+		lle = -1*logki - logp
+
+		#calculate fit quality
+		le_scale = 0.0715 + 7.5328/ha + 25.7079/math.pow(ha,2) - 361.4722/math.pow(ha, 3)
+		fq = round(le/le_scale, 3)
+
+		#calculate ligand efficiency lipophilic price
+		lelp = round(logp/le, 3)
+
+		return (logki, le, lle, fq, lelp)
+	else:
+		return (logki, None, None, None, None)
 
 if __name__ == '__main__':
 	import sys

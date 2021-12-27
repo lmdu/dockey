@@ -1,13 +1,18 @@
+import os
+
 from PySide6.QtGui import *
 from PySide6.QtCore import *
 from PySide6.QtWidgets import *
 
+from utils import *
+
 __all__ = ['BrowseInput', 'CreateProjectDialog', 'AutodockConfigDialog',
-			'AutodockVinaConfigDialog']
+			'AutodockVinaConfigDialog', 'ExportImageDialog']
 
 class BrowseInput(QWidget):
-	def __init__(self, parent=None, is_file=True):
+	def __init__(self, parent=None, is_file=True, is_save=False, _filter=""):
 		super(BrowseInput, self).__init__(parent)
+		self.filter = _filter
 		self.input = QLineEdit(self)
 		self.input.setReadOnly(True)
 		self.browse = QPushButton(self)
@@ -15,7 +20,10 @@ class BrowseInput(QWidget):
 		self.browse.setIcon(QIcon("icons/folder.svg"))
 
 		if is_file:
-			self.browse.clicked.connect(self.select_file)
+			if is_save:
+				self.browse.clicked.connect(self.select_save)
+			else:
+				self.browse.clicked.connect(self.select_file)
 		else:
 			self.browse.clicked.connect(self.select_folder)
 
@@ -28,8 +36,15 @@ class BrowseInput(QWidget):
 		self.setLayout(layout)
 
 	@Slot()
+	def select_save(self):
+		exe, _ = QFileDialog.getSaveFileName(self, filter=self.filter)
+
+		if exe:
+			self.input.setText(exe)
+
+	@Slot()
 	def select_file(self):
-		exe, _ = QFileDialog.getOpenFileName(self)
+		exe, _ = QFileDialog.getOpenFileName(self, filter=self.filter)
 
 		if exe:
 			self.input.setText(exe)
@@ -195,3 +210,69 @@ class AutodockVinaConfigDialog(ProgramConfigDialog):
 		('Tools/autodock_vina', 'Autodock Vina executable'),
 		('Tools/mgltools', 'MGLTools directory')
 	]
+
+class ExportImageDialog(QDialog):
+	def __init__(self, parent=None):
+		super(ExportImageDialog, self).__init__(parent)
+		self.options = None
+
+		self.setWindowTitle("Export as PNG Image")
+		self.resize(QSize(450, 10))
+		layout = QFormLayout()
+		layout.setVerticalSpacing(10)
+		self.setLayout(layout)
+
+		self.file_input = BrowseInput(self, is_save=True, _filter="Image (*.png)")
+		self.width_input = QSpinBox(self)
+		self.width_input.setRange(0, 100000)
+		self.width_input.setValue(1000)
+		self.height_input = QSpinBox(self)
+		self.height_input.setRange(0, 100000)
+		self.height_input.setValue(1000)
+		self.dpi_input = QComboBox(self)
+		self.dpi_input.addItems(['72', '96', '150', '200', '300', '600'])
+		self.dpi_input.setCurrentIndex(1)
+
+		layout.addRow("Image file: ", self.file_input)
+
+		sub_layout = QHBoxLayout()
+		sub_layout.addWidget(QLabel("Width: ", self))
+		sub_layout.addWidget(self.width_input, 1)
+		sub_layout.addSpacing(20)
+		sub_layout.addWidget(QLabel("Height: ", self))
+		sub_layout.addWidget(self.height_input, 1)
+		sub_layout.addSpacing(20)
+		sub_layout.addWidget(QLabel("DPI: ", self))
+		sub_layout.addWidget(self.dpi_input, 1)
+
+		layout.addRow(sub_layout)
+
+		action_box = QDialogButtonBox(QDialogButtonBox.Save | QDialogButtonBox.Cancel)
+		action_box.accepted.connect(self.save_image)
+		action_box.rejected.connect(self.reject)
+
+		layout.addRow(action_box)
+
+	@Slot()
+	def save_image(self):
+		image = self.file_input.get_text()
+
+		if not image:
+			return QMessageBox.warning(self, "Input Warning",
+				"Please select a save file"
+			)
+
+		self.options = AttrDict({
+			'image': self.file_input.get_text(),
+			'width': self.width_input.value(),
+			'height': self.height_input.value(),
+			'dpi': int(self.dpi_input.currentText()),
+		})
+
+		self.accept()
+
+	@classmethod
+	def save_to_png(cls, parent):
+		dlg = cls(parent)
+		if dlg.exec():
+			return dlg.options

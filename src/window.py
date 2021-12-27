@@ -100,18 +100,19 @@ class DockeyMainWindow(QMainWindow):
 		self.cmd.reinitialize()
 
 		name = index.data(Qt.DisplayRole)
-		sql = "SELECT * FROM molecular WHERE id=?"
-		mol = DB.get_dict(sql, (index.row()+1,))
+		sql = "SELECT id,type,pdb FROM molecular WHERE name=?"
+		mol = DB.get_row(sql, (name,))
 
-		self.cmd.load(mol.path)
-		self.current_molecular = mol
+		self.cmd.read_pdbstr(mol[2], name)
+		self.current_molecular = AttrDict(id=mol[0], type=mol[1], name=name)
 
-		sql = "SELECT * FROM grid WHERE rid=?"
-		data = DB.get_dict(sql, (mol.id,))
+		if mol[1] == 1:
+			sql = "SELECT * FROM grid WHERE rid=?"
+			data = DB.get_dict(sql, (mol[0],))
 
-		if data:
-			self.box_adjuster.params.update_grid(data)
-			draw_gridbox(self.cmd, self.box_adjuster.params)
+			if data:
+				self.box_adjuster.params.update_grid(data)
+				draw_gridbox(self.cmd, self.box_adjuster.params)
 
 	def create_gridbox_adjuster(self):
 		self.box_adjuster = GridBoxSettingPanel(self)
@@ -132,8 +133,9 @@ class DockeyMainWindow(QMainWindow):
 		#self.job_table.setAlternatingRowColors(True)
 		self.job_dock = QDockWidget("Jobs", self)
 		self.job_dock.setWidget(self.job_table)
-		self.job_dock.setAllowedAreas(Qt.TopDockWidgetArea | Qt.BottomDockWidgetArea | Qt.LeftDockWidgetArea)
-		self.addDockWidget(Qt.BottomDockWidgetArea, self.job_dock, Qt.Vertical)
+		self.job_dock.setAllowedAreas(Qt.TopDockWidgetArea | Qt.BottomDockWidgetArea
+			| Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea)
+		self.addDockWidget(Qt.LeftDockWidgetArea, self.job_dock, Qt.Vertical)
 		self.job_dock.setVisible(True)
 
 	@Slot()
@@ -156,6 +158,7 @@ class DockeyMainWindow(QMainWindow):
 
 	def create_pose_table(self):
 		self.pose_table = DockeyTableView(self)
+		self.pose_table.verticalHeader().hide()
 		self.pose_table.setSelectionBehavior(QAbstractItemView.SelectRows)
 		self.pose_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
 		self.pose_table.clicked.connect(self.on_pose_changed)
@@ -173,21 +176,23 @@ class DockeyMainWindow(QMainWindow):
 		new_index = self.pose_model.index(index.row(), 0)
 		pid = new_index.data(Qt.DisplayRole)
 
-		sql = "SELECT jid, ligand FROM pose WHERE id=? LIMIT 1"
+		sql = "SELECT jid, mode FROM {} WHERE id=? LIMIT 1".format(
+			self.pose_model.table
+		)
 		jid, pose = DB.get_row(sql, (pid,))
 
 		sql = (
-			"SELECT m1.name,m2.name,m1.path FROM jobs AS j "
+			"SELECT m1.name,m2.name,m1.pdb FROM jobs AS j "
 			"LEFT JOIN molecular AS m1 ON m1.id=j.rid "
 			"LEFT JOIN molecular AS m2 ON m2.id=j.lid "
 			"WHERE j.id=? LIMIT 1"
 		)
 
-		receptor, ligand, rpath = DB.get_row(sql, (jid,))
+		receptor, ligand, rpdb = DB.get_row(sql, (jid,))
 
 		self.cmd.delete('all')
 		self.cmd.reinitialize()
-		self.cmd.load(rpath, receptor)
+		self.cmd.read_pdbstr(rpdb, receptor)
 		self.cmd.read_pdbstr(pose, ligand)
 		#self.cmd.orient()
 		self.cmd.zoom()
@@ -200,23 +205,39 @@ class DockeyMainWindow(QMainWindow):
 	def create_job_model(self):
 		self.job_model = JobsTableModel()
 		self.job_table.setModel(self.job_model)
+		fm = self.fontMetrics()
+		header = self.job_table.horizontalHeader()
+		header.setStretchLastSection(False)
+		#header.resizeSection(0, fm.maxWidth()*3)
+		#header.resizeSection(3, fm.maxWidth()*5)
 		#self.job_table.hideColumn(0)
 		#self.job_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
-
+		header.setSectionResizeMode(0, QHeaderView.ResizeToContents)
+		header.setSectionResizeMode(1, QHeaderView.Stretch)
+		header.setSectionResizeMode(2, QHeaderView.Stretch)
+		header.setSectionResizeMode(3, QHeaderView.ResizeToContents)
+		header.setSectionResizeMode(4, QHeaderView.ResizeToContents)
 	
 	def create_pose_model(self):
 		self.pose_model = PoseTableModel()
 		self.pose_table.setModel(self.pose_model)
+		self.pose_table.hideColumn(0)
+		self.pose_table.hideColumn(1)
 
 	def create_actions(self):
-		self.new_project_act = QAction("&New project", self,
+		self.new_project_act = QAction("&New Project...", self,
 			shortcut = QKeySequence.New,
 			triggered = self.new_project
 		)
 
-		self.open_project_act = QAction("&Open project", self,
+		self.open_project_act = QAction("&Open Project...", self,
 			shortcut = QKeySequence.Open,
 			triggered = self.open_project
+		)
+
+		self.save_project_as_act = QAction("&Save Project As...", self,
+			shortcut = QKeySequence.SaveAs,
+			triggered = self.save_project_as
 		)
 
 		self.open_project_dir_act = QAction("&Show project in explorer", self,
@@ -228,12 +249,20 @@ class DockeyMainWindow(QMainWindow):
 			triggered = self.close_project
 		)
 
-		self.import_receptor_act = QAction("&Import Receptors", self,
+		self.import_receptor_act = QAction("&Import Receptors...", self,
 			triggered = self.import_receptors
 		)
 
-		self.import_ligand_act = QAction("&Import Ligands", self,
+		self.import_ligand_act = QAction("&Import Ligands...", self,
 			triggered = self.import_ligands
+		)
+
+		self.export_image_act = QAction("&Export As Image...", self,
+			triggered = self.export_as_image
+		)
+
+		self.export_file_act = QAction("&Export As File...", self,
+			triggered = self.export_as_file
 		)
 
 		#view actions
@@ -299,10 +328,14 @@ class DockeyMainWindow(QMainWindow):
 		self.file_menu = self.menuBar().addMenu("&File")
 		self.file_menu.addAction(self.new_project_act)
 		self.file_menu.addAction(self.open_project_act)
+		self.file_menu.addAction(self.save_project_as_act)
 		self.file_menu.addAction(self.close_project_act)
 		self.file_menu.addSeparator()
 		self.file_menu.addAction(self.import_receptor_act)
 		self.file_menu.addAction(self.import_ligand_act)
+		self.file_menu.addSeparator()
+		self.file_menu.addAction(self.export_image_act)
+		self.file_menu.addAction(self.export_file_act)
 
 		self.edit_menu = self.menuBar().addMenu("&Edit")
 
@@ -358,8 +391,9 @@ class DockeyMainWindow(QMainWindow):
 		DB.connect(db_file)
 
 	def new_project(self):
-		folder = CreateProjectDialog.get_project_folder(self)
+		#folder = CreateProjectDialog.get_project_folder(self)
 
+		'''
 		if not folder:
 			return
 
@@ -378,34 +412,55 @@ class DockeyMainWindow(QMainWindow):
 		except:
 			return QMessageBox.critical(self, "Error",
 				"Could not create project directory")
+		'''
 
-		db_file = os.path.join(folder, 'dockey.db')
-		self.create_db_connect(db_file)
-		self.project_folder = folder
+		project_file, _ = QFileDialog.getSaveFileName(self,
+			caption = "New Project File",
+			filter = "Dockey file (*.dky)"
+		)
 
+		if not project_file:
+			return
+
+		self.create_db_connect(project_file)
+
+		#db_file = os.path.join(folder, 'dockey.db')
+		#self.create_db_connect(db_file)
+		#self.project_folder = folder
+
+		'''
 		DB.insert_rows("INSERT INTO option VALUES (?,?,?)", [
 			(None, 'root_dir', folder),
 			(None, 'data_dir', data_dir),
 			(None, 'jobs_dir', jobs_dir)
 		])
+		'''
 
 	def open_project(self):
-		folder = QFileDialog.getExistingDirectory(self)
+		#folder = QFileDialog.getExistingDirectory(self)
 
-		if not folder:
+		project_file, _ = QFileDialog.getOpenFileName(self, filter="Dockey file (*.dky)")
+
+		if not project_file:
 			return
 
-		db_file = os.path.join(folder, 'dockey.db')
+		#if not folder:
+		#	return
 
-		if not os.path.exists(db_file):
-			return QMessageBox.critical(self, "Error",
-				"Could not find dockey.db file in {}".format(folder))
+		#db_file = os.path.join(folder, 'dockey.db')
 
-		self.create_db_connect(db_file)
-		self.project_folder = folder
+		#if not os.path.exists(db_file):
+		#	return QMessageBox.critical(self, "Error",
+		#		"Could not find dockey.db file in {}".format(folder))
+
+		self.create_db_connect(project_file)
+		#self.project_folder = folder
 
 		self.mol_model.select()
 		self.job_model.select()
+
+	def save_project_as(self):
+		pass
 
 	def open_project_dir(self):
 		QDesktopServices.openUrl(QUrl.fromLocalFile(self.project_folder))
@@ -414,28 +469,24 @@ class DockeyMainWindow(QMainWindow):
 		pass
 
 	def import_moleculars(self, mols, _type=1):
-		sql = "INSERT INTO molecular VALUES (?,?,?,?,?)"
+		sql = "INSERT INTO molecular VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)"
 		rows = []
 
 		for mol in mols:
-			qfi = QFileInfo(mol)
-			base_name = qfi.baseName()
-			file_name = qfi.fileName()
-			suffix = qfi.suffix()
-
-			new_path = os.path.join(self.project_folder, 'data', file_name)
-			QFile(mol).copy(new_path)
-
-			rows.append([None, base_name, _type, suffix, new_path])
+			mi = get_molecule_information(mol)
+			rows.append([None, mi.name, _type, mi.pdb, mi.atoms, mi.bonds,
+				mi.hvyatoms, mi.residues, mi.rotors, mi.formula, mi.energy,
+				mi.weight, mi.logp
+			])
 
 		DB.insert_rows(sql, rows)
 
-		molname = ['','receptor', 'ligand'][_type]
+		mol_type = ['', 'receptor', 'ligand'][_type]
 
 		if len(rows) == 1:
-			self.show_message("Import {} {}".format(molname, rows[0][1]))
+			self.show_message("Import {} {}".format(mol_type, rows[0][1]))
 		else:
-			self.show_message("Import {} {}s".format(len(rows), molname))
+			self.show_message("Import {} {}s".format(len(rows), mol_type))
 
 		self.mol_model.select()
 
@@ -466,6 +517,22 @@ class DockeyMainWindow(QMainWindow):
 			return
 
 		self.import_moleculars(ligands, 2)
+
+	def export_as_image(self):
+		opt = ExportImageDialog.save_to_png(self)
+
+		if not opt:
+			return
+
+		self.cmd.png(opt.image, opt.width, opt.height, opt.dpi, ray=1)
+
+	def export_as_file(self):
+		outfile, _ = QFileDialog.getSaveFileName(self, filter="PDB (*.pdb);;MOL (*.mol);;MOL2 (*.mol2)")
+
+		if not outfile:
+			return
+
+		self.cmd.save(outfile)
 
 	def pymol_sidebar_toggle(self, checked):
 		self.pymol_viewer.sidebar_controler(checked)
@@ -498,12 +565,17 @@ class DockeyMainWindow(QMainWindow):
 		self.box_dock.setVisible(True)
 
 	def delete_grid_box(self):
-		self.cmd.delete('gridbox')
-		self.box_adjuster.params.reset()
-		sql = "DELETE FROM grid WHERE id=?"
-		DB.query(sql, (self.current_molecular.id,))
+		if self.current_molecular:
+			self.cmd.delete('gridbox')
+			self.box_adjuster.params.reset()
+			sql = "DELETE FROM grid WHERE id=?"
+			DB.query(sql, (self.current_molecular.id,))
 
 	def get_jobs(self):
+		for row in DB.query("SELECT id FROM jobs"):
+			yield row[0]
+
+		'''
 		num = DB.get_one("SELECT COUNT(1) FROM jobs")
 		if not num: return
 
@@ -535,6 +607,7 @@ class DockeyMainWindow(QMainWindow):
 				'spacing': grid[8],
 				'root': self.project_folder
 			})
+		'''
 
 	def generate_job_list(self):
 		receptors = DB.get_column("SELECT id FROM molecular WHERE type=1")
@@ -569,7 +642,7 @@ class DockeyMainWindow(QMainWindow):
 		return len(rows)
 
 	def submit_jobs(self):
-		for job in self.get_jobs():
+		for job in DB.query("SELECT id FROM jobs"):
 			if self.dock_engine == 'autodock':
 				worker = AutodockWorker(job, self.dock_params)
 			elif self.dock_engine == 'vina':
@@ -592,6 +665,7 @@ class DockeyMainWindow(QMainWindow):
 
 		DB.query("DELETE FROM jobs")
 		DB.query("DELETE FROM pose")
+
 		self.job_model.select()
 		self.pose_model.select()
 
@@ -611,11 +685,13 @@ class DockeyMainWindow(QMainWindow):
 		params = dlg.params
 
 		self.generate_job_list()
-		
+
 		for job in self.get_jobs():
 			worker = AutodockWorker(job, params)
 			worker.signals.refresh.connect(self.job_model.update_row)
 			self.pool.start(worker)
+
+		DB.set_option('tool', 'autodock4')
 
 	def run_autodock_vina(self):
 		if not AutodockVinaConfigDialog.check_executable(self):
@@ -631,11 +707,13 @@ class DockeyMainWindow(QMainWindow):
 		params = dlg.params
 
 		self.generate_job_list()
-		
+
 		for job in self.get_jobs():
 			worker = AutodockVinaWorker(job, params)
 			worker.signals.refresh.connect(self.job_model.update_row)
 			self.pool.start(worker)
+
+		DB.set_option('tool', 'vina')
 
 	def open_about(self):
 		QMessageBox.about(self, "About dockey", DOCKEY_ABOUT)

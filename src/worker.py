@@ -20,51 +20,78 @@ class WorkerSignals(QObject):
 	refresh = Signal(int)
 
 class BaseWorker(QRunnable):
-	def __init__(self, *args, **kwargs):
+	def __init__(self, job, params):
 		super(BaseWorker, self).__init__()
-		self.args = args
-		self.kwargs = kwargs
+		self.job = job
+		self.params = params
 		self.signals = WorkerSignals()
 		self.settings = QSettings()
 
-		self.job_id = args[0].id
+	def get_job(self):
+		sql = (
+			"SELECT j.id,j.rid,j.lid,m1.name,m1.pdb,m2.name,m2.pdb "
+			"FROM jobs AS j LEFT JOIN molecular AS m1 ON m1.id=j.rid "
+			"LEFT JOIN molecular AS m2 ON m2.id=j.lid WHERE j.id=?"
+		)
+		job = DB.get_row(sql, (self.job,))
+		grid = DB.get_row("SELECT * FROM grid WHERE rid=?", (job[1],))
+
+		return AttrDict({
+			'jid': job[0],
+			'rid': job[1],
+			'lid': job[2],
+			'rname': job[3],
+			'rpdb': job[4],
+			'lname': job[5],
+			'lpdb': job[6],
+			'x': grid[2],
+			'y': grid[3],
+			'z': grid[4],
+			'cx': grid[5],
+			'cy': grid[6],
+			'cz': grid[7],
+			'spacing': grid[8]
+		})
 
 	def update_status(self, status):
 		sql = "UPDATE jobs SET status=? WHERE id=?"
-		DB.query(sql, (status, self.job_id))
-		self.signals.refresh.emit(self.job_id)
+		DB.query(sql, (status, self.job))
+		self.signals.refresh.emit(self.job)
 
 	def update_progress(self, progress):
 		sql = "UPDATE jobs SET progress=? WHERE id=?"
-		DB.query(sql, (progress, self.job_id))
-		self.signals.refresh.emit(self.job_id)
+		DB.query(sql, (progress, self.job))
+		self.signals.refresh.emit(self.job)
 
 	def update_message(self, message):
 		sql = "UPDATE jobs SET message=? WHERE id=?"
-		DB.query(sql, (message, self.job_id))
-		self.signals.refresh.emit(self.job_id)
+		DB.query(sql, (message, self.job))
+		self.signals.refresh.emit(self.job)
 
 	def update_started(self):
 		started = int(time.time())
 		sql = "UPDATE jobs SET status=?,progress=?,started=? WHERE id=?"
-		DB.query(sql, (2, 0, started, self.job_id))
-		self.signals.refresh.emit(self.job_id)
+		DB.query(sql, (2, 0, started, self.job))
+		self.signals.refresh.emit(self.job)
 
 	def update_finished(self):
 		finished = int(time.time())
 		sql = "UPDATE jobs SET progress=?,finished=? WHERE id=?"
-		DB.query(sql, (100, finished, self.job_id))
-		self.signals.refresh.emit(self.job_id)
+		DB.query(sql, (100, finished, self.job))
+		self.signals.refresh.emit(self.job)
 
 	def update_error(self, error):
 		sql = "UPDATE jobs SET status=?,message=? WHERE id=?"
-		DB.query(sql, (3, error, self.job_id))
-		self.signals.refresh.emit(self.job_id)
+		DB.query(sql, (3, error, self.job))
+		self.signals.refresh.emit(self.job)
 
 	def update_success(self):
 		sql = "UPDATE jobs SET status=?,message=? WHERE id=?"
-		DB.query(sql, (1, "The job was successfully finished", self.job_id))
-		self.signals.refresh.emit(self.job_id)
+		DB.query(sql, (1, "The job was successfully finished", self.job))
+		self.signals.refresh.emit(self.job)
+
+	def pipline(self):
+		pass
 
 
 	@Slot()
@@ -72,15 +99,25 @@ class BaseWorker(QRunnable):
 		self.update_started()
 
 		try:
-			self.pipline(*self.args, **self.kwargs)
+			#make a temp work dir
+			temp_dir = QTemporaryDir()
+			if not temp_dir.isValid():
+				raise Exception(
+					"Could not create temporary work directory, {}".format(
+						temp_dir.errorString()
+					)
+				)
+			self.work_dir = temp_dir.path()
+
+			#run worker
+			self.pipline()
 		except:
 			self.update_error(traceback.format_exc())
 		else:
 			self.update_success()
 		finally:
-			pass
-
-		self.update_finished()
+			temp_dir.remove()
+			self.update_finished()
 
 	def get_mgltools(self):
 		mgltools_path = self.settings.value('Tools/MGLTools')
@@ -158,8 +195,6 @@ class AutodockWorker(BaseWorker):
 		read_start = 0
 
 		while proc.poll() is None:
-			QThread.sleep(1)
-
 			if QFileInfo(glg_file).size() > read_start:
 				p = 0
 
@@ -174,6 +209,8 @@ class AutodockWorker(BaseWorker):
 
 				if p > 0:
 					self.update_progress(p)
+			else:
+				QThread.sleep(1)
 
 
 		if proc.returncode != 0:
@@ -194,8 +231,6 @@ class AutodockWorker(BaseWorker):
 		read_start = 0
 
 		while proc.poll() is None:
-			QThread.sleep(1)
-
 			if QFileInfo(dlg_file).size() > read_start:
 				p = 0
 
@@ -211,6 +246,8 @@ class AutodockWorker(BaseWorker):
 
 				if p > 0:
 					self.update_progress(p)
+			else:
+				QThread.sleep(1)
 
 		if proc.returncode != 0:
 			raise Exception(proc.stderr.read())
@@ -248,16 +285,16 @@ class AutodockWorker(BaseWorker):
 					ki = runs[rid][0]
 					crmsd = float(cols[4])
 					rrmsd = float(cols[5])
-					ligand = convert_pdbqt_to_pdb(''.join(runs[rid][1]))
+					pose = convert_pdbqt_to_pdb(''.join(runs[rid][1]))
 
-					rows.append((None, job.id, rid, energy, ki, crmsd, rrmsd, rank, ligand))
+					rows.append((None, job.id, rid, energy, ki, crmsd, rrmsd, rank, pose))
 
-		sql = "INSERT INTO pose VALUES (?,?,?,?,?,?,?,?,?)"
+		sql = "INSERT INTO pose_ad4 VALUES (?,?,?,?,?,?,?,?,?)"
 		DB.insert_rows(sql, rows)
 
 class AutodockVinaWorker(BaseWorker):
-	def __init__(self, *args, **kwargs):
-		super(AutodockVinaWorker, self).__init__(*args, **kwargs)
+	def __init__(self, job, params):
+		super(AutodockVinaWorker, self).__init__(job, params)
 
 	def get_commands(self):
 		vina = self.settings.value('Tools/autodock_vina')
@@ -265,28 +302,39 @@ class AutodockVinaWorker(BaseWorker):
 
 		return vina, autogrid
 
-	def pipline(self, job, params):
-		work_dir = os.path.join(job.root, 'jobs', "job.{}.{}.vs.{}".format(
-			job.id, job.rn, job.ln
-		))
+	def pipline(self):
+		#work_dir = os.path.join(job.root, 'jobs', "job.{}.{}.vs.{}".format(
+		#	job.id, job.rn, job.ln
+		#))
+		job = self.get_job()
 
 		#create receptor and ligand dock dir
-		if not os.path.exists(work_dir):
-			os.mkdir(work_dir)
+		#if not os.path.exists(work_dir):
+		#	os.mkdir(work_dir)
 
 		#convert receptor and ligand to pdbqt format
-		rpdbqt = os.path.join(work_dir, "{}.pdbqt".format(job.rn))
-		self.prepare_receptor(job.rp, rpdbqt)
+		rpdb = os.path.join(self.work_dir, "{}.pdb".format(job.rname))
+		rpdbqt = os.path.join(self.work_dir, "{}.pdbqt".format(job.rname))
 
-		lpdbqt = os.path.join(work_dir, "{}.pdbqt".format(job.ln))
-		self.prepare_ligand(job.lp, lpdbqt)
+		with open(rpdb, 'w') as fw:
+			fw.write(job.rpdb)
+
+		self.prepare_receptor(rpdb, rpdbqt)
+
+		lpdb = os.path.join(self.work_dir, "{}.pdb".format(job.lname))
+		lpdbqt = os.path.join(self.work_dir, "{}.pdbqt".format(job.lname))
+
+		with open(lpdb, 'w') as fw:
+			fw.write(job.lpdb)
+
+		self.prepare_ligand(lpdb, lpdbqt)
 
 		#get commands
 		vina, autogrid = self.get_commands()
 
 		#if use autodock scoring function
 		#set autogrid parameter and create gpf parameter file
-		if params.scoring == 'ad4':
+		if self.params.scoring.value == 'ad4':
 			ag_param = AutogridParameter(rpdbqt, lpdbqt, (job.x, job.y, job.z),
 				(job.cx, job.cy, job.cz), job.spacing
 			)
@@ -296,21 +344,19 @@ class AutodockVinaWorker(BaseWorker):
 
 			#run autogrid4
 			#delete the glg log file before new start
-			if QFile.exists(glg_file):
-				QFile.remove(glg_file)
+			#if QFile.exists(glg_file):
+			#	QFile.remove(glg_file)
 
 			self.update_message("Running autogrid")
 			proc = psutil.Popen([autogrid, '-p', gpf_file, '-l', glg_file],
 				stdout = subprocess.PIPE,
 				stderr = subprocess.PIPE,
-				cwd = work_dir
+				cwd = self.work_dir
 			)
 
 			read_start = 0
 
 			while proc.poll() is None:
-				QThread.sleep(1)
-
 				if QFileInfo(glg_file).size() > read_start:
 					p = 0
 
@@ -325,35 +371,39 @@ class AutodockVinaWorker(BaseWorker):
 
 					if p > 0:
 						self.update_progress(p)
+				else:
+					QThread.sleep(1)
 
 			if proc.returncode != 0:
 				raise Exception(proc.stderr.read())
 
-			params.maps.value = job.rn
+			self.params.maps.value = job.rname
+		else:
+			#using autodock score function no need --receptor arg
+			self.params.receptor.value = os.path.basename(rpdbqt)
 
 		#set autodock vina parameters and make config file
-		config_file = os.path.join(work_dir, "config.txt".format(job.rn))
-		out_file = "out.pdbqt"
-		log_file = "out.log"
+		config_file = os.path.join(self.work_dir, "config.txt".format(job.rname))
+		out_file = os.path.join(self.work_dir, "out.pdbqt")
+		log_file = os.path.join(self.work_dir, "out.log")
 
-		params.receptor.value = os.path.basename(rpdbqt)
-		params.ligand.value = os.path.basename(lpdbqt)
-		params.center_x.value = job.cx
-		params.center_y.value = job.cy
-		params.center_z.value = job.cz
-		params.size_x.value = job.x
-		params.size_y.value = job.y
-		params.size_z.value = job.z
-		params.spacing.value = job.spacing
-		params.out.value = out_file
-		params.make_config_file(config_file)
+		self.params.ligand.value = os.path.basename(lpdbqt)
+		self.params.center_x.value = job.cx
+		self.params.center_y.value = job.cy
+		self.params.center_z.value = job.cz
+		self.params.size_x.value = job.x
+		self.params.size_y.value = job.y
+		self.params.size_z.value = job.z
+		self.params.spacing.value = job.spacing
+		self.params.out.value = os.path.basename(out_file)
+		self.params.make_config_file(config_file)
 
 		#run autodock vina
 		self.update_message("Running autodock vina")
 		proc = psutil.Popen([vina, '--config', config_file],
 			stdout = subprocess.PIPE,
 			stderr = subprocess.PIPE,
-			cwd = work_dir,
+			cwd = self.work_dir,
 			encoding = 'utf8'
 		)
 
@@ -361,23 +411,27 @@ class AutodockVinaWorker(BaseWorker):
 		log_fw = open(log_file, 'w')
 
 		while proc.poll() is None:
-			char = proc.stdout.read(1)
+			chars = proc.stdout.read(5)
 
-			if char == '*':
-				star += 1
-				p = round(star/51*100, 2)
-				self.update_progress(p)
+			for char in chars:
+				if char == '*':
+					star += 1
+					
+			p = round(star/51*100, 2)
+			self.update_progress(p)
 
-			if char:
-				log_fw.write(char)
+			if chars:
+				log_fw.write(chars)
 			else:
 				QThread.msleep(500)
 
 		log_fw.write(proc.stdout.read())
+		log_fw.close()
 
 		if proc.returncode != 0:
 			raise Exception(proc.stderr.read())
 
+		self.update_message("Analyzing docking results")
 		rows = []
 		with open(log_file) as fh:
 			for line in fh:
@@ -386,17 +440,33 @@ class AutodockVinaWorker(BaseWorker):
 
 			for line in fh:
 				cols = line.strip().split()
+				run = int(cols[0])
+				energy = float(cols[1])
+				rmsd1 = float(cols[2])
+				rmsd2 = float(cols[3])
 
-				rows.append((None, job.id, int(cols[0]), float(cols[1]),
-				 float(cols[2]), float(cols[3])))
+				rows.append([None, self.job, run, energy, rmsd1, rmsd2])
 
+		modes = {}
 		with open(out_file) as fh:
 			for line in fh:
 				if line.startswith('MODEL'):
-					pass
+					lines = [line]
+					idx = int(line.strip().split()[1]) - 1
+
 				elif line.startswith('ENDMDL'):
-					pass
+					lines.append(line)
+					mode = convert_pdbqt_to_pdb(''.join(lines))
+					modes[idx] = mode
+				else:
+					lines.append(line)
 
-					
+		for i, row in enumerate(rows):
+			mode = modes.get(i, '')
+			lea = ligand_efficiency_assessment(mode, row[3])
+			rows[i].extend(lea)
+			rows[i].append(mode)
 
+		sql = "INSERT INTO pose VALUES (?,?,?,?,?,?,?,?,?,?,?,?)"
+		DB.insert_rows(sql, rows)
 

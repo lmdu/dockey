@@ -714,9 +714,9 @@ class AutodockParameter(Parameter):
 
 	def get_ordered_items(self, algorithm='LGA'):
 		params = {}
-		for p in self.params:
+		for p in self:
 			if self[p].user and (self[p].scope == 'global' or algorithm in self[p].scope):
-				params[k] = self[p]
+				params[p] = self[p]
 
 		return sorted(params.items(), key=lambda x: x[1].order)
 
@@ -737,9 +737,9 @@ class AutodockParameter(Parameter):
 		algorithm = ['LGA', 'GA', 'SA', 'LS'][self.algorithm]
 		
 		params = {}
-		for p in self.params:
+		for p in self:
 			if self[p].scope == 'global' or algorithm in self[p].scope:
-				params[k] = self[p]
+				params[p] = self[p]
 		params = sorted(params.items(), key=lambda x: x[1].order)
 
 		rows = []
@@ -768,7 +768,7 @@ class AutodockParameter(Parameter):
 		with open(gdf_file, 'w') as fw:
 			for row in rows:
 				field = row.split()[0]
-				fw.write("{:<{}}#{}\n".format(row, max_len, self.params[field].comment))
+				fw.write("{:<{}}#{}\n".format(row, max_len, self[field].comment))
 
 		return gdf_file
 
@@ -841,39 +841,39 @@ class AutodockParameterWizard(QWizard):
 		self.create_parameter_widgets(self.algorithm_layout, scope)
 
 	def create_parameter_widgets(self, layout, scope='global'):
-		for cmd, meta in self.params.items():
-			if not meta.user:
+		for p, m in self.params.items():
+			if not m.user:
 				continue
 
-			if scope not in meta.scope:
+			if scope not in m.scope:
 				continue
 
-			if meta.type is int:
+			if m.type is int:
 				editor = QSpinBox(self)
-				if 'range' in meta:
-					_min, _max = meta.range
+				if 'range' in m:
+					_min, _max = m.range
 					editor.setRange(_min, _max)
-				editor.setValue(meta.value)
-				editor.valueChanged.connect(lambda x: self.update_parameter(cmd, x))
-				layout.addRow(meta.comment, editor)
+				editor.setValue(m.value)
+				editor.valueChanged.connect(lambda x: self.update_parameter(p, x))
+				layout.addRow(m.comment, editor)
 
-			elif meta.type is float:
+			elif m.type is float:
 				editor = QDoubleSpinBox(self)
-				if 'range' in meta:
-					_min, _max = meta.range
+				if 'range' in m:
+					_min, _max = m.range
 					editor.setRange(_min, _max)
-				editor.setValue(meta.value)
-				editor.valueChanged.connect(lambda x: self.update_parameter(cmd, x))
-				layout.addRow(meta.comment, editor)
+				editor.setValue(m.value)
+				editor.valueChanged.connect(lambda x: self.update_parameter(p, x))
+				layout.addRow(m.comment, editor)
 
-			elif cmd in ('geometric_schedule', 'set_sw1'):
+			elif p in ('geometric_schedule', 'set_sw1'):
 				pass
 
-			elif cmd == 'linear_schedule':
+			elif p == 'linear_schedule':
 				btn_layout = QHBoxLayout()
 				btn_group = QButtonGroup()
 				line_btn = QRadioButton("Linear", self)
-				line_btn.setChecked(meta.value)
+				line_btn.setChecked(m.value)
 				line_btn.toggled.connect(lambda x: self.update_parameter('linear_schedule', x))
 				geome_btn = QRadioButton("Geometric", self)
 				geome_btn.toggled.connect(lambda x: self.update_parameter('geometric_schedule', x))
@@ -882,9 +882,9 @@ class AutodockParameterWizard(QWizard):
 				btn_layout.addWidget(geome_btn)
 				btn_group.addButton(geome_btn)
 				btn_group.setExclusive(True)
-				layout.addRow(meta.comment, btn_layout)
+				layout.addRow(m.comment, btn_layout)
 
-			elif cmd == 'set_psw1':
+			elif p == 'set_psw1':
 				btn_layout = QHBoxLayout()
 				btn_group = QButtonGroup()
 				sw_btn = QRadioButton("classic", self)
@@ -893,59 +893,59 @@ class AutodockParameterWizard(QWizard):
 				btn_layout.addWidget(sw_btn)
 
 				psw_btn = QRadioButton("pseudo", self)
-				psw_btn.setChecked(meta.value)
+				psw_btn.setChecked(m.value)
 				psw_btn.toggled.connect(lambda x: self.update_parameter('set_psw1', x))
 				btn_group.addButton(psw_btn)
 				btn_layout.addWidget(psw_btn)
 				btn_group.setExclusive(True)
-				layout.addRow(meta.comment, btn_layout)
+				layout.addRow(m.comment, btn_layout)
 
-			elif meta.type is bool:
+			elif m.type is bool:
 				editor = QCheckBox(self)
-				editor.setChecked(meta.value)
-				editor.stateChanged.connect(lambda x: self.update_parameter(cmd, x))
-				layout.addRow(meta.comment, editor)
+				editor.setChecked(m.value)
+				editor.stateChanged.connect(lambda x,p=p: self.update_parameter(p, x))
+				layout.addRow(m.comment, editor)
 
-			elif meta.type is str:
+			elif m.type is str:
 				editor = QLineEdit(self)
-				editor.setText(meta.value)
-				editor.textChanged.connect(lambda x: self.update_parameter(cmd, x))
-				layout.addRow(meta.comment, editor)
+				editor.setText(m.value)
+				editor.textChanged.connect(lambda x,p=p: self.update_parameter(p, x))
+				layout.addRow(m.comment, editor)
 
-			elif 'choices' in meta:
+			elif 'choices' in m:
 				editor = QComboBox(self)
-				editor.addItems(meta.choices)
-				idx = editor.findText(meta.value)
+				editor.addItems(m.choices)
+				idx = editor.findText(m.value)
 				editor.setCurrentIndex(idx)
-				editor.currentTextChanged.connect(lambda x: self.update_parameter(cmd, x))
-				layout.addRow(meta.comment, editor)
+				editor.currentTextChanged.connect(lambda x,p=p: self.update_parameter(p, x))
+				layout.addRow(m.comment, editor)
 
-			elif isinstance(meta.type, list):
-				for i, t in enumerate(meta.type):
+			elif isinstance(m.type, list):
+				for i, t in enumerate(m.type):
 					if t is int:
 						editor = QSpinBox(self)
-						editor.valueChanged.connect(lambda x: self.update_parameter(cmd, x, i))
-						editor.setValue(meta.value[i])
+						editor.valueChanged.connect(lambda x,p=p,i=i: self.update_parameter(p, x, i))
+						editor.setValue(m.value[i])
 					elif t is float:
 						editor = QDoubleSpinBox(self)
-						editor.valueChanged.connect(lambda x: self.update_parameter(cmd, x, i))
-						editor.setValue(meta.value[i])
+						editor.valueChanged.connect(lambda x,p=p,i=i: self.update_parameter(p, x, i))
+						editor.setValue(m.value[i])
 					else:
 						editor = QLineEdit(self)
-						editor.textChanged.connect(lambda x: self.update_parameter(cmd, x, i))
-						editor.setText(meta.value[i])
+						editor.textChanged.connect(lambda x,p=p,i=i: self.update_parameter(p, x, i))
+						editor.setText(m.value[i])
 
-					if 'range' in meta:
-						_min, _max = meta.range
+					if 'range' in m:
+						_min, _max = m.range
 						editor.setRange(_min, _max)
 
 					if i == 0:
-						layout.addRow(meta.comment, editor)
+						layout.addRow(m.comment, editor)
 					else:
 						layout.addRow('', editor)
 
 			else:
-				layout.addRow(QLabel(meta.comment))
+				layout.addRow(QLabel(m.comment))
 
 	def create_docking_page(self):
 		self.docking_page = QWizardPage(self)
@@ -982,7 +982,7 @@ class AutodockVinaParameter(Parameter):
 			default = '',
 			value = '',
 			comment = 'rigid part of the receptor',
-			required = True,
+			required = False,
 			user = False
 		)
 		self.flex = self.make_param(
@@ -991,7 +991,7 @@ class AutodockVinaParameter(Parameter):
 			value = '',
 			comment = 'flexible side chains, if any',
 			required = False,
-			user = True
+			user = False
 		)
 		self.ligand = self.make_param(
 			type = str,
@@ -1204,7 +1204,7 @@ class AutodockVinaParameterWizard(QWizard):
 					editor.setRange(_min, _max)
 
 				editor.setValue(m.value)
-				editor.valueChanged.connect(lambda x: self.update_parameter(p, x))
+				editor.valueChanged.connect(lambda x, p=p: self.update_parameter(p, x))
 				self.parameter_layout.addRow(m.comment, editor)
 
 			elif m.type is float:
@@ -1215,14 +1215,14 @@ class AutodockVinaParameterWizard(QWizard):
 					editor.setRange(_min, _max)
 
 				editor.setValue(m.value)
-				editor.valueChanged.connect(lambda x: self.update_parameter(p, x))
+				editor.valueChanged.connect(lambda x, p=p: self.update_parameter(p, x))
 				self.parameter_layout.addRow(m.comment, editor)
 
 			elif p == 'scoring':
 				editor = QComboBox(self)
 				editor.addItems(m.choices)
 				editor.setCurrentIndex(0)
-				editor.currentTextChanged.connect(lambda x: self.update_parameter(p, x))
+				editor.currentTextChanged.connect(lambda x, p=p: self.update_parameter(p, x))
 				self.parameter_layout.addRow(m.comment, editor)
 
 	def create_finish_page(self):

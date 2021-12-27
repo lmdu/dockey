@@ -7,8 +7,16 @@ DB_TABLES = {
 		('id', 'INTEGER PRIMARY KEY'),
 		('name', 'TEXT'),
 		('type', 'INTEGER'),
-		('format', 'TEXT'),
-		('path', 'TEXT')
+		('pdb', 'TEXT'),
+		('atoms', 'INTEGER'),
+		('bonds', 'INTEGER'),
+		('hvyatoms', 'INTEGER'),
+		('residues', 'INTEGER'),
+		('rotors', 'INTEGER'),
+		('formula', 'TEXT'),
+		('energy', 'REAL'),
+		('weight', 'REAL'),
+		('logp', 'REAL')
 	],
 	'grid': [
 		('id', 'INTEGER PRIMARY KEY'),
@@ -31,25 +39,19 @@ DB_TABLES = {
 		('finished', 'INTEGER'),
 		('message', 'TEXT')
 	],
-	'pose_ad4': [
+	'pose': [
 		('id', 'INTEGER PRIMARY KEY'),
 		('jid', 'INTEGER'),
 		('run', 'INTEGER'),
 		('energy', 'REAL'),
-		('ki', 'TEXT'),
-		('crmsd', 'REAL'),
-		('rrmsd', 'REAL'),
-		('rank', 'INTEGER'),
-		('pose', 'TEXT')
-	],
-	'pose_vina': [
-		('id', 'INTEGER PRIMARY KEY'),
-		('jid', 'INTEGER'),
-		('mode', 'INTEGER'),
-		('affinity', 'REAL'),
-		('lrmsd', 'REAL'),
-		('urmsd', 'REAL'),
-		('pose', 'REAL')
+		('rmsd1', 'REAL'),
+		('rmsd2', 'REAL'),
+		('logki', 'REAL'),
+		('le', 'REAL'),
+		('lle', 'REAL'),
+		('fq', 'REAL'),
+		('lelp', 'REAL'),
+		('mode', 'TEXT')
 	],
 	'option': [
 		('id', 'INTEGER PRIMARY KEY'),
@@ -131,10 +133,8 @@ class DataBackend:
 
 	def get_dict(self, sql, paras=None):
 		cur = self.query(sql, paras)
-		table = sql.split()[3]
-		fields = get_fields(table)
-		row = cur.fetchone()
-		if row:
+		for row in cur:
+			fields = [col[0] for col in cur.getdescription()]
 			return DataRow(zip(fields, row))
 
 	def get_column(self, sql, paras=None):
@@ -162,6 +162,14 @@ class DataBackend:
 	def get_option(self, name):
 		sql = "SELECT value FROM option WHERE name=? LIMIT 1"
 		return self.get_one(sql, (name,))
+
+	def set_option(self, name, val):
+		if self.get_option(name):
+			sql = "UPDATE option SET value=? WHERE name=?"
+			self.query(sql, (val, name))
+		else:
+			sql = "INSERT INTO option VALUES (?,?,?)"
+			self.query(sql, (None, name, val))
 
 
 DB = DataBackend()
