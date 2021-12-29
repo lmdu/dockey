@@ -1,0 +1,1 @@
+hiddenimports = ["pymol.chempy.*"]

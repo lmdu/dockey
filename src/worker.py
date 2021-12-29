@@ -22,22 +22,22 @@ class WorkerSignals(QObject):
 class BaseWorker(QRunnable):
 	def __init__(self, job, params):
 		super(BaseWorker, self).__init__()
-		self.job = job
+		self.job = self.get_job(job)
 		self.params = params
 		self.signals = WorkerSignals()
 		self.settings = QSettings()
 
-	def get_job(self):
+	def get_job(self, _id):
 		sql = (
 			"SELECT j.id,j.rid,j.lid,m1.name,m1.pdb,m2.name,m2.pdb "
 			"FROM jobs AS j LEFT JOIN molecular AS m1 ON m1.id=j.rid "
 			"LEFT JOIN molecular AS m2 ON m2.id=j.lid WHERE j.id=?"
 		)
-		job = DB.get_row(sql, (self.job,))
+		job = DB.get_row(sql, (_id,))
 		grid = DB.get_row("SELECT * FROM grid WHERE rid=?", (job[1],))
 
 		return AttrDict({
-			'jid': job[0],
+			'id': job[0],
 			'rid': job[1],
 			'lid': job[2],
 			'rname': job[3],
@@ -53,42 +53,46 @@ class BaseWorker(QRunnable):
 			'spacing': grid[8]
 		})
 
+	def save_pose(self, poses):
+		sql = "INSERT INTO pose VALUES (?,?,?,?,?,?,?,?,?,?,?,?)"
+		DB.insert_rows(sql, poses)
+
 	def update_status(self, status):
 		sql = "UPDATE jobs SET status=? WHERE id=?"
-		DB.query(sql, (status, self.job))
-		self.signals.refresh.emit(self.job)
+		DB.query(sql, (status, self.job.id))
+		self.signals.refresh.emit(self.job.id)
 
 	def update_progress(self, progress):
 		sql = "UPDATE jobs SET progress=? WHERE id=?"
-		DB.query(sql, (progress, self.job))
-		self.signals.refresh.emit(self.job)
+		DB.query(sql, (progress, self.job.id))
+		self.signals.refresh.emit(self.job.id)
 
 	def update_message(self, message):
 		sql = "UPDATE jobs SET message=? WHERE id=?"
-		DB.query(sql, (message, self.job))
-		self.signals.refresh.emit(self.job)
+		DB.query(sql, (message, self.job.id))
+		self.signals.refresh.emit(self.job.id)
 
 	def update_started(self):
 		started = int(time.time())
 		sql = "UPDATE jobs SET status=?,progress=?,started=? WHERE id=?"
-		DB.query(sql, (2, 0, started, self.job))
-		self.signals.refresh.emit(self.job)
+		DB.query(sql, (2, 0, started, self.job.id))
+		self.signals.refresh.emit(self.job.id)
 
 	def update_finished(self):
 		finished = int(time.time())
 		sql = "UPDATE jobs SET progress=?,finished=? WHERE id=?"
-		DB.query(sql, (100, finished, self.job))
-		self.signals.refresh.emit(self.job)
+		DB.query(sql, (100, finished, self.job.id))
+		self.signals.refresh.emit(self.job.id)
 
 	def update_error(self, error):
 		sql = "UPDATE jobs SET status=?,message=? WHERE id=?"
-		DB.query(sql, (3, error, self.job))
-		self.signals.refresh.emit(self.job)
+		DB.query(sql, (3, error, self.job.id))
+		self.signals.refresh.emit(self.job.id)
 
 	def update_success(self):
 		sql = "UPDATE jobs SET status=?,message=? WHERE id=?"
-		DB.query(sql, (1, "The job was successfully finished", self.job))
-		self.signals.refresh.emit(self.job)
+		DB.query(sql, (1, "The job was successfully finished", self.job.id))
+		self.signals.refresh.emit(self.job.id)
 
 	def pipline(self):
 		pass
@@ -145,8 +149,8 @@ class BaseWorker(QRunnable):
 		self.execute(py27, args, os.path.dirname(infile))
 
 class AutodockWorker(BaseWorker):
-	def __init__(self, *args, **kwargs):
-		super(AutodockWorker, self).__init__(*args, **kwargs)
+	def __init__(self, job, params):
+		super(AutodockWorker, self).__init__(job, params)
 
 	def get_commands(self):
 		autodock = self.settings.value('Tools/autodock_4')
@@ -154,25 +158,27 @@ class AutodockWorker(BaseWorker):
 
 		return autodock, autogrid
 
-	def pipline(self, job, params):
-		work_dir = os.path.join(job.root, 'jobs', "job.{}.{}.vs.{}".format(
-			job.id, job.rn, job.ln
-		))
-
-		#create receptor and ligand dock dir
-		if not os.path.exists(work_dir):
-			os.mkdir(work_dir)
-
+	def pipline(self):
 		#convert receptor and ligand to pdbqt format
-		rpdbqt = os.path.join(work_dir, "{}.pdbqt".format(job.rn))
-		self.prepare_receptor(job.rp, rpdbqt)
+		rpdb = os.path.join(self.work_dir, "{}.pdb".format(self.job.rname))
+		rpdbqt = os.path.join(self.work_dir, "{}.pdbqt".format(self.job.rname))
 
-		lpdbqt = os.path.join(work_dir, "{}.pdbqt".format(job.ln))
-		self.prepare_ligand(job.lp, lpdbqt)
+		with open(rpdb, 'w') as fw:
+			fw.write(self.job.rpdb)
+
+		self.prepare_receptor(rpdb, rpdbqt)
+
+		lpdb = os.path.join(self.work_dir, "{}.pdb".format(self.job.lname))
+		lpdbqt = os.path.join(self.work_dir, "{}.pdbqt".format(self.job.lname))
+
+		with open(lpdb, 'w') as fw:
+			fw.write(self.job.lpdb)
+		
+		self.prepare_ligand(lpdb, lpdbqt)
 
 		#set autogrid parameter and create gpf parameter file
-		ag_param = AutogridParameter(rpdbqt, lpdbqt, (job.x, job.y, job.z),
-			(job.cx, job.cy, job.cz), job.spacing
+		ag_param = AutogridParameter(rpdbqt, lpdbqt, (self.job.x, self.job.y, self.job.z),
+			(self.job.cx, self.job.cy, self.job.cz), self.job.spacing
 		)
 		gpf_file = ag_param.make_gpf_file()
 		glg_file = gpf_file.replace('.gpf', '.glg')
@@ -180,16 +186,11 @@ class AutodockWorker(BaseWorker):
 
 		autodock, autogrid = self.get_commands()
 
-		#run autogrid4
-		#delete the glg log file before new start
-		if QFile.exists(glg_file):
-			QFile.remove(glg_file)
-
 		self.update_message("Running autogrid")
 		proc = psutil.Popen([autogrid, '-p', gpf_file, '-l', glg_file],
 			stdout = subprocess.PIPE,
 			stderr = subprocess.PIPE,
-			cwd = work_dir
+			cwd = self.work_dir
 		)
 
 		read_start = 0
@@ -217,7 +218,7 @@ class AutodockWorker(BaseWorker):
 			raise Exception(proc.stderr.read())
 
 		#set autodock4 parameters and make dpf parameter file
-		dpf_file = params.make_dpf_file(rpdbqt, lpdbqt)
+		dpf_file = self.params.make_dpf_file(rpdbqt, lpdbqt)
 		dlg_file = dpf_file.replace('.dpf', '.dlg')
 
 		#run autodock4
@@ -225,7 +226,7 @@ class AutodockWorker(BaseWorker):
 		proc = psutil.Popen([autodock, '-p', dpf_file, '-l', dlg_file],
 			stdout = subprocess.PIPE,
 			stderr = subprocess.PIPE,
-			cwd = work_dir
+			cwd = self.work_dir
 		)
 
 		read_start = 0
@@ -280,17 +281,21 @@ class AutodockWorker(BaseWorker):
 
 				if len(cols) == 7:
 					rid = int(cols[2])
-					rank = int(cols[0])
+					#rank = int(cols[0])
 					energy = float(cols[3])
 					ki = runs[rid][0]
+					logki = convert_ki_to_log(ki)
 					crmsd = float(cols[4])
 					rrmsd = float(cols[5])
 					pose = convert_pdbqt_to_pdb(''.join(runs[rid][1]))
 
-					rows.append((None, job.id, rid, energy, ki, crmsd, rrmsd, rank, pose))
+					row = [None, self.job.id, rid, energy, crmsd, rrmsd]
+					lea = ligand_efficiency_assessment(pose, energy, ki)
+					row.extend(lea)
+					row.append(pose)
+					rows.append(row)
 
-		sql = "INSERT INTO pose_ad4 VALUES (?,?,?,?,?,?,?,?,?)"
-		DB.insert_rows(sql, rows)
+		self.save_pose(rows)
 
 class AutodockVinaWorker(BaseWorker):
 	def __init__(self, job, params):
@@ -303,29 +308,20 @@ class AutodockVinaWorker(BaseWorker):
 		return vina, autogrid
 
 	def pipline(self):
-		#work_dir = os.path.join(job.root, 'jobs', "job.{}.{}.vs.{}".format(
-		#	job.id, job.rn, job.ln
-		#))
-		job = self.get_job()
-
-		#create receptor and ligand dock dir
-		#if not os.path.exists(work_dir):
-		#	os.mkdir(work_dir)
-
 		#convert receptor and ligand to pdbqt format
-		rpdb = os.path.join(self.work_dir, "{}.pdb".format(job.rname))
-		rpdbqt = os.path.join(self.work_dir, "{}.pdbqt".format(job.rname))
+		rpdb = os.path.join(self.work_dir, "{}.pdb".format(self.job.rname))
+		rpdbqt = os.path.join(self.work_dir, "{}.pdbqt".format(self.job.rname))
 
 		with open(rpdb, 'w') as fw:
-			fw.write(job.rpdb)
+			fw.write(self.job.rpdb)
 
 		self.prepare_receptor(rpdb, rpdbqt)
 
-		lpdb = os.path.join(self.work_dir, "{}.pdb".format(job.lname))
-		lpdbqt = os.path.join(self.work_dir, "{}.pdbqt".format(job.lname))
+		lpdb = os.path.join(self.work_dir, "{}.pdb".format(self.job.lname))
+		lpdbqt = os.path.join(self.work_dir, "{}.pdbqt".format(self.job.lname))
 
 		with open(lpdb, 'w') as fw:
-			fw.write(job.lpdb)
+			fw.write(self.job.lpdb)
 
 		self.prepare_ligand(lpdb, lpdbqt)
 
@@ -335,8 +331,8 @@ class AutodockVinaWorker(BaseWorker):
 		#if use autodock scoring function
 		#set autogrid parameter and create gpf parameter file
 		if self.params.scoring.value == 'ad4':
-			ag_param = AutogridParameter(rpdbqt, lpdbqt, (job.x, job.y, job.z),
-				(job.cx, job.cy, job.cz), job.spacing
+			ag_param = AutogridParameter(rpdbqt, lpdbqt, (self.job.x, self.job.y, self.job.z),
+				(self.job.cx, self.job.cy, self.job.cz), self.job.spacing
 			)
 			gpf_file = ag_param.make_gpf_file()
 			glg_file = gpf_file.replace('.gpf', '.glg')
@@ -377,24 +373,24 @@ class AutodockVinaWorker(BaseWorker):
 			if proc.returncode != 0:
 				raise Exception(proc.stderr.read())
 
-			self.params.maps.value = job.rname
+			self.params.maps.value = self.job.rname
 		else:
 			#using autodock score function no need --receptor arg
 			self.params.receptor.value = os.path.basename(rpdbqt)
 
 		#set autodock vina parameters and make config file
-		config_file = os.path.join(self.work_dir, "config.txt".format(job.rname))
+		config_file = os.path.join(self.work_dir, "config.txt".format(self.job.rname))
 		out_file = os.path.join(self.work_dir, "out.pdbqt")
 		log_file = os.path.join(self.work_dir, "out.log")
 
 		self.params.ligand.value = os.path.basename(lpdbqt)
-		self.params.center_x.value = job.cx
-		self.params.center_y.value = job.cy
-		self.params.center_z.value = job.cz
-		self.params.size_x.value = job.x
-		self.params.size_y.value = job.y
-		self.params.size_z.value = job.z
-		self.params.spacing.value = job.spacing
+		self.params.center_x.value = self.job.cx
+		self.params.center_y.value = self.job.cy
+		self.params.center_z.value = self.job.cz
+		self.params.size_x.value = self.job.x
+		self.params.size_y.value = self.job.y
+		self.params.size_z.value = self.job.z
+		self.params.spacing.value = self.job.spacing
 		self.params.out.value = os.path.basename(out_file)
 		self.params.make_config_file(config_file)
 
@@ -445,7 +441,7 @@ class AutodockVinaWorker(BaseWorker):
 				rmsd1 = float(cols[2])
 				rmsd2 = float(cols[3])
 
-				rows.append([None, self.job, run, energy, rmsd1, rmsd2])
+				rows.append([None, self.job.id, run, energy, rmsd1, rmsd2])
 
 		modes = {}
 		with open(out_file) as fh:
@@ -467,6 +463,5 @@ class AutodockVinaWorker(BaseWorker):
 			rows[i].extend(lea)
 			rows[i].append(mode)
 
-		sql = "INSERT INTO pose VALUES (?,?,?,?,?,?,?,?,?,?,?,?)"
-		DB.insert_rows(sql, rows)
+		self.save_pose(rows)
 

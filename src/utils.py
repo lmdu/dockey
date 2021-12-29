@@ -6,7 +6,7 @@ from openbabel import openbabel
 __all__ = ['AttrDict', 'draw_gridbox', 'convert_dimension_to_coordinates',
 	'convert_coordinates_to_dimension', 'get_atom_types_from_pdbqt',
 	'get_molecule_center_from_pdbqt', 'time_format', 'convert_pdbqt_to_pdb',
-	'ligand_efficiency_assessment', 'get_molecule_information'
+	'ligand_efficiency_assessment', 'get_molecule_information', 'convert_ki_to_log'
 ]
 
 class AttrDict(dict):
@@ -166,9 +166,12 @@ def time_format(seconds):
 		t = time.localtime(seconds)
 		return time.strftime("%Y-%m-%d %H:%M:%S", t)
 
-def convert_ki_to_log(ki, unit):
+def convert_ki_to_log(ki_str):
+	ki, unit = ki_str.split()
+	ki = float(ki)
+
 	scales = {
-		'M': 0, 'mM': 3, 'µM': 6, 'nM': 9, 'pM': 12,
+		'M': 0, 'mM': 3, 'uM': 6, 'nM': 9, 'pM': 12,
 		'fM': 15, 'aM': 18, 'zM': 21, 'yM': 24
 	}
 	ki = ki/math.pow(10, scales[unit])

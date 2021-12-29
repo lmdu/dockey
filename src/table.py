@@ -39,42 +39,37 @@ class DockeyListView(QListView):
 	def on_custom_menu(self, pos):
 		self.current_index = self.indexAt(pos)
 
-		menu = QMenu(self)
-
 		add_r_act = QAction("Add Receptors", self,
 			triggered = self.add_receptors
 		)
-		menu.addAction(add_r_act)
+
 		add_l_act = QAction("Add Ligands", self,
 			triggered = self.add_ligands
 		)
-		menu.addAction(add_l_act)
-
-		menu.addSeparator()
 
 		del_m_act = QAction("Delete", self,
 			triggered = self.delete_molecular
 		)
-		
-		if not self.current_index.isValid():
-			del_m_act.setDisabled(True)
-		
-		menu.addAction(del_m_act)
-		
+		del_m_act.setDisabled(not self.current_index.isValid())
+
 		clr_m_act = QAction("Delete All", self,
 			triggered = self.delete_all
 		)
-		menu.addAction(clr_m_act)
 
 		view_act = QAction("View Details", self,
 			triggered = self.view_details
 		)
+		view_act.setDisabled(not self.current_index.isValid())
+
+		menu = QMenu(self)
+		menu.addAction(add_r_act)
+		menu.addAction(add_l_act)
+		menu.addSeparator()
+		menu.addAction(del_m_act)
+		menu.addAction(clr_m_act)
+		menu.addSeparator()
 		menu.addAction(view_act)
-
-		if not self.current_index.isValid():
-			view_act.setDisabled(True)
-
-		action = menu.exec(self.mapToGlobal(pos))
+		menu.exec(self.mapToGlobal(pos))
 
 	@Slot()
 	def add_receptors(self):
@@ -117,7 +112,7 @@ class DockeyListView(QListView):
 				"<tr><td>Number of residues: </td><td>{}</td></tr>"
 				"<tr><td>Number of rotors: </td><td>{}</td></tr>"
 				"<tr><td>Stochoimetric formula: </td><td>{}</td></tr>"
-				"<tr><td>Heat of formation: </td><td>{} kcal/mol</td></tr>"
+				#"<tr><td>Heat of formation: </td><td>{} kcal/mol</td></tr>"
 				"<tr><td>Molecular Weight: </td><td>{}</td></tr>"
 				"<tr><td>Calculated logP: </td><td>{}</td></tr>"
 				"</table>"
@@ -131,12 +126,40 @@ class DockeyListView(QListView):
 				mol.hvyatoms,
 				mol.residues,
 				mol.rotors,
-				mol.formula,
-				mol.energy,
+				self.format_formula(mol.formula),
+				#mol.energy,
 				round(mol.weight, 3),
 				round(mol.logp, 3)
 			))
 			dlg.exec()
+
+	def format_formula(self, formula):
+		nums = []
+		chars = []
+
+		formulas = []
+
+		for char in formula:
+			if char.isdigit():
+				nums.append(char)
+			else:
+				if chars:
+					formulas.append("{}<sub>{}</sub>".format(
+						''.join(chars),
+						''.join(nums)
+					))
+
+					nums = []
+					chars = []
+				chars.append(char)
+
+		if chars:
+			formulas.append("{}<sub>{}</sub>".format(
+				''.join(chars),
+				''.join(nums)
+			))
+
+		return ''.join(formulas)
 
 
 class DockeyTableView(QTableView):
@@ -408,14 +431,23 @@ class PoseTableModel(DockeyTableModel):
 			fetch_count
 		)
 
+	def data(self, index, role=Qt.DisplayRole):
+		if not index.isValid():
+			return None
+
+		if role == Qt.TextAlignmentRole:
+			return Qt.AlignCenter
+
+		return super(PoseTableModel, self).data(index, role)
+
 	def switch_table(self, tool):
 		if tool == 'autodock4':
-			self.custom_headers = ['ID', 'Job', 'Run', 'Energy', 'Cluster RMSD', 'Reference RMSD',
+			self.custom_headers = ['ID', 'Job', 'Run', 'Energy', 'cRMSD', 'rRMSD',
 				'logKi', 'LE', 'LLE', 'FQ', 'LELP'
 			]
 		elif tool == 'vina':
-			self.custom_headers = ['ID', 'Job', 'Mode', 'Affinity', 'RMSD l.b.', 'RMSD u.b.',
-				'logKi', ' Ligand efficiency', 'Lipophilic\nligand efficiency', 'Fit quality', 'Ligand efficiency\nlipophilic price'
+			self.custom_headers = ['ID', 'Job', 'Mode', 'Affinity', 'lRMSD', 'uRMSD',
+				'logKi', ' LE', 'LLE', 'FQ', 'LELP'
 			]
 
 	def set_job(self, job_id):

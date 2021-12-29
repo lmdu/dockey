@@ -159,6 +159,7 @@ class DockeyMainWindow(QMainWindow):
 	def create_pose_table(self):
 		self.pose_table = DockeyTableView(self)
 		self.pose_table.verticalHeader().hide()
+		self.pose_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
 		self.pose_table.setSelectionBehavior(QAbstractItemView.SelectRows)
 		self.pose_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
 		self.pose_table.clicked.connect(self.on_pose_changed)
@@ -370,8 +371,15 @@ class DockeyMainWindow(QMainWindow):
 	def create_toolbar(self):
 		self.toolbar = self.addToolBar('')
 		self.toolbar.setMovable(False)
-
-		#self.toolbar.addAction(self.import_act)
+		#self.toolbar.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)
+		self.toolbar.addAction(QIcon("icons/new.svg"), "New Project")
+		self.toolbar.addAction(QIcon("icons/open.svg"), "Open Project")
+		self.toolbar.addSeparator()
+		self.toolbar.addAction(QIcon("icons/command.svg"), "Command")
+		self.toolbar.addAction(QIcon("icons/zoomin.svg"), "Zoom In")
+		self.toolbar.addAction(QIcon("icons/zoomout.svg"), "Zoom Out")
+		self.toolbar.addAction(QIcon("icons/saveimage.svg"), "Save Image")
+		self.toolbar.addWidget(QLineEdit(self))
 
 	def create_statusbar(self):
 		self.statusbar = self.statusBar()

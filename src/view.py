@@ -2,6 +2,7 @@ import sys
 
 import pymol
 from pymol2 import SingletonPyMOL as PyMOL
+import pymol.chempy
 
 from PySide6.QtCore import *
 from PySide6.QtGui import *
