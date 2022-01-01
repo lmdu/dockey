@@ -7,7 +7,8 @@ from PySide6.QtWidgets import *
 from utils import *
 
 __all__ = ['BrowseInput', 'CreateProjectDialog', 'AutodockConfigDialog',
-			'AutodockVinaConfigDialog', 'ExportImageDialog']
+			'AutodockVinaConfigDialog', 'ExportImageDialog', 'FeedbackBrowser',
+			'PymolSettingDialog', 'DockingToolSettingDialog']
 
 class BrowseInput(QWidget):
 	def __init__(self, parent=None, is_file=True, is_save=False, _filter=""):
@@ -17,7 +18,7 @@ class BrowseInput(QWidget):
 		self.input.setReadOnly(True)
 		self.browse = QPushButton(self)
 		self.browse.setFlat(True)
-		self.browse.setIcon(QIcon("icons/folder.svg"))
+		self.browse.setIcon(QIcon(":/icons/folder.svg"))
 
 		if is_file:
 			if is_save:
@@ -130,6 +131,63 @@ class CreateProjectDialog(QDialog):
 			name = dlg.name_input.text()
 			location = dlg.location_input.get_text()
 			return os.path.join(location, name)
+
+class DockingToolSettingDialog(QDialog):
+	def __init__(self, parent=None):
+		super(DockingToolSettingDialog, self).__init__(parent)
+		self.resize(QSize(550, 100))
+		self.settings = QSettings()
+		self.ad4 = self.settings.value('Tools/autodock_4', '')
+		self.ag4 = self.settings.value('Tools/autogrid_4', '')
+		self.vina = self.settings.value('Tools/autodock_vina', '')
+		self.mglt = self.settings.value('Tools/mgltools', '')
+		self.autodock_input = BrowseInput(self)
+		self.autodock_input.set_text(self.ad4)
+		self.autogrid_input = BrowseInput(self)
+		self.autogrid_input.set_text(self.ag4)
+		self.vina_input = BrowseInput(self)
+		self.vina_input.set_text(self.vina)
+		self.mgltools_input = BrowseInput(self, False)
+		self.mgltools_input.set_text(self.mglt)
+
+		self.layout = QVBoxLayout()
+		self.layout.addWidget(QLabel("Autodock4 executable", self))
+		self.layout.addWidget(self.autodock_input)
+		self.layout.addWidget(QLabel("Autogrid4 executable", self))
+		self.layout.addWidget(self.autogrid_input)
+		self.layout.addWidget(QLabel("Autodock vina executable", self))
+		self.layout.addWidget(self.vina_input)
+		self.layout.addWidget(QLabel("MGLTools directory", self))
+		self.layout.addWidget(self.mgltools_input)
+
+		btn_box = QDialogButtonBox(QDialogButtonBox.Save | QDialogButtonBox.Cancel)
+		btn_box.accepted.connect(self.save_settings)
+		btn_box.rejected.connect(self.reject)
+		self.layout.addWidget(btn_box)
+		self.setLayout(self.layout)
+
+
+	@Slot()
+	def save_settings(self):
+		self.settings = QSettings()
+		ad4 = self.autodock_input.get_text()
+		ag4 = self.autogrid_input.get_text()
+		vina = self.vina_input.get_text()
+		mglt = self.mgltools_input.get_text()
+
+		if ad4 != self.ad4:
+			self.settings.setValue('Tools/autodock_4', ad4)
+
+		if ag4 != self.ag4:
+			self.settings.setValue('Tools/autogrid_4', ag4)
+
+		if vina != self.vina:
+			self.settings.setValue('Tools/autodock_vina', vina)
+
+		if mglt != self.mglt:
+			self.settings.setValue('Tools/mgltools', mglt)
+
+		self.accept()
 
 class ProgramConfigDialog(QDialog):
 	title = ""
@@ -276,3 +334,59 @@ class ExportImageDialog(QDialog):
 		dlg = cls(parent)
 		if dlg.exec():
 			return dlg.options
+
+class FeedbackBrowser(QPlainTextEdit):
+	def __init__(self, parent=None):
+		super(FeedbackBrowser, self).__init__(parent)
+		self.setReadOnly(True)
+
+	def sizeHint(self):
+		return QSize(300, 50)
+
+class GradientColorBar(QWidget):
+	def __init__(self, parent):
+		super(GradientColorBar, self).__init__(parent)
+
+	def sizeHint(self):
+		return QSize(200, 20)
+
+	def paintEvent(self, event):
+		painter = QPainter(self)
+		gradient = QLinearGradient(event.rect().topLeft(), event.rect().topRight())
+		gradient.setColorAt(0, Qt.white)
+		gradient.setColorAt(1, Qt.black)
+		painter.fillRect(event.rect(), gradient)
+
+class PymolSettingDialog(QDialog):
+	def __init__(self, parent=None):
+		super(PymolSettingDialog, self).__init__(parent)
+		self.parent = parent
+		self.settings = QSettings()
+		self.setWindowTitle("Pymol Settings")
+		self.resize(QSize(400, 100))
+		self.bar = GradientColorBar(self)
+		self.slider = QSlider(Qt.Horizontal, self)
+		self.slider.setRange(0, 100)
+		self.slider.valueChanged.connect(self.on_color_changed)
+		self.layout = QVBoxLayout()
+		self.layout.addWidget(QLabel("Background", self))
+		self.layout.addWidget(self.bar)
+		self.layout.addWidget(self.slider)
+		self.setLayout(self.layout)
+		val = self.settings.value('Pymol/background', 100, int)
+		self.slider.setValue(val)
+
+	@Slot()
+	def on_color_changed(self):
+		val = self.slider.value()
+
+		if val == 0:
+			color = 'white'
+		elif val == 100:
+			color = 'black'
+		else:
+			color = 'grey{:0>2d}'.format(100-val)
+
+		self.parent.cmd.bg_color(color)
+		self.settings.setValue('Pymol/background', val)
+

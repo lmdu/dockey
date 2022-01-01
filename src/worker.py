@@ -4,7 +4,6 @@ import psutil
 import traceback
 import subprocess
 
-from PySide6.QtSql import *
 from PySide6.QtCore import *
 
 from param import *

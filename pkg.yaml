@@ -1,0 +1,10 @@
+meta:
+  description: a tool for molecular docking
+  vendor: Lianming Du
+  maintainer: Bioinformatics and Integrative Genomics
+
+files:
+  "/usr/lib/Dockey":
+    file: dist/Dockey
+    mode: "0755"
+    user: "root"

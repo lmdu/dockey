@@ -1,4 +1,5 @@
 import sys
+import apsw
 import pymol
 import PySide6
 import openbabel
@@ -21,6 +22,15 @@ DOCKEY_ABOUT = """
 		<td>
 			<a href="https://www.python.org/">
 				https://www.python.org
+			</a>
+		</td>
+	</tr>
+	<tr>
+		<td>APSW</td>
+		<td>v{apsw}</td>
+		<td>
+			<a href="https://github.com/rogerbinns/apsw/">
+				https://github.com/rogerbinns/apsw
 			</a>
 		</td>
 	</tr>
@@ -48,6 +58,15 @@ DOCKEY_ABOUT = """
 		<td>
 			<a href="http://openbabel.org">
 				http://openbabel.org
+			</a>
+		</td>
+	</tr>
+	<tr>
+		<td>Icons</td>
+		<td>v{icon}</td>
+		<td>
+			<a href="https://icons.getbootstrap.com/">
+				https://icons.getbootstrap.com
 			</a>
 		</td>
 	</tr>
@@ -86,7 +105,9 @@ DOCKEY_ABOUT = """
 	version = DOCKEY_VERSION,
 	build = DOCKEY_BUILD,
 	python = sys.version.split()[0],
+	apsw = apsw.apswversion(),
 	pyside = PySide6.__version__,
 	pymol = pymol.cmd.get_version()[0],
-	babel = openbabel.__version__
+	babel = openbabel.__version__,
+	icon = '1.7.0'
 )

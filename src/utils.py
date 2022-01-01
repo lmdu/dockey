@@ -6,7 +6,8 @@ from openbabel import openbabel
 __all__ = ['AttrDict', 'draw_gridbox', 'convert_dimension_to_coordinates',
 	'convert_coordinates_to_dimension', 'get_atom_types_from_pdbqt',
 	'get_molecule_center_from_pdbqt', 'time_format', 'convert_pdbqt_to_pdb',
-	'ligand_efficiency_assessment', 'get_molecule_information', 'convert_ki_to_log'
+	'ligand_efficiency_assessment', 'get_molecule_information', 'convert_ki_to_log',
+	'time_elapse'
 ]
 
 class AttrDict(dict):
@@ -166,6 +167,25 @@ def time_format(seconds):
 		t = time.localtime(seconds)
 		return time.strftime("%Y-%m-%d %H:%M:%S", t)
 
+def time_elapse(start, stop):
+	seconds = stop - start
+
+	h = int(seconds // 3600)
+	m = int(seconds % 3600 // 60)
+	s = int(seconds % 60)
+
+	ts = []
+	if h:
+		ts.append("{}h".format(h))
+
+	if m:
+		ts.append("{}m".format(m))
+
+	if s:
+		ts.append("{}s".format(s))
+
+	return ' '.join(ts)
+
 def convert_ki_to_log(ki_str):
 	ki, unit = ki_str.split()
 	ki = float(ki)
@@ -229,7 +249,7 @@ def ligand_efficiency_assessment(pdb_str, energy, ki=0):
 		logp = des.Predict(mol)
 
 		#calculate ligand lipophilic efficiency
-		lle = -1*logki - logp
+		lle = round(-1*logki - logp, 3)
 
 		#calculate fit quality
 		le_scale = 0.0715 + 7.5328/ha + 25.7079/math.pow(ha,2) - 361.4722/math.pow(ha, 3)

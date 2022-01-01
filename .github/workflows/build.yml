@@ -1,0 +1,89 @@
+name: build
+
+on: [push, pull_request]
+
+jobs:
+  build_win:
+    name: Build on Windows
+    runs-on: windows-2019
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.8
+      - name: Install requirements
+        run: |
+          pip install wheels/apsw-3.36.0-cp38-cp38-win_amd64.whl
+          pip install wheels/openbabel-3.1.1-cp38-cp38-win_amd64.whl
+          pip install wheels/Pmw‑2.0.1‑py3‑none‑any.whl
+          pip install wheels/pymol-2.6.0a0-cp38-cp38-win_amd64.whl
+          pip install PySide6 == 6.2.2.1
+          pip install pyinstaller == 4.7
+      - name: Build executable
+        run: pyinstaller win.spec
+      - name: Package
+        run: iscc win.iss
+
+      - uses: actions/upload-artifact@v2
+        with:
+          path: dist/*.exe
+
+  build_linux:
+    name: Build on Linux
+    runs-on: ubuntu-20.04
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.8
+      - name: Install requirements
+        run: |
+          pip install -r requirements.txt
+          pip install pyinstaller == 4.7
+      - name: Build executable
+        run: pyinstaller win.spec
+      - name: Package
+        run: iscc win.iss
+      - uses: kentik/pkg@v1
+        with:
+          name: Dockey
+          version: 0.1.0
+          arch: x86_64
+          format: deb
+          package: pkg.yaml
+      - uses: actions/upload-artifact@v2
+        with:
+          path: dist/*.deb
+
+  build_mac:
+    name: Build on Mac
+    runs-on: macos-10.15
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Install Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.8
+      - name: Install requirements
+        run: |
+          pip install -r requirements.txt
+          pip install pyinstaller == 4.7
+      - name: Build executable
+        run: pyinstaller win.spec
+      - name: Package
+        run: |
+          cd dist
+          version=`awk '/^VERSION/{print $NF}' src/config.py | sed 's/\"//g'`
+          npm install --global create-dmg
+          create-dmg Dockey.app
+
+      - uses: actions/upload-artifact@v2
+        with:
+          path: dist/*.dmg
+
+

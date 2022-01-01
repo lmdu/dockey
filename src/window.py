@@ -2,7 +2,6 @@ import os
 import psutil
 
 from PySide6.QtGui import *
-from PySide6.QtSql import *
 from PySide6.QtCore import *
 from PySide6.QtWidgets import *
 
@@ -22,9 +21,11 @@ __all__ = ['DockeyMainWindow']
 class DockeyMainWindow(QMainWindow):
 	def __init__(self):
 		super(DockeyMainWindow, self).__init__()
+		self.pymol_actions = {}
 
 		self.setWindowTitle("Dockey v{}".format(DOCKEY_VERSION))
-		self.setWindowIcon(QIcon('icons/logo.svg'))
+		self.setWindowIcon(QIcon(':/icons/logo.svg'))
+		self.setAcceptDrops(True)
 		self.setDockOptions(QMainWindow.AnimatedDocks | QMainWindow.AllowTabbedDocks)
 
 		self.create_pymol_viewer()
@@ -32,6 +33,7 @@ class DockeyMainWindow(QMainWindow):
 		self.create_gridbox_adjuster()
 		self.create_job_table()
 		self.create_pose_table()
+		self.create_pymol_feedback()
 
 		self.create_molecular_model()
 		self.create_job_model()
@@ -61,6 +63,10 @@ class DockeyMainWindow(QMainWindow):
 		for child in parent.children():
 			child.kill()
 
+		event.accept()
+
+
+
 	def read_settings(self):
 		settings = QSettings()
 		settings.beginGroup('Window')
@@ -82,6 +88,47 @@ class DockeyMainWindow(QMainWindow):
 		self.cmd = self.pymol_viewer.cmd
 		self.setCentralWidget(self.pymol_viewer)
 
+	def create_pymol_feedback(self):
+		self.feedback_edit = QLineEdit(self)
+		self.feedback_edit.returnPressed.connect(self.execute_pymol_cmd)
+		self.feedback_edit.setPlaceholderText("PyMOL>")
+		self.feedback_browser = FeedbackBrowser(self)
+		self.feedback_dock = QDockWidget("Feedbacks", self)
+		self.feedback_dock.setAllowedAreas(Qt.TopDockWidgetArea | Qt.BottomDockWidgetArea)
+		self.feedback_dock.setWidget(self.feedback_browser)
+		self.addDockWidget(Qt.BottomDockWidgetArea, self.feedback_dock, Qt.Vertical)
+		self.feedback_dock.setVisible(False)
+
+		#timer
+		self.feedback_timer = QTimer()
+		self.feedback_timer.setSingleShot(True)
+		self.feedback_timer.timeout.connect(self.update_feedback)
+		self.feedback_timer.start(100)
+
+	@Slot()
+	def execute_pymol_cmd(self):
+		cmd = self.feedback_edit.text().strip()
+
+		if cmd:
+			self.cmd.do(cmd)
+			self.feedback_edit.clear()
+			self.feedback_timer.start(0)
+
+	@Slot()
+	def update_feedback(self):
+		feedbacks = self.cmd._get_feedback()
+		if feedbacks:
+			feedbacks = ["<p>{}</p>".format(feedback) for feedback in feedbacks]
+			self.feedback_browser.appendHtml('\n'.join(feedbacks))
+
+		settings = self.cmd.get_setting_updates()
+		for setting in settings:
+			if setting in self.pymol_actions:
+				val = self.cmd.get_setting_tuple(setting)[1][0]
+				self.pymol_actions[setting].setChecked(val)
+
+		self.feedback_timer.start(500)
+
 	def create_molecular_viewer(self):
 		#self.mol_viewer = QTreeWidget(self)
 		#self.mol_viewer.setColumnCount(1)
@@ -93,6 +140,14 @@ class DockeyMainWindow(QMainWindow):
 		self.mol_dock.setWidget(self.mol_viewer)
 		self.addDockWidget(Qt.LeftDockWidgetArea, self.mol_dock)
 		self.mol_dock.setVisible(True)
+
+	def draw_grid_box(self, rid):
+		sql = "SELECT * FROM grid WHERE rid=? LIMIT 1"
+		data = DB.get_dict(sql, (rid,))
+
+		if data:
+			self.box_adjuster.params.update_grid(data)
+			draw_gridbox(self.cmd, self.box_adjuster.params)
 
 	@Slot()
 	def on_molecular_changed(self, index):
@@ -106,13 +161,24 @@ class DockeyMainWindow(QMainWindow):
 		self.cmd.read_pdbstr(mol[2], name)
 		self.current_molecular = AttrDict(id=mol[0], type=mol[1], name=name)
 
-		if mol[1] == 1:
-			sql = "SELECT * FROM grid WHERE rid=?"
-			data = DB.get_dict(sql, (mol[0],))
+		if mol[1] == 1 and self.box_sidebar_act.isChecked():
+			self.draw_grid_box(mol[0])
+			
 
-			if data:
-				self.box_adjuster.params.update_grid(data)
-				draw_gridbox(self.cmd, self.box_adjuster.params)
+	@Slot()
+	def display_grid_box(self, flag):
+		objects = self.cmd.get_names('objects')
+
+		if flag:
+			sql = "SELECT id FROM molecular WHERE name=? AND type=1 LIMIT 1"
+			for name in objects:
+				rid = DB.get_one(sql, (name,))
+
+				if rid:
+					self.draw_grid_box(rid)
+		else:
+			if 'gridbox' in objects:
+				self.cmd.delete('gridbox')
 
 	def create_gridbox_adjuster(self):
 		self.box_adjuster = GridBoxSettingPanel(self)
@@ -123,7 +189,7 @@ class DockeyMainWindow(QMainWindow):
 		self.box_dock.setVisible(False)
 
 	def create_job_table(self):
-		self.job_table = DockeyTableView(self)
+		self.job_table = JobTableView(self)
 		self.job_table.clicked.connect(self.on_job_changed)
 		self.job_table.setItemDelegateForColumn(4, JobsTableDelegate(self))
 		self.job_table.setSelectionBehavior(QAbstractItemView.SelectRows)
@@ -157,7 +223,7 @@ class DockeyMainWindow(QMainWindow):
 			self.pose_error.show()	
 
 	def create_pose_table(self):
-		self.pose_table = DockeyTableView(self)
+		self.pose_table = PoseTableView(self)
 		self.pose_table.verticalHeader().hide()
 		self.pose_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
 		self.pose_table.setSelectionBehavior(QAbstractItemView.SelectRows)
@@ -226,15 +292,17 @@ class DockeyMainWindow(QMainWindow):
 		self.pose_table.hideColumn(1)
 
 	def create_actions(self):
-		self.new_project_act = QAction("&New Project...", self,
+		self.new_project_act = QAction(QIcon(':/icons/new.svg'), "&New Project...", self,
 			shortcut = QKeySequence.New,
 			triggered = self.new_project
 		)
+		self.new_project_act.setIconVisibleInMenu(False)
 
-		self.open_project_act = QAction("&Open Project...", self,
+		self.open_project_act = QAction(QIcon(':/icons/open.svg'), "&Open Project...", self,
 			shortcut = QKeySequence.Open,
 			triggered = self.open_project
 		)
+		self.open_project_act.setIconVisibleInMenu(False)
 
 		self.save_project_as_act = QAction("&Save Project As...", self,
 			shortcut = QKeySequence.SaveAs,
@@ -245,7 +313,7 @@ class DockeyMainWindow(QMainWindow):
 			triggered = self.open_project_dir
 		)
 
-		self.close_project_act = QAction("&Close project", self,
+		self.close_project_act = QAction("&Close Project", self,
 			shortcut = QKeySequence.Close,
 			triggered = self.close_project
 		)
@@ -258,45 +326,88 @@ class DockeyMainWindow(QMainWindow):
 			triggered = self.import_ligands
 		)
 
-		self.export_image_act = QAction("&Export As Image...", self,
+		self.export_image_act = QAction(QIcon(':/icons/save.svg'), "&Export As Image...", self,
 			triggered = self.export_as_image
 		)
+		self.export_image_act.setIconVisibleInMenu(False)
 
 		self.export_file_act = QAction("&Export As File...", self,
 			triggered = self.export_as_file
 		)
 
+		#edit actions
+		self.pymol_undo_act = QAction("Undo", self,
+			shortcut = QKeySequence.Undo,
+			triggered = self.pymol_undo
+		)
+		self.pymol_redo_act = QAction("Redo", self,
+			shortcut = QKeySequence.Redo,
+			triggered = self.pymol_redo
+		)
+
+		self.pymol_setting_act = QAction("Pymol Settings", self,
+			triggered = self.pymol_settings
+		)
+
+		self.dock_tool_act = QAction("Docking Tool Settings", self,
+			triggered = self.docking_tool_settings
+		)
+
 		#view actions
 		#pymol sidebar
-		self.pymol_sidebar_act = QAction("Show pymol sidebar", self,
+		self.pymol_sidebar_act = QAction("Show Pymol Sidebar", self,
 			checkable = True,
 			checked = False
 		)
 		self.pymol_sidebar_act.toggled.connect(self.pymol_sidebar_toggle)
 
+		index = self.cmd.setting._get_index('internal_gui')
+		self.pymol_actions[index] = self.pymol_sidebar_act
+
+
+
+		self.pymol_feedback_act = self.feedback_dock.toggleViewAction()
+		self.pymol_feedback_act.setText("Show Pymol Feedback")
+
+		self.pymol_cmd_act = QAction(QIcon(':/icons/cmd.svg'), "Show Pymol Command", self,
+			checkable = True,
+			checked =  False
+		)
+		self.pymol_cmd_act.setIconVisibleInMenu(False)
+
 		#gridbox setting sidebar
 		self.box_sidebar_act = self.box_dock.toggleViewAction()
-		self.box_sidebar_act.setText("Show grid box")
+		self.box_sidebar_act.setIcon(QIcon(':/icons/box.svg'))
+		self.box_sidebar_act.setIconVisibleInMenu(False)
+		self.box_sidebar_act.setText("Show Grid Box")
 		self.box_sidebar_act.setChecked(False)
+		self.box_sidebar_act.toggled.connect(self.display_grid_box)
 
 		self.mol_list_act = self.mol_dock.toggleViewAction()
-		self.mol_list_act.setText("Show molecular list")
+		self.mol_list_act.setIcon(QIcon(':/icons/molecular.svg'))
+		self.mol_list_act.setIconVisibleInMenu(False)
+		self.mol_list_act.setText("Show Molecular List")
 
 		self.job_table_act = self.job_dock.toggleViewAction()
-		self.job_table_act.setText("Show task table")
+		self.job_table_act.setIcon(QIcon(":/icons/job.svg"))
+		self.job_table_act.setIconVisibleInMenu(False)
+		self.job_table_act.setText("Show Job Table")
 
 		self.pose_table_act = self.pose_dock.toggleViewAction()
-		self.pose_table_act.setText("Show pose table")
+		self.pose_table_act.setIcon(QIcon(':/icons/pose.svg'))
+		self.pose_table_act.setIconVisibleInMenu(False)
+		self.pose_table_act.setText("Show Pose Table")
 
-		self.bounding_box_act = QAction("Bounding box", self,
+		self.bounding_box_act = QAction(QIcon(':/icons/bounding.svg'), "Draw Bounding Box", self,
 			triggered = self.draw_bounding_box
 		)
+		self.bounding_box_act.setIconVisibleInMenu(False)
 
-		self.custom_box_act = QAction("Custom box", self,
+		self.custom_box_act = QAction("Draw Custom Box", self,
 			triggered = self.draw_custom_box
 		)
 
-		self.delete_box_act = QAction("Delete box", self,
+		self.delete_box_act = QAction("Delete Grid Box", self,
 			triggered = self.delete_grid_box
 		)
 
@@ -339,6 +450,11 @@ class DockeyMainWindow(QMainWindow):
 		self.file_menu.addAction(self.export_file_act)
 
 		self.edit_menu = self.menuBar().addMenu("&Edit")
+		self.edit_menu.addAction(self.pymol_undo_act)
+		self.edit_menu.addAction(self.pymol_redo_act)
+		self.edit_menu.addSeparator()
+		self.edit_menu.addAction(self.pymol_setting_act)
+		self.edit_menu.addAction(self.dock_tool_act)
 
 		self.view_menu = self.menuBar().addMenu("&View")
 		#self.view_menu.addAction(self.open_project_dir_act)
@@ -348,7 +464,10 @@ class DockeyMainWindow(QMainWindow):
 		self.view_menu.addAction(self.pose_table_act)
 		self.view_menu.addSeparator()
 		self.view_menu.addAction(self.box_sidebar_act)
+		self.view_menu.addSeparator()
 		self.view_menu.addAction(self.pymol_sidebar_act)
+		self.view_menu.addAction(self.pymol_cmd_act)
+		self.view_menu.addAction(self.pymol_feedback_act)
 
 		self.grid_menu = self.menuBar().addMenu("&Grid")
 		self.grid_menu.addAction(self.bounding_box_act)
@@ -370,16 +489,25 @@ class DockeyMainWindow(QMainWindow):
 
 	def create_toolbar(self):
 		self.toolbar = self.addToolBar('')
+		#self.toolbar.setIconSize(QSize(28,28))
 		self.toolbar.setMovable(False)
 		#self.toolbar.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)
-		self.toolbar.addAction(QIcon("icons/new.svg"), "New Project")
-		self.toolbar.addAction(QIcon("icons/open.svg"), "Open Project")
+		self.toolbar.addAction(self.new_project_act)
+		self.toolbar.addAction(self.open_project_act)
 		self.toolbar.addSeparator()
-		self.toolbar.addAction(QIcon("icons/command.svg"), "Command")
-		self.toolbar.addAction(QIcon("icons/zoomin.svg"), "Zoom In")
-		self.toolbar.addAction(QIcon("icons/zoomout.svg"), "Zoom Out")
-		self.toolbar.addAction(QIcon("icons/saveimage.svg"), "Save Image")
-		self.toolbar.addWidget(QLineEdit(self))
+		self.toolbar.addAction(self.mol_list_act)
+		self.toolbar.addAction(self.job_table_act)
+		self.toolbar.addAction(self.pose_table_act)
+		self.toolbar.addSeparator()
+		self.toolbar.addAction(self.box_sidebar_act)
+		self.toolbar.addAction(self.bounding_box_act)
+		self.toolbar.addSeparator()
+		self.toolbar.addAction(self.export_image_act)
+		self.toolbar.addSeparator()
+		self.toolbar.addAction(self.pymol_cmd_act)
+		self.feedback_act = self.toolbar.addWidget(self.feedback_edit)
+		self.feedback_act.setVisible(False)
+		self.pymol_cmd_act.toggled.connect(self.feedback_act.setVisible)
 
 	def create_statusbar(self):
 		self.statusbar = self.statusBar()
@@ -397,6 +525,26 @@ class DockeyMainWindow(QMainWindow):
 		#	QMessageBox.critical(self, "Error",
 		#		"Could not connect to dockey.db file")
 		DB.connect(db_file)
+
+	def dragEnterEvent(self, event):
+		event.acceptProposedAction()
+
+	def dragMoveEvent(self, event):
+		event.acceptProposedAction()
+
+	def dropEvent(self, event):
+		if event.mimeData().hasUrls():
+			url = event.mimeData().urls()[0]
+			pfile = url.toLocalFile()
+
+			if pfile.endswith('.dky'):
+				self.create_db_connect(pfile)
+				self.mol_model.select()
+				self.job_model.select()
+			else:
+				QMessageBox.critical(self, "Error",
+					"{} is not a dockey project file".format(pfile)
+				)
 
 	def new_project(self):
 		#folder = CreateProjectDialog.get_project_folder(self)
@@ -424,7 +572,7 @@ class DockeyMainWindow(QMainWindow):
 
 		project_file, _ = QFileDialog.getSaveFileName(self,
 			caption = "New Project File",
-			filter = "Dockey file (*.dky)"
+			filter = "Dockey File (*.dky)"
 		)
 
 		if not project_file:
@@ -447,7 +595,7 @@ class DockeyMainWindow(QMainWindow):
 	def open_project(self):
 		#folder = QFileDialog.getExistingDirectory(self)
 
-		project_file, _ = QFileDialog.getOpenFileName(self, filter="Dockey file (*.dky)")
+		project_file, _ = QFileDialog.getOpenFileName(self, filter="Dockey File (*.dky)")
 
 		if not project_file:
 			return
@@ -541,6 +689,24 @@ class DockeyMainWindow(QMainWindow):
 			return
 
 		self.cmd.save(outfile)
+
+	@Slot()
+	def pymol_undo(self):
+		self.cmd.undo()
+
+	@Slot()
+	def pymol_redo(self):
+		self.cmd.redo()
+
+	@Slot()
+	def pymol_settings(self):
+		dlg = PymolSettingDialog(self)
+		dlg.exec()
+
+	@Slot()
+	def docking_tool_settings(self):
+		dlg = DockingToolSettingDialog(self)
+		dlg.exec()
 
 	def pymol_sidebar_toggle(self, checked):
 		self.pymol_viewer.sidebar_controler(checked)

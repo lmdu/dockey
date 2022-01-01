@@ -1,0 +1,23 @@
+<!DOCTYPE RCC><RCC version="1.0">
+<qresource>
+	<file>icons/bounding.svg</file>
+	<file>icons/box.svg</file>
+	<file>icons/cmd.svg</file>
+	<file>icons/error.svg</file>
+	<file>icons/folder.svg</file>
+	<file>icons/job.svg</file>
+	<file>icons/ligand.svg</file>
+	<file>icons/logo.svg</file>
+	<file>icons/molecular.svg</file>
+	<file>icons/new.svg</file>
+	<file>icons/open.svg</file>
+	<file>icons/pend.svg</file>
+	<file>icons/pose.svg</file>
+	<file>icons/receptor.svg</file>
+	<file>icons/run.svg</file>
+	<file>icons/save.svg</file>
+	<file>icons/success.svg</file>
+	<file>icons/zoomin.svg</file>
+	<file>icons/zoomout.svg</file>
+</qresource>
+</RCC>
