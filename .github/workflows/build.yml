@@ -9,20 +9,24 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
+
       - name: Install Python
         uses: actions/setup-python@v2
         with:
           python-version: 3.8
+
       - name: Install requirements
         run: |
-          pip install wheels/apsw-3.36.0-cp38-cp38-win_amd64.whl
-          pip install wheels/openbabel-3.1.1-cp38-cp38-win_amd64.whl
           pip install wheels/Pmw‑2.0.1‑py3‑none‑any.whl
+          pip install wheels/openbabel-3.1.1-cp38-cp38-win_amd64.whl
           pip install wheels/pymol-2.6.0a0-cp38-cp38-win_amd64.whl
-          pip install PySide6 == 6.2.2.1
-          pip install pyinstaller == 4.7
+          pip install apsw-wheels==3.36.0.post1
+          pip install PySide6==6.2.2.1
+          pip install pyinstaller==4.7
+
       - name: Build executable
         run: pyinstaller win.spec
+
       - name: Package
         run: iscc win.iss
 
