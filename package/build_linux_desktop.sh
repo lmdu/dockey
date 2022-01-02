@@ -29,9 +29,9 @@ license: MIT
 contents:
   - src: ./Dockey
     dst: /usr/lib/Dockey
-  - src: /dockey.desktop
+  - src: ./dockey.desktop
     dst: /usr/share/applications/dockey.desktop
-  - src: /dockey_logo.svg
+  - src: ./dockey_logo.svg
     dst: /usr/share/icons/dockey_logo.svg
 "
 echo "$nfpmconfig" > nfpm.yaml
