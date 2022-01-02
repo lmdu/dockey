@@ -58,6 +58,7 @@ jobs:
           make -j2
           sudo make install
           pip install openbabel==3.1.1.1
+          cd ../../
 
       - name: Install pymol
         run: |
@@ -68,6 +69,7 @@ jobs:
           mv mmtf-cpp/include/mmtf* pymol-open-source/include/
           cd pymol-open-source
           python setup.py install
+          cd ..
 
       - name: Install requirements
         run: |
@@ -116,15 +118,17 @@ jobs:
           make -j2
           sudo make install
           pip install openbabel==3.1.1.1
+          cd ../../
 
       - name: Install pymol
         run: |
-          brew install glfw glew libpng freetype libxml2 msgpack glm netcdf
+          brew install mesalib-glw glfw glew libpng freetype libxml2 msgpack glm netcdf
           git clone https://github.com/schrodinger/pymol-open-source.git
           git clone https://github.com/rcsb/mmtf-cpp.git
           mv mmtf-cpp/include/mmtf* pymol-open-source/include/
           cd pymol-open-source
           python setup.py install
+          cd ..
 
       - name: Install requirements
         run: |
