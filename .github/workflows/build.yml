@@ -46,9 +46,31 @@ jobs:
         with:
           python-version: 3.8
 
+      - name: Install openbabel
+        run: |
+          sudo apt install libxml2-dev zlib1g-dev libeigen3-dev
+          wget https://github.com/openbabel/openbabel/archive/refs/tags/openbabel-3-1-1.tar.gz
+          tar xzf openbabel-3-1-1.tar.gz
+          cd openbabel-3-1-1
+          mkdir build
+          cd build
+          cmake ..
+          make -j2
+          sudo make install
+          pip install openbabel==3.1.1.1
+
+      - name: Install pymol
+        run: |
+          sudo apt install build-essential libgl1-mesa-dev libglew-dev libpng-dev libfreetype6-dev
+          sudo apt install libmsgpack-dev libxml2-dev libglm-dev libnetcdf-dev
+          git clone https://github.com/schrodinger/pymol-open-source.git
+          git clone https://github.com/rcsb/mmtf-cpp.git
+          mv mmtf-cpp/include/mmtf* pymol-open-source/include/
+          cd pymol-open-source
+          python setup.py install
+
       - name: Install requirements
         run: |
-          sudo apt install python3-openbabel python3-pymol
           pip install apsw-wheels==3.36.0.post1
           pip install PySide6==6.2.2.1
           pip install pyinstaller==4.7
@@ -56,7 +78,7 @@ jobs:
       - name: Build executable
         run: pyinstaller package/build.spec
 
-      - name: Package
+      - name: Package installer
         run: |
           version=`awk '/^VERSION/{print $NF}' src/config.py | sed 's/\"//g'`
           cd dist
@@ -82,10 +104,30 @@ jobs:
         with:
           python-version: 3.8
 
+      - name: Install openbabel
+        run: |
+          brew install libxml2 eigen zlib
+          wget https://github.com/openbabel/openbabel/archive/refs/tags/openbabel-3-1-1.tar.gz
+          tar xzf openbabel-3-1-1.tar.gz
+          cd openbabel-3-1-1
+          mkdir build
+          cd build
+          cmake ..
+          make -j2
+          sudo make install
+          pip install openbabel==3.1.1.1
+
+      - name: Install pymol
+        run: |
+          brew install glfw glew libpng freetype libxml2 msgpack glm netcdf
+          git clone https://github.com/schrodinger/pymol-open-source.git
+          git clone https://github.com/rcsb/mmtf-cpp.git
+          mv mmtf-cpp/include/mmtf* pymol-open-source/include/
+          cd pymol-open-source
+          python setup.py install
+
       - name: Install requirements
         run: |
-          brew install open-babel
-          brew install brewsci/bio/pymol
           pip install apsw-wheels==3.36.0.post1
           pip install PySide6==6.2.2.1
           pip install pyinstaller==4.7
