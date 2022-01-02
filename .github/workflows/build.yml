@@ -51,7 +51,7 @@ jobs:
           sudo apt install libxml2-dev zlib1g-dev libeigen3-dev
           wget https://github.com/openbabel/openbabel/archive/refs/tags/openbabel-3-1-1.tar.gz
           tar xzf openbabel-3-1-1.tar.gz
-          cd openbabel-3-1-1
+          cd openbabel-openbabel-3-1-1
           mkdir build
           cd build
           cmake ..
@@ -111,7 +111,7 @@ jobs:
           brew install libxml2 eigen zlib
           wget https://github.com/openbabel/openbabel/archive/refs/tags/openbabel-3-1-1.tar.gz
           tar xzf openbabel-3-1-1.tar.gz
-          cd openbabel-3-1-1
+          cd openbabel-openbabel-3-1-1
           mkdir build
           cd build
           cmake ..
