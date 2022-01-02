@@ -28,7 +28,7 @@ jobs:
         run: pyinstaller package/build.spec
 
       - name: Package
-        run: iscc package/win.iss
+        run: iscc package/build_win_installer.iss
 
       - uses: actions/upload-artifact@v2
         with:
@@ -48,8 +48,20 @@ jobs:
 
       - name: Install requirements
         run: |
-          pip install -r requirements.txt
+          apt install git build-essential python3-dev libglew-dev 
+          apt install libpng-dev libfreetype6-dev libxml2-dev
+          apt install libmsgpack-dev libglm-dev libnetcdf-dev
+          pip install openbabel==3.1.1
+          pip install apsw-wheels==3.36.0.post1
+          pip install PySide6==6.2.2.1
+          pip install pyinstaller==4.7
           pip install pyinstaller == 4.7
+          git clone https://github.com/schrodinger/pymol-open-source.git
+          git clone https://github.com/rcsb/mmtf-cpp.git
+          mv mmtf-cpp/include/mmtf* pymol-open-source/include/
+          cd pymol-open-source
+          python3 setup.py build install
+
 
       - name: Build executable
         run: pyinstaller package/build.spec
