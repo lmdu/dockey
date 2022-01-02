@@ -28,7 +28,10 @@ jobs:
         run: pyinstaller package/build.spec
 
       - name: Package
-        run: iscc package/build_win_installer.iss
+        run: |
+          $lines = Get-Content src/config.py
+          $version = $lines[8].Substring(18,5)
+          iscc /DMyAppVersion=$version package/build_win_installer.iss
 
       - uses: actions/upload-artifact@v2
         with:
@@ -48,6 +51,7 @@ jobs:
 
       - name: Install openbabel
         run: |
+          cmake --version
           sudo apt install libxml2-dev zlib1g-dev libeigen3-dev
           wget https://github.com/openbabel/openbabel/archive/refs/tags/openbabel-3-1-1.tar.gz
           tar xzf openbabel-3-1-1.tar.gz
@@ -82,7 +86,7 @@ jobs:
 
       - name: Package installer
         run: |
-          version=`awk '/^VERSION/{print $NF}' src/config.py | sed 's/\"//g'`
+          version=`awk '/^DOCKEY_VERSION/{print $NF}' src/config.py | sed 's/\"//g'`
           cd dist
           tar -czvf Dockey-v${version}-linux.tar.gz Dockey
           chmod a+x ../package/build_linux_desktop.sh
@@ -93,6 +97,7 @@ jobs:
           path: |
             dist/*.deb
             dist/*.rpm
+            dist/*.tar.gz
 
   build_mac:
     name: Build on Mac
@@ -108,6 +113,7 @@ jobs:
 
       - name: Install openbabel
         run: |
+          cmake --version
           brew install libxml2 eigen zlib
           wget https://github.com/openbabel/openbabel/archive/refs/tags/openbabel-3-1-1.tar.gz
           tar xzf openbabel-3-1-1.tar.gz
@@ -141,7 +147,7 @@ jobs:
 
       - name: Package
         run: |
-          version=`awk '/^VERSION/{print $NF}' src/config.py | sed 's/\"//g'`
+          version=`awk '/^DOCKEY_VERSION/{print $NF}' src/config.py | sed 's/\"//g'`
           cd dist
           npm install --global create-dmg
           create-dmg Dockey.app

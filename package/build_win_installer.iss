@@ -2,7 +2,6 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "Dockey"
-#define MyAppVersion "0.1.0"
 #define MyAppPublisher "Lianming Du"
 #define MyAppURL "https://github.com/lmdu/dockey"
 #define MyAppExeName "Dockey.exe"

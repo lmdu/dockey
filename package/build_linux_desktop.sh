@@ -36,5 +36,5 @@ echo "$nfpmconfig" > nfpm.yaml
 # copy logo file
 cp ../src/icons/logo.svg ./dockey_logo.svg
 
-./nfpm pkg -t Dockey-v${version}-amd64.deb
-./nfpm pkg -t Dockey-v${version}-amd64.rpm
+./nfpm pkg -t Dockey-v${version}-x86_64.deb
+./nfpm pkg -t Dockey-v${version}-x86_64.rpm
