@@ -111,33 +111,10 @@ jobs:
         with:
           python-version: 3.8
 
-      - name: Install openbabel
-        run: |
-          cmake --version
-          brew install libxml2 eigen zlib
-          wget https://github.com/openbabel/openbabel/archive/refs/tags/openbabel-3-1-1.tar.gz
-          tar xzf openbabel-3-1-1.tar.gz
-          cd openbabel-openbabel-3-1-1
-          mkdir build
-          cd build
-          cmake ..
-          make -j2
-          sudo make install
-          pip install openbabel==3.1.1.1
-          cd ../../
-
-      - name: Install pymol
-        run: |
-          brew install mesalib-glw glfw glew libpng freetype libxml2 msgpack glm netcdf
-          git clone https://github.com/schrodinger/pymol-open-source.git
-          git clone https://github.com/rcsb/mmtf-cpp.git
-          mv mmtf-cpp/include/mmtf* pymol-open-source/include/
-          cd pymol-open-source
-          python setup.py install
-          cd ..
-
       - name: Install requirements
         run: |
+          brew install open-babel
+          brew install brewsci/bio/pymol
           pip install apsw-wheels==3.36.0.post1
           pip install PySide6==6.2.2.1
           pip install pyinstaller==4.7
@@ -149,8 +126,8 @@ jobs:
         run: |
           version=`awk '/^DOCKEY_VERSION/{print $NF}' src/config.py | sed 's/\"//g'`
           cd dist
-          npm install --global create-dmg
-          create-dmg Dockey.app
+          brew install create-dmg
+          create-dmg Dockey-v${version}-macos.dmg Dockey.app
 
       - uses: actions/upload-artifact@v2
         with:
