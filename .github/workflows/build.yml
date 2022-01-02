@@ -25,7 +25,7 @@ jobs:
           pip install pyinstaller==4.7
 
       - name: Build executable
-        run: pyinstaller package/win.spec
+        run: pyinstaller package/build.spec
 
       - name: Package
         run: iscc package/win.iss
