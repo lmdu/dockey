@@ -35,6 +35,7 @@ jobs:
 
       - uses: actions/upload-artifact@v2
         with:
+          name: Windows
           path: dist/*.exe
 
   build_linux:
@@ -94,6 +95,7 @@ jobs:
 
       - uses: actions/upload-artifact@v2
         with:
+          name: Linux
           path: |
             dist/*.deb
             dist/*.rpm
@@ -131,6 +133,7 @@ jobs:
 
       - uses: actions/upload-artifact@v2
         with:
+          name: MacOS
           path: dist/*.dmg
 
 
