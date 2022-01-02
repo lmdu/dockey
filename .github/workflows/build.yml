@@ -25,10 +25,10 @@ jobs:
           pip install pyinstaller==4.7
 
       - name: Build executable
-        run: pyinstaller win.spec
+        run: pyinstaller package/win.spec
 
       - name: Package
-        run: iscc win.iss
+        run: iscc package/win.iss
 
       - uses: actions/upload-artifact@v2
         with:
@@ -40,28 +40,33 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
+
       - name: Install Python
         uses: actions/setup-python@v2
         with:
           python-version: 3.8
+
       - name: Install requirements
         run: |
           pip install -r requirements.txt
           pip install pyinstaller == 4.7
+
       - name: Build executable
-        run: pyinstaller win.spec
+        run: pyinstaller package/build.spec
+
       - name: Package
-        run: iscc win.iss
-      - uses: kentik/pkg@v1
-        with:
-          name: Dockey
-          version: 0.1.0
-          arch: x86_64
-          format: deb
-          package: pkg.yaml
+        run: |
+          cd dist
+          version=`awk '/^VERSION/{print $NF}' src/config.py | sed 's/\"//g'`
+          tar -czvf Dockey-v${version}-linux.tar.gz Dockey
+          chmod a+x ../package/build_linux_desktop.sh
+          ../package/build_linux_desktop.sh
+
       - uses: actions/upload-artifact@v2
         with:
-          path: dist/*.deb
+          path: |
+            dist/*.deb
+            dist/*.rpm
 
   build_mac:
     name: Build on Mac
@@ -78,7 +83,7 @@ jobs:
           pip install -r requirements.txt
           pip install pyinstaller == 4.7
       - name: Build executable
-        run: pyinstaller win.spec
+        run: pyinstaller package/build.spec
       - name: Package
         run: |
           cd dist

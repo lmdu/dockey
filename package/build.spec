@@ -4,7 +4,7 @@
 block_cipher = None
 
 
-a = Analysis(['src/main.py'],
+a = Analysis(['../src/main.py'],
              pathex=[],
              binaries=[],
              datas=[],
@@ -36,7 +36,7 @@ exe = EXE(pyz,
           target_arch=None,
           codesign_identity=None,
           entitlements_file=None,
-          icon='src/icons/logo.ico')
+          icon='../src/icons/logo.ico')
 coll = COLLECT(exe,
                a.binaries,
                a.zipfiles,
