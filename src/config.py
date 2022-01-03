@@ -1,6 +1,7 @@
 import sys
 import apsw
 import pymol
+import psutil
 import PySide6
 import openbabel
 
@@ -8,7 +9,7 @@ __all__ = ['DOCKEY_VERSION', 'DOCKEY_BUILD', 'DOCKEY_ABOUT']
 
 DOCKEY_VERSION = "0.1.0"
 
-DOCKEY_BUILD = "211118"
+DOCKEY_BUILD = "220103"
 
 DOCKEY_ABOUT = """
 <p>Dockey - Molecular Docking and Virtual Screening</p>
@@ -62,6 +63,15 @@ DOCKEY_ABOUT = """
 		</td>
 	</tr>
 	<tr>
+		<td>Psutil</td>
+		<td>v{psutil}</td>
+		<td>
+			<a href="https://github.com/giampaolo/psutil">
+				https://github.com/giampaolo/psutil
+			</a>
+		</td>
+	</tr>
+	<tr>
 		<td>Icons</td>
 		<td>v{icon}</td>
 		<td>
@@ -92,7 +102,7 @@ DOCKEY_ABOUT = """
 		</td>
 	</tr>
 	<tr>
-		<td>AutoDock Vina</td>
+		<td>Vina</td>
 		<td>v1.2.3</td>
 		<td>
 			<a href="https://github.com/ccsb-scripps/AutoDock-Vina/">
@@ -109,5 +119,6 @@ DOCKEY_ABOUT = """
 	pyside = PySide6.__version__,
 	pymol = pymol.cmd.get_version()[0],
 	babel = openbabel.__version__,
+	psutil = psutil.__version__,
 	icon = '1.7.0'
 )

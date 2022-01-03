@@ -83,7 +83,7 @@ class ColorButton(QPushButton):
 		self.pressed.connect(self.onColorPicker)
 		self.setColor(self._default)
 
-		self.setFixedSize(QSize(20, 15))
+		self.setFixedSize(QSize(15, 12))
 
 	def setColor(self, color):
 		if color != self._color:
@@ -289,31 +289,29 @@ class GridBoxSettingPanel(QWidget):
 
 	@Slot()
 	def on_save(self):
-		if self.parent.current_molecular:
-			if self.parent.current_molecular.type == 1:
-				sql = "INSERT INTO grid VALUES (?,?,?,?,?,?,?,?,?)"
-				DB.query(sql, (
-					None,
-					self.parent.current_molecular.id,
-					self.params.x,
-					self.params.y,
-					self.params.z,
-					self.params.cx,
-					self.params.cy,
-					self.params.cz,
-					self.params.spacing
-				))
+		r = self.parent.get_current_receptor()
 
-				QMessageBox.information(self.parent, "Grid box saved",
-					"Successfully set grid box for receptor {}".format(
-						self.parent.current_molecular.name)
-				)
-			else:
-				QMessageBox.warning(self.parent, "Warning",
-					"Could not save grid box for ligand"
-				)
-		else:
-			QMessageBox.warning(self.parent, "Warning",
+		if not r:
+			return QMessageBox.warning(self.parent, "Warning",
 				"Please select a receptor to add grid box"
 			)
 
+		sql = "SELECT 1 FROM grid WHERE rid=? LIMIT 1"
+		if DB.get_one(sql, (r.id,)):
+			DB.query("DELETE FROM grid WHERE rid=?", (r.id,))
+
+		sql = "INSERT INTO grid VALUES (?,?,?,?,?,?,?,?,?)"
+		DB.query(sql, (
+			None,
+			r.id,
+			self.params.x,
+			self.params.y,
+			self.params.z,
+			self.params.cx,
+			self.params.cy,
+			self.params.cz,
+			self.params.spacing
+		))
+
+		QMessageBox.information(self.parent, "Grid box saved",
+			"Successfully set grid box for receptor {}".format(r.name))

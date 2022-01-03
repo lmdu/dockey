@@ -62,8 +62,10 @@ class DockeyListView(QListView):
 		view_act.setDisabled(not self.current_index.isValid())
 
 		menu = QMenu(self)
-		menu.addAction(add_r_act)
-		menu.addAction(add_l_act)
+		#menu.addAction(add_r_act)
+		#menu.addAction(add_l_act)
+		menu.addAction(self.parent.import_receptor_act)
+		menu.addAction(self.parent.import_ligand_act)
 		menu.addSeparator()
 		menu.addAction(del_m_act)
 		menu.addAction(clr_m_act)
@@ -497,6 +499,13 @@ class DockeyTableModel(QAbstractTableModel):
 		self.endResetModel()
 
 		self.row_count.emit(self.total_count)
+
+	def reset(self):
+		self.beginResetModel()
+		self.read_count = 0
+		self.total_count = 0
+		self.displayed = []
+		self.endResetModel()
 
 class MolecularTableModel(DockeyTableModel):
 	table = 'molecular'

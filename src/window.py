@@ -19,9 +19,13 @@ from gridbox import *
 __all__ = ['DockeyMainWindow']
 
 class DockeyMainWindow(QMainWindow):
+	project_ready = Signal(bool)
+
 	def __init__(self):
 		super(DockeyMainWindow, self).__init__()
 		self.pymol_actions = {}
+		self.pool = QThreadPool(self)
+		self.pool.setMaxThreadCount(3)
 
 		self.setWindowTitle("Dockey v{}".format(DOCKEY_VERSION))
 		self.setWindowIcon(QIcon(':/icons/logo.svg'))
@@ -44,12 +48,6 @@ class DockeyMainWindow(QMainWindow):
 		self.create_toolbar()
 		self.create_statusbar()
 
-		self.project_folder = None
-		self.current_molecular = None
-
-		self.pool = QThreadPool(self)
-		self.pool.setMaxThreadCount(3)
-
 		self.read_settings()
 
 	def closeEvent(self, event):
@@ -64,8 +62,6 @@ class DockeyMainWindow(QMainWindow):
 			child.kill()
 
 		event.accept()
-
-
 
 	def read_settings(self):
 		settings = QSettings()
@@ -155,15 +151,13 @@ class DockeyMainWindow(QMainWindow):
 		self.cmd.reinitialize()
 
 		name = index.data(Qt.DisplayRole)
-		sql = "SELECT id,type,pdb FROM molecular WHERE name=?"
-		mol = DB.get_row(sql, (name,))
+		sql = "SELECT id,type,pdb FROM molecular WHERE name=? LIMIT 1"
+		mol = DB.get_dict(sql, (name,))
 
-		self.cmd.read_pdbstr(mol[2], name)
-		self.current_molecular = AttrDict(id=mol[0], type=mol[1], name=name)
+		self.cmd.read_pdbstr(mol.pdb, name)
 
-		if mol[1] == 1 and self.box_sidebar_act.isChecked():
-			self.draw_grid_box(mol[0])
-			
+		if mol.type == 1 and self.box_sidebar_act.isChecked():
+			self.draw_grid_box(mol.id)
 
 	@Slot()
 	def display_grid_box(self, flag):
@@ -305,26 +299,30 @@ class DockeyMainWindow(QMainWindow):
 		self.open_project_act.setIconVisibleInMenu(False)
 
 		self.save_project_as_act = QAction("&Save Project As...", self,
+			disabled = True,
 			shortcut = QKeySequence.SaveAs,
 			triggered = self.save_project_as
 		)
-
-		self.open_project_dir_act = QAction("&Show project in explorer", self,
-			triggered = self.open_project_dir
-		)
+		self.project_ready.connect(self.save_project_as_act.setEnabled)
 
 		self.close_project_act = QAction("&Close Project", self,
+			disabled = True,
 			shortcut = QKeySequence.Close,
 			triggered = self.close_project
 		)
+		self.project_ready.connect(self.close_project_act.setEnabled)
 
 		self.import_receptor_act = QAction("&Import Receptors...", self,
+			disabled = True,
 			triggered = self.import_receptors
 		)
+		self.project_ready.connect(self.import_receptor_act.setEnabled)
 
 		self.import_ligand_act = QAction("&Import Ligands...", self,
+			disabled = True,
 			triggered = self.import_ligands
 		)
+		self.project_ready.connect(self.import_ligand_act.setEnabled)
 
 		self.export_image_act = QAction(QIcon(':/icons/save.svg'), "&Export As Image...", self,
 			triggered = self.export_as_image
@@ -345,7 +343,7 @@ class DockeyMainWindow(QMainWindow):
 			triggered = self.pymol_redo
 		)
 
-		self.pymol_setting_act = QAction("Pymol Settings", self,
+		self.pymol_setting_act = QAction("Pymol View Settings", self,
 			triggered = self.pymol_settings
 		)
 
@@ -363,8 +361,6 @@ class DockeyMainWindow(QMainWindow):
 
 		index = self.cmd.setting._get_index('internal_gui')
 		self.pymol_actions[index] = self.pymol_sidebar_act
-
-
 
 		self.pymol_feedback_act = self.feedback_dock.toggleViewAction()
 		self.pymol_feedback_act.setText("Show Pymol Feedback")
@@ -521,10 +517,16 @@ class DockeyMainWindow(QMainWindow):
 		QMessageBox.critical(self, "Error", msg)
 
 	def create_db_connect(self, db_file):
-		#if not DB.connect(db_file):
-		#	QMessageBox.critical(self, "Error",
-		#		"Could not connect to dockey.db file")
-		DB.connect(db_file)
+		try:
+			DB.connect(db_file)
+		except:
+			return QMessageBox.critical(self, "Error",
+				"Could not open the project file, it's not a dockey project file"
+			)
+
+		self.mol_model.select()
+		self.job_model.select()
+		self.project_ready.emit(True)
 
 	def dragEnterEvent(self, event):
 		event.acceptProposedAction()
@@ -535,40 +537,38 @@ class DockeyMainWindow(QMainWindow):
 	def dropEvent(self, event):
 		if event.mimeData().hasUrls():
 			url = event.mimeData().urls()[0]
-			pfile = url.toLocalFile()
+			project_file = url.toLocalFile()
 
-			if pfile.endswith('.dky'):
-				self.create_db_connect(pfile)
-				self.mol_model.select()
-				self.job_model.select()
+			if project_file.endswith('.dky'):
+				if DB.active():
+					ret = QMessageBox.warning(self, "Warning",
+						"Are you sure you want to close the current project and open the dragged project?",
+						QMessageBox.Yes | QMessageBox.No
+					)
+
+					if ret == QMessageBox.No:
+						return
+					else:
+						self.close_project()
+
+				self.create_db_connect(project_file)
+				
 			else:
 				QMessageBox.critical(self, "Error",
-					"{} is not a dockey project file".format(pfile)
+					"{} is not a dockey project file".format(project_file)
 				)
 
 	def new_project(self):
-		#folder = CreateProjectDialog.get_project_folder(self)
+		if DB.active():
+			ret = QMessageBox.warning(self, "Warning",
+				"Are you sure you want to close the current project and create a new project?",
+				QMessageBox.Yes | QMessageBox.No
+			)
 
-		'''
-		if not folder:
-			return
-
-		try:
-			#make project folder
-			os.mkdir(folder)
-
-			#make data folder
-			data_dir = os.path.join(folder, 'data')
-			os.mkdir(data_dir)
-
-			#make jobs folder
-			jobs_dir = os.path.join(folder, 'jobs')
-			os.mkdir(jobs_dir)
-
-		except:
-			return QMessageBox.critical(self, "Error",
-				"Could not create project directory")
-		'''
+			if ret == QMessageBox.No:
+				return
+			else:
+				self.close_project()
 
 		project_file, _ = QFileDialog.getSaveFileName(self,
 			caption = "New Project File",
@@ -580,49 +580,39 @@ class DockeyMainWindow(QMainWindow):
 
 		self.create_db_connect(project_file)
 
-		#db_file = os.path.join(folder, 'dockey.db')
-		#self.create_db_connect(db_file)
-		#self.project_folder = folder
-
-		'''
-		DB.insert_rows("INSERT INTO option VALUES (?,?,?)", [
-			(None, 'root_dir', folder),
-			(None, 'data_dir', data_dir),
-			(None, 'jobs_dir', jobs_dir)
-		])
-		'''
-
 	def open_project(self):
-		#folder = QFileDialog.getExistingDirectory(self)
+		if DB.active():
+			ret = QMessageBox.warning(self, "Warning",
+				"Are you sure you want to close the current project and open a new project?",
+				QMessageBox.Yes | QMessageBox.No
+			)
+
+			if ret == QMessageBox.No:
+				return
+			else:
+				self.close_project()
 
 		project_file, _ = QFileDialog.getOpenFileName(self, filter="Dockey File (*.dky)")
 
 		if not project_file:
 			return
 
-		#if not folder:
-		#	return
-
-		#db_file = os.path.join(folder, 'dockey.db')
-
-		#if not os.path.exists(db_file):
-		#	return QMessageBox.critical(self, "Error",
-		#		"Could not find dockey.db file in {}".format(folder))
-
 		self.create_db_connect(project_file)
-		#self.project_folder = folder
-
-		self.mol_model.select()
-		self.job_model.select()
 
 	def save_project_as(self):
-		pass
+		project_file, _ = QFileDialog.getSaveFileName(self, filter="Dockey File (*dky)")
 
-	def open_project_dir(self):
-		QDesktopServices.openUrl(QUrl.fromLocalFile(self.project_folder))
+		if not project_file:
+			return
+
+		DB.save(project_file)
 
 	def close_project(self):
-		pass
+		self.mol_model.reset()
+		self.job_model.reset()
+		self.pose_model.reset()
+		DB.close()
+		self.project_ready.emit(False)
 
 	def import_moleculars(self, mols, _type=1):
 		sql = "INSERT INTO molecular VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)"
@@ -711,77 +701,54 @@ class DockeyMainWindow(QMainWindow):
 	def pymol_sidebar_toggle(self, checked):
 		self.pymol_viewer.sidebar_controler(checked)
 
+	def get_current_receptor(self):
+		objs = self.cmd.get_names('objects')
+		sql = "SELECT * FROM molecular WHERE name=? LIMIT 1"
+
+		for obj in objs:
+			if obj == 'gridbox':
+				continue
+
+			mol = DB.get_dict(sql, (objs[0],))
+			if mol.type == 1:
+				return mol
+
+		QMessageBox.critical(self, "Error", "There is no receptor in pymol viewer")
+
 	def draw_bounding_box(self):
-		if not self.current_molecular:
+		r = self.get_current_receptor()
+
+		if not r:
 			return
 
-		if self.current_molecular.type == 2:
-			return
-
-		points = self.cmd.get_extent(self.current_molecular.name)
+		points = self.cmd.get_extent(r.name)
 		self.box_adjuster.params.update_dimension(points)
-
 		draw_gridbox(self.cmd, self.box_adjuster.params)
-
 		self.box_dock.setVisible(True)
 
 	def draw_custom_box(self):
-		if not self.current_molecular:
-			return
+		r = self.get_current_receptor()
 
-		if self.current_molecular.type == 2:
+		if not r:
 			return
 
 		self.box_adjuster.params.custom()
-
 		draw_gridbox(self.cmd, self.box_adjuster.params)
-
 		self.box_dock.setVisible(True)
 
 	def delete_grid_box(self):
-		if self.current_molecular:
-			self.cmd.delete('gridbox')
-			self.box_adjuster.params.reset()
-			sql = "DELETE FROM grid WHERE id=?"
-			DB.query(sql, (self.current_molecular.id,))
+		r = self.get_current_receptor()
+
+		if not r:
+			return
+
+		self.cmd.delete('gridbox')
+		self.box_adjuster.params.reset()
+		DB.query("DELETE FROM grid WHERE id=?", (r.id,))
 
 	def get_jobs(self):
 		for row in DB.query("SELECT id FROM jobs"):
 			yield row[0]
-
-		'''
-		num = DB.get_one("SELECT COUNT(1) FROM jobs")
-		if not num: return
-
-		sql = (
-			"SELECT j.id,j.rid,j.lid,m1.name,m1.path,m1.format,m2.name,m2.path,m2.format "
-			"FROM jobs AS j LEFT JOIN molecular AS m1 ON m1.id=j.rid "
-			"LEFT JOIN molecular AS m2 ON m2.id=j.lid"
-		)
-
-		for job in DB.query(sql):
-			grid = DB.get_row("SELECT * FROM grid WHERE rid=?", (job[1],))
-
-			yield AttrDict({
-				'id': job[0],
-				'ri': job[1],
-				'rn': job[3],
-				'rp': job[4],
-				'rf': job[5],
-				'li': job[2],
-				'ln': job[6],
-				'lp': job[7],
-				'lf': job[8],
-				'x': grid[2],
-				'y': grid[3],
-				'z': grid[4],
-				'cx': grid[5],
-				'cy': grid[6],
-				'cz': grid[7],
-				'spacing': grid[8],
-				'root': self.project_folder
-			})
-		'''
 
 	def generate_job_list(self):
 		receptors = DB.get_column("SELECT id FROM molecular WHERE type=1")
@@ -825,12 +792,30 @@ class DockeyMainWindow(QMainWindow):
 			worker.signals.refresh.connect(self.job_model.update_row)
 			self.pool.start(worker)
 
+	def check_mols(self):
+		receptors = DB.get_one("SELECT 1 FROM molecular WHERE type=1 LIMIT 1")
+		ligands = DB.get_one("SELECT 1 FROM molecular WHERE type=2 LIMIT 1")
+
+		if not (receptors and ligands):
+			QMessageBox.critical(self, "Error", "There are no receptors and ligands")
+			return False
+
+		if not receptors:
+			QMessageBox.critical(self, "Error", "There are no receptors")
+			return False
+
+		if not ligands:
+			QMessageBox.critical(self, "Error", "There are no ligands")
+			return False
+
+		return True
+
 	def check_jobs(self):
 		jobs = DB.get_one("SELECT COUNT(1) FROM jobs LIMIT 1")
 
 		if jobs:
 			ret = QMessageBox.warning(self, "Warning",
-				"Are you sure you want to delete previous jobs and submit new jobs?",
+				"Are you sure you want to delete the previous jobs and submit new jobs?",
 				QMessageBox.Yes | QMessageBox.No
 			)
 
@@ -846,6 +831,9 @@ class DockeyMainWindow(QMainWindow):
 		return True
 
 	def run_autodock(self):
+		if not self.check_mols():
+			return
+
 		if not AutodockConfigDialog.check_executable(self):
 			return
 
@@ -868,6 +856,9 @@ class DockeyMainWindow(QMainWindow):
 		DB.set_option('tool', 'autodock4')
 
 	def run_autodock_vina(self):
+		if not self.check_mols():
+			return
+
 		if not AutodockVinaConfigDialog.check_executable(self):
 			return
 

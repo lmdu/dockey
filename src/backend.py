@@ -75,7 +75,8 @@ class DataBackend:
 	conn = None
 
 	def __init__(self):
-		self.connect()
+		#self.connect()
+		pass
 
 	def __del__(self):
 		if self.conn:
@@ -98,12 +99,23 @@ class DataBackend:
 			self.query(sql)
 
 	def connect(self, db_file=':memory:'):
-		if self.conn:
-			self.conn.close()
-
+		self.close()
 		self.conn = apsw.Connection(db_file)
 		#self.conn.setrowtrace(row_factory)
 		self._create_tables()
+
+	def close(self):
+		if self.conn:
+			self.conn.close()
+			self.conn = None
+
+	def active(self):
+		return self.conn is not None
+
+	def save(self, db_file):
+		target = apsw.Connection(db_file)
+		with target.backup('main', self.conn, 'main') as b:
+			b.step()
 
 	def clear_table(self, table):
 		self.query("DELETE FROM {}".format(table))
