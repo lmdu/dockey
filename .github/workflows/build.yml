@@ -35,7 +35,7 @@ jobs:
 
       - uses: actions/upload-artifact@v2
         with:
-          name: Windows
+          name: Windows exe
           path: dist/*.exe
 
   build_linux:
@@ -95,11 +95,18 @@ jobs:
 
       - uses: actions/upload-artifact@v2
         with:
-          name: Linux
-          path: |
-            dist/*.deb
-            dist/*.rpm
-            dist/*.tar.gz
+          name: Ubuntu deb
+          path: dist/*.deb
+
+      - uses: actions/upload-artifact@v2
+        with:
+          name: Fedora rpm
+          path: dist/*.rpm
+
+      - uses: actions/upload-artifact@v2
+        with:
+          name: Linux generic
+          path: dist/*.tar.gz
 
   build_mac:
     name: Build on Mac
@@ -133,7 +140,7 @@ jobs:
 
       - uses: actions/upload-artifact@v2
         with:
-          name: MacOS
+          name: MacOS dmg
           path: dist/*.dmg
 
 
