@@ -17,7 +17,6 @@ jobs:
 
       - name: Install requirements
         run: |
-          pip install wheels/Pmw‑2.0.1‑py3‑none‑any.whl
           pip install wheels/openbabel-3.1.1-cp38-cp38-win_amd64.whl
           pip install wheels/pymol-2.6.0a0-cp38-cp38-win_amd64.whl
           pip install psutil==5.9.0
@@ -26,17 +25,17 @@ jobs:
           pip install pyinstaller==4.7
 
       - name: Build executable
-        run: pyinstaller package/build.spec
+        run: pyinstaller package/build_win.spec
 
       - name: Package
         run: |
           $lines = Get-Content src/config.py
-          $version = $lines[8].Substring(18,5)
+          $version = $lines[9].Split('"')[1]
           iscc /DMyAppVersion=$version package/build_win_installer.iss
 
       - uses: actions/upload-artifact@v2
         with:
-          name: Windows exe
+          name: Dockey-win64.exe
           path: dist/*.exe
 
   build_linux:
@@ -85,7 +84,7 @@ jobs:
           pip install pyinstaller==4.7
 
       - name: Build executable
-        run: pyinstaller package/build.spec
+        run: pyinstaller package/build_linux.spec
 
       - name: Package installer
         run: |
@@ -97,17 +96,17 @@ jobs:
 
       - uses: actions/upload-artifact@v2
         with:
-          name: Ubuntu deb
+          name: Dockey-amd64.deb
           path: dist/*.deb
 
       - uses: actions/upload-artifact@v2
         with:
-          name: Fedora rpm
+          name: Dockey-amd64.rpm
           path: dist/*.rpm
 
       - uses: actions/upload-artifact@v2
         with:
-          name: Linux generic
+          name: Dockey-amd64.tar.gz
           path: dist/*.tar.gz
 
   build_mac:
@@ -122,28 +121,53 @@ jobs:
         with:
           python-version: 3.8
 
+      - name: Install openbabel
+        run: |
+          cmake --version
+          brew install libxml2 zlib eigen
+          wget https://github.com/openbabel/openbabel/archive/refs/tags/openbabel-3-1-1.tar.gz
+          tar xzf openbabel-3-1-1.tar.gz
+          cd openbabel-openbabel-3-1-1
+          mkdir build
+          cd build
+          cmake ..
+          make -j2
+          sudo make install
+          pip install openbabel==3.1.1.1
+          cd ../../
+
+      - name: Install pymol
+        run: |
+          brew install catch2 ffmpeg freeglut freetype glew glm libpng libxml2
+          brew install msgpack-cxx netcdf sip
+          git clone https://github.com/schrodinger/pymol-open-source.git
+          git clone https://github.com/rcsb/mmtf-cpp.git
+          mv mmtf-cpp/include/mmtf* pymol-open-source/include/
+          cd pymol-open-source
+          python setup.py install
+          cd ..
+
       - name: Install requirements
         run: |
-          brew install open-babel
-          brew install brewsci/bio/pymol
           pip install psutil==5.9.0
           pip install apsw-wheels==3.36.0.post1
           pip install PySide6==6.2.2.1
           pip install pyinstaller==4.7
 
       - name: Build executable
-        run: pyinstaller package/build.spec
+        run: pyinstaller package/build_mac.spec
 
       - name: Package
         run: |
           version=`awk '/^DOCKEY_VERSION/{print $NF}' src/config.py | sed 's/\"//g'`
           cd dist
-          brew install create-dmg
-          create-dmg Dockey-v${version}-macos.dmg Dockey.app
+          sudo npm install --global create-dmg
+          create-dmg Dockey.app
+          mv "Dockey 0.0.0.dmg" Dockey-v${version}-macos.dmg
 
       - uses: actions/upload-artifact@v2
         with:
-          name: MacOS dmg
+          name: Dockey-macos.dmg
           path: dist/*.dmg
 
 
