@@ -74,7 +74,7 @@ jobs:
           git clone https://github.com/rcsb/mmtf-cpp.git
           mv mmtf-cpp/include/mmtf* pymol-open-source/include/
           cd pymol-open-source
-          python setup.py --jobs 2 --use-openmp no --no-libxml install
+          python setup.py install
           cd ..
 
       - name: Install requirements
@@ -141,14 +141,13 @@ jobs:
       - name: Install pymol
         run: |
           pip install Pmw==2.0.1
-          pip install mmtf-python
           brew install catch2 ffmpeg freeglut freetype glew glm libpng libxml2
           brew install msgpack msgpack-cxx netcdf sip
           git clone https://github.com/schrodinger/pymol-open-source.git
-          #git clone https://github.com/rcsb/mmtf-cpp.git
-          #mv mmtf-cpp/include/mmtf* pymol-open-source/include/
+          git clone https://github.com/rcsb/mmtf-cpp.git
+          mv mmtf-cpp/include/mmtf* pymol-open-source/include/
           cd pymol-open-source
-          python setup.py --jobs 2 --use-openmp no --use-msgpackc c++11 --no-libxml install
+          python setup.py install --glut --use-msgpackc c++11
           cd ..
 
       - name: Install requirements

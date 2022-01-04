@@ -186,10 +186,14 @@ class AutodockWorker(BaseWorker):
 		autodock, autogrid = self.get_commands()
 
 		self.update_message("Running autogrid")
+		startupinfo = subprocess.STARTUPINFO()
+		startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
 		proc = psutil.Popen([autogrid, '-p', gpf_file, '-l', glg_file],
+			startupinfo = startupinfo,
 			stdout = subprocess.PIPE,
 			stderr = subprocess.PIPE,
-			cwd = self.work_dir
+			cwd = self.work_dir,
+			encoding = 'utf8'
 		)
 
 		read_start = 0
@@ -223,9 +227,11 @@ class AutodockWorker(BaseWorker):
 		#run autodock4
 		self.update_message("Running autodock")
 		proc = psutil.Popen([autodock, '-p', dpf_file, '-l', dlg_file],
+			startupinfo = startupinfo,
 			stdout = subprocess.PIPE,
 			stderr = subprocess.PIPE,
-			cwd = self.work_dir
+			cwd = self.work_dir,
+			encoding = 'utf8'
 		)
 
 		read_start = 0
@@ -343,10 +349,14 @@ class AutodockVinaWorker(BaseWorker):
 			#	QFile.remove(glg_file)
 
 			self.update_message("Running autogrid")
+			startupinfo = subprocess.STARTUPINFO()
+			startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
 			proc = psutil.Popen([autogrid, '-p', gpf_file, '-l', glg_file],
+				startupinfo = startupinfo,
 				stdout = subprocess.PIPE,
 				stderr = subprocess.PIPE,
-				cwd = self.work_dir
+				cwd = self.work_dir,
+				encoding = 'utf8'
 			)
 
 			read_start = 0
@@ -396,6 +406,7 @@ class AutodockVinaWorker(BaseWorker):
 		#run autodock vina
 		self.update_message("Running autodock vina")
 		proc = psutil.Popen([vina, '--config', config_file],
+			startupinfo = startupinfo,
 			stdout = subprocess.PIPE,
 			stderr = subprocess.PIPE,
 			cwd = self.work_dir,
