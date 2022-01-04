@@ -74,7 +74,7 @@ jobs:
           git clone https://github.com/rcsb/mmtf-cpp.git
           mv mmtf-cpp/include/mmtf* pymol-open-source/include/
           cd pymol-open-source
-          python setup.py install
+          python setup.py --jobs 2 --use-openmp no --no-libxml install
           cd ..
 
       - name: Install requirements
@@ -133,7 +133,7 @@ jobs:
           mkdir build
           cd build
           cmake ..
-          make
+          make -j2
           sudo make install
           pip install openbabel==3.1.1.1
           cd ../../
@@ -148,7 +148,7 @@ jobs:
           #git clone https://github.com/rcsb/mmtf-cpp.git
           #mv mmtf-cpp/include/mmtf* pymol-open-source/include/
           cd pymol-open-source
-          python setup.py --use-msgpackc=c++11 --osx-frameworks install
+          python setup.py --jobs 2 --use-openmp no --use-msgpackc c++11 --no-libxml install
           cd ..
 
       - name: Install requirements
