@@ -17,6 +17,7 @@ jobs:
 
       - name: Install requirements
         run: |
+          pip install wheels/Pmw-2.0.1-py3-none-any.whl
           pip install wheels/openbabel-3.1.1-cp38-cp38-win_amd64.whl
           pip install wheels/pymol-2.6.0a0-cp38-cp38-win_amd64.whl
           pip install psutil==5.9.0
@@ -78,6 +79,7 @@ jobs:
 
       - name: Install requirements
         run: |
+          pip install Pmw==2.0.1
           pip install psutil==5.9.0
           pip install apsw-wheels==3.36.0.post1
           pip install PySide6==6.2.2.1
@@ -131,20 +133,21 @@ jobs:
           mkdir build
           cd build
           cmake ..
-          make -j2
+          make
           sudo make install
           pip install openbabel==3.1.1.1
           cd ../../
 
       - name: Install pymol
         run: |
+          pip install Pmw==2.0.1
           brew install catch2 ffmpeg freeglut freetype glew glm libpng libxml2
-          brew install msgpack-cxx netcdf sip
+          brew install msgpack msgpack-cxx netcdf sip
           git clone https://github.com/schrodinger/pymol-open-source.git
           git clone https://github.com/rcsb/mmtf-cpp.git
           mv mmtf-cpp/include/mmtf* pymol-open-source/include/
           cd pymol-open-source
-          python setup.py install
+          python setup.py --osx-frameworks install
           cd ..
 
       - name: Install requirements

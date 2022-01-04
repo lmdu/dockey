@@ -33,11 +33,15 @@ contents:
     dst: /usr/share/applications/dockey.desktop
   - src: ./dockey_logo.svg
     dst: /usr/share/icons/dockey_logo.svg
+rpm:
+  compression: lzma
+deb:
+  compression: xz
 "
 echo "$nfpmconfig" > nfpm.yaml
 
 # copy logo file
 cp ../src/icons/logo.svg ./dockey_logo.svg
 
-./nfpm pkg -t Dockey-v${version}-amd64.deb
-./nfpm pkg -t Dockey-v${version}-amd64.rpm
+./nfpm pkg -p deb -t Dockey-v${version}-amd64.deb
+./nfpm pkg -p rpm -t Dockey-v${version}-amd64.rpm
