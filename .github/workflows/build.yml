@@ -123,25 +123,25 @@ jobs:
         with:
           python-version: 3.8
 
-      - name: Install openbabel
-        run: |
-          cmake --version
-          brew install libxml2 zlib eigen
-          wget https://github.com/openbabel/openbabel/archive/refs/tags/openbabel-3-1-1.tar.gz
-          tar xzf openbabel-3-1-1.tar.gz
-          cd openbabel-openbabel-3-1-1
-          mkdir build
-          cd build
-          cmake ..
-          make -j2
-          sudo make install
-          pip install openbabel==3.1.1.1
-          cd ../../
+      #- name: Install openbabel
+      #  run: |
+      #    cmake --version
+      #    brew install libxml2 zlib eigen
+      #    wget https://github.com/openbabel/openbabel/archive/refs/tags/openbabel-3-1-1.tar.gz
+      #    tar xzf openbabel-3-1-1.tar.gz
+      #    cd openbabel-openbabel-3-1-1
+      #    mkdir build
+      #    cd build
+      #    cmake ..
+      #    make -j2
+      #    sudo make install
+      #    pip install openbabel==3.1.1.1
+      #    cd ../../
 
       - name: Install pymol
         run: |
           pip install Pmw==2.0.1
-          brew install catch2 ffmpeg freeglut freetype glew glm libpng libxml2
+          brew install catch2 freeglut freetype glew glm libpng libxml2
           brew install msgpack msgpack-cxx netcdf sip
           git clone https://github.com/schrodinger/pymol-open-source.git
           #git clone https://github.com/rcsb/mmtf-cpp.git

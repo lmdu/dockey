@@ -2,8 +2,8 @@ import sys
 import apsw
 import pymol
 import psutil
-import PySide6
 import openbabel
+from PySide6.QtCore import __version__ as pyside_version
 
 __all__ = ['DOCKEY_VERSION', 'DOCKEY_BUILD', 'DOCKEY_ABOUT']
 
@@ -116,7 +116,7 @@ DOCKEY_ABOUT = """
 	build = DOCKEY_BUILD,
 	python = sys.version.split()[0],
 	apsw = apsw.apswversion(),
-	pyside = PySide6.__version__,
+	pyside = pyside_version,
 	pymol = pymol.cmd.get_version()[0],
 	babel = openbabel.__version__,
 	psutil = psutil.__version__,
