@@ -144,10 +144,10 @@ jobs:
           brew install catch2 ffmpeg freeglut freetype glew glm libpng libxml2
           brew install msgpack msgpack-cxx netcdf sip
           git clone https://github.com/schrodinger/pymol-open-source.git
-          git clone https://github.com/rcsb/mmtf-cpp.git
-          mv mmtf-cpp/include/mmtf* pymol-open-source/include/
+          #git clone https://github.com/rcsb/mmtf-cpp.git
+          #mv mmtf-cpp/include/mmtf* pymol-open-source/include/
           cd pymol-open-source
-          python setup.py install --use-msgpackc c++11
+          python setup.py build install --glut --use-msgpackc c++11
           cd ..
 
       - name: Install requirements
