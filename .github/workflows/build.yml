@@ -17,8 +17,8 @@ jobs:
 
       - name: Install requirements
         run: |
-          wget https://github.com/lmdu/pymol-wheel/releases/download/2.6.0a0/pymol-2.6.0a0-cp38-cp38-win_amd64.whl
-          wget https://github.com/lmdu/openbabel-wheel/releases/download/3.1.1/openbabel-3.1.1-cp38-cp38-win_amd64.whl
+          wsl wget https://github.com/lmdu/pymol-wheel/releases/download/2.6.0a0/pymol-2.6.0a0-cp38-cp38-win_amd64.whl
+          wsl wget https://github.com/lmdu/openbabel-wheel/releases/download/3.1.1/openbabel-3.1.1-cp38-cp38-win_amd64.whl
           pip install pymol-2.6.0a0-cp38-cp38-win_amd64.whl
           pip install openbabel-3.1.1-cp38-cp38-win_amd64.whl
           pip install psutil==5.9.0
