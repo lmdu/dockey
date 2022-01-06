@@ -17,9 +17,10 @@ jobs:
 
       - name: Install requirements
         run: |
-          pip install wheels/Pmw-2.0.1-py3-none-any.whl
-          pip install wheels/openbabel-3.1.1-cp38-cp38-win_amd64.whl
-          pip install wheels/pymol-2.6.0a0-cp38-cp38-win_amd64.whl
+          wget https://github.com/lmdu/pymol-wheel/releases/download/2.6.0a0/pymol-2.6.0a0-cp38-cp38-win_amd64.whl
+          wget https://github.com/lmdu/openbabel-wheel/releases/download/3.1.1/openbabel-3.1.1-cp38-cp38-win_amd64.whl
+          pip install pymol-2.6.0a0-cp38-cp38-win_amd64.whl
+          pip install openbabel-3.1.1-cp38-cp38-win_amd64.whl
           pip install psutil==5.9.0
           pip install apsw-wheels==3.36.0.post1
           pip install PySide6==6.2.2.1
@@ -51,35 +52,12 @@ jobs:
         with:
           python-version: 3.8
 
-      - name: Install openbabel
-        run: |
-          cmake --version
-          sudo apt install libxml2-dev zlib1g-dev libeigen3-dev
-          wget https://github.com/openbabel/openbabel/archive/refs/tags/openbabel-3-1-1.tar.gz
-          tar xzf openbabel-3-1-1.tar.gz
-          cd openbabel-openbabel-3-1-1
-          mkdir build
-          cd build
-          cmake ..
-          make -j2
-          sudo make install
-          pip install openbabel==3.1.1.1
-          cd ../../
-
-      - name: Install pymol
-        run: |
-          sudo apt install build-essential libgl1-mesa-dev libglew-dev libpng-dev libfreetype6-dev
-          sudo apt install libmsgpack-dev libxml2-dev libglm-dev libnetcdf-dev
-          git clone https://github.com/schrodinger/pymol-open-source.git
-          git clone https://github.com/rcsb/mmtf-cpp.git
-          mv mmtf-cpp/include/mmtf* pymol-open-source/include/
-          cd pymol-open-source
-          python setup.py install
-          cd ..
-
       - name: Install requirements
         run: |
-          pip install Pmw==2.0.1
+          wget https://github.com/lmdu/pymol-wheel/releases/download/2.6.0a0/pymol-2.6.0a0-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
+          wget https://github.com/lmdu/openbabel-wheel/releases/download/3.1.1/openbabel-3.1.1.1-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
+          pip install pymol-2.6.0a0-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
+          pip install openbabel-3.1.1.1-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
           pip install psutil==5.9.0
           pip install apsw-wheels==3.36.0.post1
           pip install PySide6==6.2.2.1
@@ -123,35 +101,12 @@ jobs:
         with:
           python-version: 3.8
 
-      #- name: Install openbabel
-      #  run: |
-      #    cmake --version
-      #    brew install libxml2 zlib eigen
-      #    wget https://github.com/openbabel/openbabel/archive/refs/tags/openbabel-3-1-1.tar.gz
-      #    tar xzf openbabel-3-1-1.tar.gz
-      #    cd openbabel-openbabel-3-1-1
-      #    mkdir build
-      #    cd build
-      #    cmake ..
-      #    make -j2
-      #    sudo make install
-      #    pip install openbabel==3.1.1.1
-      #    cd ../../
-
-      - name: Install pymol
-        run: |
-          pip install Pmw==2.0.1
-          brew install catch2 freeglut freetype glew glm libpng libxml2
-          brew install msgpack msgpack-cxx netcdf sip
-          git clone https://github.com/schrodinger/pymol-open-source.git
-          #git clone https://github.com/rcsb/mmtf-cpp.git
-          #mv mmtf-cpp/include/mmtf* pymol-open-source/include/
-          cd pymol-open-source
-          python setup.py build install --glut --use-msgpackc c++11
-          cd ..
-
       - name: Install requirements
         run: |
+          wget https://github.com/lmdu/pymol-wheel/releases/download/2.6.0a0/pymol-2.6.0a0-cp38-cp38-macosx_10_9_x86_64.whl
+          wget https://github.com/lmdu/openbabel-wheel/releases/download/3.1.1/openbabel-3.1.1.1-cp38-cp38-macosx_10_9_x86_64.whl
+          pip install pymol-2.6.0a0-cp38-cp38-macosx_10_9_x86_64.whl
+          pip install openbabel-3.1.1.1-cp38-cp38-macosx_10_9_x86_64.whl
           pip install psutil==5.9.0
           pip install apsw-wheels==3.36.0.post1
           pip install PySide6==6.2.2.1
