@@ -17,10 +17,8 @@ jobs:
 
       - name: Install requirements
         run: |
-          wsl wget https://github.com/lmdu/pymol-wheel/releases/download/2.6.0a0/pymol-2.6.0a0-cp38-cp38-win_amd64.whl
-          wsl wget https://github.com/lmdu/openbabel-wheel/releases/download/3.1.1/openbabel-3.1.1-cp38-cp38-win_amd64.whl
-          pip install pymol-2.6.0a0-cp38-cp38-win_amd64.whl
-          pip install openbabel-3.1.1-cp38-cp38-win_amd64.whl
+          pip install https://github.com/lmdu/pymol-wheel/releases/download/2.6.0a0/pymol-2.6.0a0-cp38-cp38-win_amd64.whl
+          pip install https://github.com/lmdu/openbabel-wheel/releases/download/3.1.1/openbabel-3.1.1-cp38-cp38-win_amd64.whl
           pip install psutil==5.9.0
           pip install apsw-wheels==3.36.0.post1
           pip install PySide6==6.2.2.1
@@ -54,10 +52,8 @@ jobs:
 
       - name: Install requirements
         run: |
-          wget https://github.com/lmdu/pymol-wheel/releases/download/2.6.0a0/pymol-2.6.0a0-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
-          wget https://github.com/lmdu/openbabel-wheel/releases/download/3.1.1/openbabel-3.1.1.1-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
-          pip install pymol-2.6.0a0-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
-          pip install openbabel-3.1.1.1-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
+          pip install https://github.com/lmdu/pymol-wheel/releases/download/2.6.0a0/pymol-2.6.0a0-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
+          pip install https://github.com/lmdu/openbabel-wheel/releases/download/3.1.1/openbabel-3.1.1.1-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
           pip install psutil==5.9.0
           pip install apsw-wheels==3.36.0.post1
           pip install PySide6==6.2.2.1
@@ -103,10 +99,8 @@ jobs:
 
       - name: Install requirements
         run: |
-          wget https://github.com/lmdu/pymol-wheel/releases/download/2.6.0a0/pymol-2.6.0a0-cp38-cp38-macosx_10_9_x86_64.whl
-          wget https://github.com/lmdu/openbabel-wheel/releases/download/3.1.1/openbabel-3.1.1.1-cp38-cp38-macosx_10_9_x86_64.whl
-          pip install pymol-2.6.0a0-cp38-cp38-macosx_10_9_x86_64.whl
-          pip install openbabel-3.1.1.1-cp38-cp38-macosx_10_9_x86_64.whl
+          pip install https://github.com/lmdu/pymol-wheel/releases/download/2.6.0a0/pymol-2.6.0a0-cp38-cp38-macosx_10_9_x86_64.whl
+          pip install https://github.com/lmdu/openbabel-wheel/releases/download/3.1.1/openbabel-3.1.1.1-cp38-cp38-macosx_10_9_x86_64.whl
           pip install psutil==5.9.0
           pip install apsw-wheels==3.36.0.post1
           pip install PySide6==6.2.2.1
@@ -118,9 +112,9 @@ jobs:
       - name: Package
         run: |
           version=`awk '/^DOCKEY_VERSION/{print $NF}' src/config.py | sed 's/\"//g'`
+          npm install --global create-dmg
           cd dist
-          sudo npm install --global create-dmg
-          create-dmg Dockey.app
+          create-dmg Dockey.app || true
           mv "Dockey 0.0.0.dmg" Dockey-v${version}-macos.dmg
 
       - uses: actions/upload-artifact@v2
