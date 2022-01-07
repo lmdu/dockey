@@ -123,7 +123,8 @@ jobs:
           path: dist/*.dmg
 
   deploy:
-    name: Upload to release
+    name: Upload to Release
+    runs-on: ubuntu-20.04
 
     steps:
       - uses: actions/download-artifact@v2
