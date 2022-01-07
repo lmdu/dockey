@@ -125,6 +125,7 @@ jobs:
   deploy:
     name: Upload to Release
     runs-on: ubuntu-20.04
+    needs: [build_win, build_linux, build_mac]
 
     steps:
       - uses: actions/download-artifact@v2
