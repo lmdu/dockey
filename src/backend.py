@@ -53,6 +53,12 @@ DB_TABLES = {
 		('lelp', 'REAL'),
 		('mode', 'TEXT')
 	],
+	'logs': [
+		('id', 'INTEGER PRIMARY KEY'),
+		('jid', 'INTEGER'),
+		('name', 'TEXT'),
+		('content', 'TEXT')
+	],
 	'option': [
 		('id', 'INTEGER PRIMARY KEY'),
 		('name', 'TEXT'),

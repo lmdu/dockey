@@ -25,6 +25,50 @@ class MoleculeDetailDialog(QDialog):
 		btn_box.rejected.connect(self.reject)
 		layout.addWidget(btn_box)
 
+class JobLogDialog(QDialog):
+	def __init__(self, parent, job):
+		super(JobLogDialog, self).__init__(parent)
+		self.job = job
+		self.resize(QSize(650, 400))
+		self.tab_bar = QTabBar(self)
+		self.log_viewer = QTextBrowser(self)
+		self.log_names = self.get_log_names()
+
+		for name in self.log_names:
+			self.tab_bar.addTab(name)
+
+		self.tab_bar.currentChanged.connect(self.on_tab_changed)
+		self.on_tab_changed(0)
+
+		btn_box = QDialogButtonBox(QDialogButtonBox.Ok)
+		btn_box.accepted.connect(self.accept)
+
+		self.layout = QVBoxLayout()
+		self.layout.setSpacing(0)
+		self.layout.addWidget(self.tab_bar)
+		self.layout.addWidget(self.log_viewer)
+		self.layout.addItem(QSpacerItem(5,10))
+		self.layout.addWidget(btn_box)
+		self.setLayout(self.layout)
+
+	def get_log_names(self):
+		sql = "SELECT name FROM logs WHERE jid=?"
+		return DB.get_column(sql, (self.job,))
+
+	@Slot()
+	def on_tab_changed(self, index):
+		name = self.log_names[index]
+		sql = "SELECT content FROM logs WHERE jid=? AND name=? LIMIT 1"
+		content = DB.get_one(sql, (self.job, name))
+		content = content.replace('\0', '')
+
+		self.log_viewer.setText(content)
+
+	@classmethod
+	def view_log(cls, parent, job):
+		dlg = cls(parent, job)
+		dlg.exec()
+
 class DockeyListView(QListView):
 	def __init__(self, parent=None):
 		super(DockeyListView, self).__init__(parent)
@@ -178,13 +222,19 @@ class JobTableView(QTableView):
 	def on_custom_menu(self, pos):
 		self.current_index = self.indexAt(pos)
 
-		view_act = QAction("View Details", self,
+		view_detail_act = QAction("View Details", self,
 			triggered = self.view_details
 		)
-		view_act.setDisabled(not self.current_index.isValid())
+		view_detail_act.setEnabled(self.current_index.isValid())
+
+		view_logs_act = QAction("View Log Files", self,
+			triggered = self.view_logs
+		)
+		view_logs_act.setEnabled(self.current_index.isValid())
 
 		menu = QMenu(self)
-		menu.addAction(view_act)
+		menu.addAction(view_detail_act)
+		menu.addAction(view_logs_act)
 		menu.popup(self.viewport().mapToGlobal(pos))
 
 	@Slot()
@@ -222,6 +272,14 @@ class JobTableView(QTableView):
 			job.message
 		))
 		dlg.exec()
+
+	@Slot()
+	def view_logs(self):
+		if not self.current_index.isValid():
+			return
+
+		jid = self.current_index.row() + 1
+		JobLogDialog.view_log(self.parent, jid)
 
 class PoseTableView(QTableView):
 	def __init__(self, parent=None):

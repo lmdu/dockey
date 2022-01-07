@@ -122,4 +122,17 @@ jobs:
           name: Dockey-macos.dmg
           path: dist/*.dmg
 
+  deploy:
+    name: Upload to release
 
+    steps:
+      - uses: actions/download-artifact@v2
+        with:
+          path: ./exes
+
+      - run: ls -lh ./exes
+
+      - uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: ./exes/*

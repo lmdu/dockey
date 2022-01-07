@@ -15,7 +15,6 @@ from config import *
 from backend import *
 from gridbox import *
 
-
 __all__ = ['DockeyMainWindow']
 
 class DockeyMainWindow(QMainWindow):
@@ -343,11 +342,19 @@ class DockeyMainWindow(QMainWindow):
 			triggered = self.pymol_redo
 		)
 
-		self.pymol_setting_act = QAction("Pymol View Settings", self,
+		self.pymol_color_act = QAction("Color", self,
 			triggered = self.pymol_settings
 		)
 
-		self.dock_tool_act = QAction("Docking Tool Settings", self,
+		self.pymol_opaque_act = QAction("Opaque", self,
+			checkable = True,
+			checked = False
+		)
+		self.pymol_opaque_act.toggled.connect(self.pymol_opaque_background)
+		index = self.cmd.setting._get_index('opaque_background')
+		self.pymol_actions[index] = self.pymol_opaque_act
+
+		self.dock_tool_act = QAction("Docking Tools", self,
 			triggered = self.docking_tool_settings
 		)
 
@@ -408,12 +415,16 @@ class DockeyMainWindow(QMainWindow):
 		)
 
 		self.run_autodock_act = QAction("Autodock", self,
+			disabled = True,
 			triggered = self.run_autodock
 		)
+		self.project_ready.connect(self.run_autodock_act.setEnabled)
 
 		self.run_vina_act = QAction("Autodock Vina", self,
+			disabled = True,
 			triggered = self.run_autodock_vina
 		)
+		self.project_ready.connect(self.run_vina_act.setEnabled)
 
 		#help actions
 		self.about_act = QAction("&About", self,
@@ -449,7 +460,10 @@ class DockeyMainWindow(QMainWindow):
 		self.edit_menu.addAction(self.pymol_undo_act)
 		self.edit_menu.addAction(self.pymol_redo_act)
 		self.edit_menu.addSeparator()
-		self.edit_menu.addAction(self.pymol_setting_act)
+		bg_menu = self.edit_menu.addMenu("Background")
+		bg_menu.addAction(self.pymol_color_act)
+		bg_menu.addAction(self.pymol_opaque_act)
+
 		self.edit_menu.addAction(self.dock_tool_act)
 
 		self.view_menu = self.menuBar().addMenu("&View")
@@ -611,6 +625,11 @@ class DockeyMainWindow(QMainWindow):
 		self.mol_model.reset()
 		self.job_model.reset()
 		self.pose_model.reset()
+
+		#reset pymol
+		self.cmd.delete('all')
+		self.cmd.reinitialize()
+
 		DB.close()
 		self.project_ready.emit(False)
 
@@ -700,6 +719,9 @@ class DockeyMainWindow(QMainWindow):
 
 	def pymol_sidebar_toggle(self, checked):
 		self.pymol_viewer.sidebar_controler(checked)
+
+	def pymol_opaque_background(self, checked):
+		self.cmd.set('ray_opaque_background', checked)
 
 	def get_current_receptor(self):
 		objs = self.cmd.get_names('objects')

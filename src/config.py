@@ -9,7 +9,7 @@ __all__ = ['DOCKEY_VERSION', 'DOCKEY_BUILD', 'DOCKEY_ABOUT']
 
 DOCKEY_VERSION = "0.1.0"
 
-DOCKEY_BUILD = "220103"
+DOCKEY_BUILD = "220107"
 
 DOCKEY_ABOUT = """
 <p>Dockey - Molecular Docking and Virtual Screening</p>

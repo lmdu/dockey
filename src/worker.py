@@ -56,6 +56,15 @@ class BaseWorker(QRunnable):
 		sql = "INSERT INTO pose VALUES (?,?,?,?,?,?,?,?,?,?,?,?)"
 		DB.insert_rows(sql, poses)
 
+	def save_log(self, name, log_file):
+		sql = "INSERT INTO logs VALUES (?,?,?,?)"
+
+		with open(log_file) as fh:
+			content = fh.read()
+
+		logs = [(None, self.job.id, name, content)]
+		DB.insert_rows(sql, logs)
+
 	def update_status(self, status):
 		sql = "UPDATE jobs SET status=? WHERE id=?"
 		DB.query(sql, (status, self.job.id))
@@ -103,14 +112,14 @@ class BaseWorker(QRunnable):
 
 		try:
 			#make a temp work dir
-			temp_dir = QTemporaryDir()
-			if not temp_dir.isValid():
+			self.temp_dir = QTemporaryDir()
+			if not self.temp_dir.isValid():
 				raise Exception(
 					"Could not create temporary work directory, {}".format(
-						temp_dir.errorString()
+						self.temp_dir.errorString()
 					)
 				)
-			self.work_dir = temp_dir.path()
+			self.work_dir = self.temp_dir.path()
 
 			#run worker
 			self.pipline()
@@ -119,7 +128,7 @@ class BaseWorker(QRunnable):
 		else:
 			self.update_success()
 		finally:
-			temp_dir.remove()
+			self.temp_dir.remove()
 			self.update_finished()
 
 	def get_mgltools(self):
@@ -182,18 +191,18 @@ class AutodockWorker(BaseWorker):
 		gpf_file = ag_param.make_gpf_file()
 		glg_file = gpf_file.replace('.gpf', '.glg')
 		self.log_file = glg_file
+		self.save_log('gpf_file', gpf_file)
 
 		autodock, autogrid = self.get_commands()
 
 		self.update_message("Running autogrid")
-		startupinfo = subprocess.STARTUPINFO()
-		startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
 		proc = psutil.Popen([autogrid, '-p', gpf_file, '-l', glg_file],
-			startupinfo = startupinfo,
+			stdin = subprocess.PIPE,
 			stdout = subprocess.PIPE,
 			stderr = subprocess.PIPE,
 			cwd = self.work_dir,
-			encoding = 'utf8'
+			encoding = 'utf8',
+			creationflags = 0x08000000
 		)
 
 		read_start = 0
@@ -216,9 +225,10 @@ class AutodockWorker(BaseWorker):
 			else:
 				QThread.sleep(1)
 
-
 		if proc.returncode != 0:
 			raise Exception(proc.stderr.read())
+
+		self.save_log('glg_file', glg_file)
 
 		#set autodock4 parameters and make dpf parameter file
 		dpf_file = self.params.make_dpf_file(rpdbqt, lpdbqt)
@@ -227,11 +237,12 @@ class AutodockWorker(BaseWorker):
 		#run autodock4
 		self.update_message("Running autodock")
 		proc = psutil.Popen([autodock, '-p', dpf_file, '-l', dlg_file],
-			startupinfo = startupinfo,
+			stdin = subprocess.PIPE,
 			stdout = subprocess.PIPE,
 			stderr = subprocess.PIPE,
 			cwd = self.work_dir,
-			encoding = 'utf8'
+			encoding = 'utf8',
+			creationflags = 0x08000000
 		)
 
 		read_start = 0
@@ -257,6 +268,8 @@ class AutodockWorker(BaseWorker):
 
 		if proc.returncode != 0:
 			raise Exception(proc.stderr.read())
+
+		self.save_log('dlg_file', dlg_file)
 
 		#parse autodock dlg log file
 		self.update_message("Analyzing docking results")
@@ -343,20 +356,16 @@ class AutodockVinaWorker(BaseWorker):
 			glg_file = gpf_file.replace('.gpf', '.glg')
 			self.log_file = glg_file
 
-			#run autogrid4
-			#delete the glg log file before new start
-			#if QFile.exists(glg_file):
-			#	QFile.remove(glg_file)
+			self.save_log('gpf_file', gpf_file)
 
 			self.update_message("Running autogrid")
-			startupinfo = subprocess.STARTUPINFO()
-			startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
 			proc = psutil.Popen([autogrid, '-p', gpf_file, '-l', glg_file],
-				startupinfo = startupinfo,
+				stdin = subprocess.PIPE,
 				stdout = subprocess.PIPE,
 				stderr = subprocess.PIPE,
 				cwd = self.work_dir,
-				encoding = 'utf8'
+				encoding = 'utf8',
+				creationflags = 0x08000000
 			)
 
 			read_start = 0
@@ -382,6 +391,8 @@ class AutodockVinaWorker(BaseWorker):
 			if proc.returncode != 0:
 				raise Exception(proc.stderr.read())
 
+			self.save_log('glg_file', glg_file)
+
 			self.params.maps.value = self.job.rname
 		else:
 			#using autodock score function no need --receptor arg
@@ -403,14 +414,17 @@ class AutodockVinaWorker(BaseWorker):
 		self.params.out.value = os.path.basename(out_file)
 		self.params.make_config_file(config_file)
 
+		self.save_log('config_file', config_file)
+
 		#run autodock vina
 		self.update_message("Running autodock vina")
 		proc = psutil.Popen([vina, '--config', config_file],
-			startupinfo = startupinfo,
+			stdin = subprocess.PIPE,
 			stdout = subprocess.PIPE,
 			stderr = subprocess.PIPE,
 			cwd = self.work_dir,
-			encoding = 'utf8'
+			encoding = 'utf8',
+			creationflags = 0x08000000
 		)
 
 		star = 0
@@ -436,6 +450,9 @@ class AutodockVinaWorker(BaseWorker):
 
 		if proc.returncode != 0:
 			raise Exception(proc.stderr.read())
+
+		self.save_log('log_file', log_file)
+		self.save_log('out_file', out_file)
 
 		self.update_message("Analyzing docking results")
 		rows = []
