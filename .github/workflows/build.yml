@@ -103,6 +103,8 @@ jobs:
         with:
           python-version: 3.8
 
+      - run: python -m pip install -U pip
+
       - name: Install requirements
         run: |
           python -m pip install https://github.com/lmdu/pymol-wheel/releases/download/2.6.0a0/pymol-2.6.0a0-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
