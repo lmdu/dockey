@@ -92,7 +92,7 @@ jobs:
   build_fedora:
     name: Build on Centos
     runs-on: ubuntu-20.04
-    container: 'centos:latest'
+    container: docker.io/centos:7
 
     steps:
       - uses: actions/checkout@v2.4.0
