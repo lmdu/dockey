@@ -99,8 +99,7 @@ jobs:
       - uses: actions/checkout@v2.4.0
 
       - name: Install Python
-        #uses: actions/setup-python@v2
-        uses: palewire/install-python-pipenv-pipfile@v2
+        uses: actions/setup-python@v2
         with:
           python-version: 3.8
 
