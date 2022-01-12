@@ -1,6 +1,7 @@
 #!/bin/sh
 
 version=$1
+packager=$2
 
 wget https://github.com/goreleaser/nfpm/releases/download/v2.11.3/nfpm_2.11.3_Linux_x86_64.tar.gz
 tar xzvf nfpm_2.11.3_Linux_x86_64.tar.gz
@@ -48,5 +49,13 @@ echo "$nfpmconfig" > nfpm.yaml
 # copy logo file
 cp ../src/icons/logo.svg ./logo.svg
 
-./nfpm pkg -t Dockey-v${version}-amd64.deb
-./nfpm pkg -t Dockey-v${version}-amd64.rpm
+if [ $packager == "deb" ]
+then
+  ./nfpm pkg -t Dockey-v${version}-amd64.deb
+  tar -czvf Dockey-v${version}-ubuntu.tar.gz Dockey
+elif [ $packager == "rpm" ]
+  ./nfpm pkg -t Dockey-v${version}-amd64.rpm
+  tar -czvf Dockey-v${version}-fedora.tar.gz Dockey
+else
+  echo $version
+fi

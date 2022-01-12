@@ -43,8 +43,8 @@ jobs:
         with:
           files: dist/*.exe
 
-  build_linux:
-    name: Build on Linux
+  build_ubuntu:
+    name: Build on Ubuntu
     runs-on: ubuntu-20.04
 
     steps:
@@ -73,14 +73,13 @@ jobs:
           cd dist
           tar -czvf Dockey-v${version}-linux.tar.gz Dockey
           chmod a+x ../package/build_linux_desktop.sh
-          ../package/build_linux_desktop.sh $version
+          ../package/build_linux_desktop.sh $version deb
 
       - uses: actions/upload-artifact@v2
         with:
           name: Dockey-linux
           path: |
             dist/*.deb
-            dist/*.rpm
             dist/*.tar.gz
 
       - uses: softprops/action-gh-release@v1
@@ -88,6 +87,52 @@ jobs:
         with:
           files: |
             dist/*.deb
+            dist/*.tar.gz
+
+  build_fedora:
+    name: Build on Centos
+    runs-on: ubuntu-20.04
+    container: centos:latest
+
+    steps:
+      - uses: actions/checkout@v2.4.0
+
+      - name: Install Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.8
+
+      - name: Install requirements
+        run: |
+          pip install https://github.com/lmdu/pymol-wheel/releases/download/2.6.0a0/pymol-2.6.0a0-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
+          pip install https://github.com/lmdu/openbabel-wheel/releases/download/3.1.1/openbabel-3.1.1.1-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
+          pip install psutil==5.9.0
+          pip install apsw-wheels==3.36.0.post1
+          pip install PySide6==6.2.2.1
+          pip install pyinstaller==4.7
+
+      - name: Build executable
+        run: pyinstaller package/build_linux.spec
+
+      - name: Package installer
+        run: |
+          version=`awk '/^DOCKEY_VERSION/{print $NF}' src/config.py | sed 's/\"//g'`
+          cd dist
+          tar -czvf Dockey-v${version}-linux.tar.gz Dockey
+          chmod a+x ../package/build_linux_desktop.sh
+          ../package/build_linux_desktop.sh $version rpm
+
+      - uses: actions/upload-artifact@v2
+        with:
+          name: Dockey-linux
+          path: |
+            dist/*.rpm
+            dist/*.tar.gz
+
+      - uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: |
             dist/*.rpm
             dist/*.tar.gz
 
