@@ -90,18 +90,18 @@ jobs:
             dist/*.tar.gz
 
   build_fedora:
-    name: Build on Centos
+    name: Build on Fedora
     runs-on: ubuntu-20.04
     container:
-      image: centos:latest
+      image: centos:centos8.4.2105
 
     steps:
       - uses: actions/checkout@v2.4.0
 
-      - name: Install Python
-        uses: actions/setup-python@v2
-        with:
-          python-version: 3.8
+      #- name: Install Python
+      #  uses: actions/setup-python@v2
+      #  with:
+      #    python-version: 3.8
 
       - name: Install requirements
         run: |
