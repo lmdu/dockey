@@ -54,6 +54,7 @@ then
   ./nfpm pkg -t Dockey-v${version}-amd64.deb
   tar -czvf Dockey-v${version}-ubuntu.tar.gz Dockey
 elif [ $packager == "rpm" ]
+then
   ./nfpm pkg -t Dockey-v${version}-amd64.rpm
   tar -czvf Dockey-v${version}-fedora.tar.gz Dockey
 else
