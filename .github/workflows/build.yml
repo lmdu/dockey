@@ -93,7 +93,7 @@ jobs:
     name: Build on Centos
     runs-on: ubuntu-20.04
     container:
-      image: fedora-33
+      image: centos:latest
 
     steps:
       - uses: actions/checkout@v2.4.0
