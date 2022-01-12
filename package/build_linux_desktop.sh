@@ -9,11 +9,14 @@ desktop="[Desktop Entry]
 Version=${version}
 Name=Dockey
 Comment=a morden tool for molecular docking
+GenericName=Molecular Docking
+Keywords=Molecular;Docking;Drug
 Exec=/usr/lib/Dockey/Dockey
-Icon=/usr/share/icons/dockey_logo.svg
+Icon=/usr/share/icons/dockey/logo.svg
 Terminal=false
 Type=Application
 Categories=Application
+StartupNotify=true
 "
 echo "$desktop" > dockey.desktop
 
@@ -21,6 +24,8 @@ nfpmconfig="name: Dockey
 arch: amd64
 platform: linux
 version: v${version}
+section: default
+priority: extra
 maintainer: lmdu <adullb@qq.com>
 description: a morden tool for molecular docking
 vendor: Bioinformatics and Integrative Genomics
@@ -31,8 +36,8 @@ contents:
     dst: /usr/lib/Dockey
   - src: ./dockey.desktop
     dst: /usr/share/applications/dockey.desktop
-  - src: ./dockey_logo.svg
-    dst: /usr/share/icons/dockey_logo.svg
+  - src: ./logo.svg
+    dst: /usr/share/icons/dockey/logo.svg
 rpm:
   compression: lzma
 deb:
@@ -41,7 +46,7 @@ deb:
 echo "$nfpmconfig" > nfpm.yaml
 
 # copy logo file
-cp ../src/icons/logo.svg ./dockey_logo.svg
+cp ../src/icons/logo.svg ./logo.svg
 
-./nfpm pkg -p deb -t Dockey-v${version}-amd64.deb
-./nfpm pkg -p rpm -t Dockey-v${version}-amd64.rpm
+./nfpm pkg -t Dockey-v${version}-amd64.deb
+./nfpm pkg -t Dockey-v${version}-amd64.rpm

@@ -35,7 +35,7 @@ jobs:
 
       - uses: actions/upload-artifact@v2
         with:
-          name: Dockey-win64.exe
+          name: Dockey-win64
           path: dist/*.exe
 
       - uses: softprops/action-gh-release@v1
@@ -77,23 +77,19 @@ jobs:
 
       - uses: actions/upload-artifact@v2
         with:
-          name: Dockey-amd64.deb
-          path: dist/*.deb
-
-      - uses: actions/upload-artifact@v2
-        with:
-          name: Dockey-amd64.rpm
-          path: dist/*.rpm
-
-      - uses: actions/upload-artifact@v2
-        with:
-          name: Dockey-amd64.tar.gz
-          path: dist/*.tar.gz
+          name: Dockey-linux
+          path: |
+            dist/*.deb
+            dist/*.rpm
+            dist/*.tar.gz
 
       - uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
         with:
-          files: dist/*.*
+          files: |
+            dist/*.deb
+            dist/*.rpm
+            dist/*.tar.gz
 
   build_mac:
     name: Build on Mac
@@ -107,10 +103,23 @@ jobs:
         with:
           python-version: 3.8
 
+      - name: Install openbabel
+        run: |
+          cmake --version
+          wget https://github.com/openbabel/openbabel/archive/refs/tags/openbabel-3-1-1.tar.gz
+          tar xzf openbabel-3-1-1.tar.gz
+          cd openbabel-openbabel-3-1-1
+          mkdir build
+          cd build
+          cmake .. -DRUN_SWIG=ON -DPYTHON_BINDINGS=ON
+          make -j2
+          make install
+          cd ../../
+
       - name: Install requirements
         run: |
           pip install https://github.com/lmdu/pymol-wheel/releases/download/2.6.0a0/pymol-2.6.0a0-cp38-cp38-macosx_10_9_x86_64.whl
-          pip install https://github.com/lmdu/openbabel-wheel/releases/download/3.1.1/openbabel-3.1.1.1-cp38-cp38-macosx_10_9_x86_64.whl
+          #pip install https://github.com/lmdu/openbabel-wheel/releases/download/3.1.1/openbabel-3.1.1.1-cp38-cp38-macosx_10_9_x86_64.whl
           pip install psutil==5.9.0
           pip install apsw-wheels==3.36.0.post1
           pip install PySide6==6.2.2.1
@@ -129,7 +138,7 @@ jobs:
 
       - uses: actions/upload-artifact@v2
         with:
-          name: Dockey-macos.dmg
+          name: Dockey-macos
           path: dist/*.dmg
 
       - uses: softprops/action-gh-release@v1
