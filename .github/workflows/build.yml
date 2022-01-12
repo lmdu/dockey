@@ -100,9 +100,9 @@ jobs:
 
       - name: Install Python
         #uses: actions/setup-python@v2
-        #with:
-        #  python-version: 3.8
-        run: yum -y install python3-pip
+        uses: palewire/install-python-pipenv-pipfile@v2
+        with:
+          python-version: 3.8
 
       - name: Install requirements
         run: |
