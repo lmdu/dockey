@@ -94,7 +94,6 @@ jobs:
     runs-on: ubuntu-20.04
     container:
       image: centos:latest
-      options: --user root
 
     steps:
       - uses: actions/checkout@v2.4.0
@@ -103,7 +102,10 @@ jobs:
       #  uses: actions/setup-python@v2
       #  with:
       #    python-version: 3.8
-      - run: sudo dnf module -y install python38
+      - run: dnf module -y install python38
+      - run: which python
+      - run: which python3
+      - run: which pip
 
       - name: Install requirements
         run: |
