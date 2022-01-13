@@ -13,12 +13,12 @@ jobs:
       - name: Install Python
         uses: actions/setup-python@v2
         with:
-          python-version: 3.8
+          python-version: 3.9
 
       - name: Install requirements
         run: |
-          pip install https://github.com/lmdu/pymol-wheel/releases/download/2.6.0a0/pymol-2.6.0a0-cp38-cp38-win_amd64.whl
-          pip install https://github.com/lmdu/openbabel-wheel/releases/download/3.1.1/openbabel-3.1.1-cp38-cp38-win_amd64.whl
+          pip install https://github.com/lmdu/pymol-wheel/releases/download/2.6.0/pymol-2.6.0a0-cp39-cp39-win_amd64.whl
+          pip install https://github.com/lmdu/openbabel-wheel/releases/download/3.1.1.1/openbabel-3.1.1.1-cp39-cp39-win_amd64.whl
           pip install psutil==5.9.0
           pip install apsw-wheels==3.36.0.post1
           pip install PySide6==6.2.2.1
@@ -53,12 +53,12 @@ jobs:
       - name: Install Python
         uses: actions/setup-python@v2
         with:
-          python-version: 3.8
+          python-version: 3.9
 
       - name: Install requirements
         run: |
-          pip install https://github.com/lmdu/pymol-wheel/releases/download/2.6.0a0/pymol-2.6.0a0-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
-          pip install https://github.com/lmdu/openbabel-wheel/releases/download/3.1.1/openbabel-3.1.1.1-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
+          pip install https://github.com/lmdu/pymol-wheel/releases/download/2.6.0/pymol-2.6.0a0-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
+          pip install https://github.com/lmdu/openbabel-wheel/releases/download/3.1.1.1/openbabel-3.1.1.1-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
           pip install psutil==5.9.0
           pip install apsw-wheels==3.36.0.post1
           pip install PySide6==6.2.2.1
@@ -102,12 +102,12 @@ jobs:
       #  uses: actions/setup-python@v2
       #  with:
       #    python-version: 3.8
-      - run: dnf module -y install python38
+      - run: dnf module -y install python39
 
       - name: Install requirements
         run: |
-          pip3 install https://github.com/lmdu/pymol-wheel/releases/download/2.6.0a0/pymol-2.6.0a0-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
-          pip3 install https://github.com/lmdu/openbabel-wheel/releases/download/3.1.1/openbabel-3.1.1.1-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
+          pip3 install https://github.com/lmdu/pymol-wheel/releases/download/2.6.0/pymol-2.6.0a0-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
+          pip3 install https://github.com/lmdu/openbabel-wheel/releases/download/3.1.1.1/openbabel-3.1.1.1-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
           pip3 install psutil==5.9.0
           pip3 install apsw-wheels==3.36.0.post1
           pip3 install PySide6==6.2.2.1
@@ -150,26 +150,26 @@ jobs:
       #  with:
       #    python-version: 3.8
 
-      - name: Install openbabel
-        run: |
-          cmake --version
-          python --version
-          python3 --version
-          wget https://github.com/openbabel/openbabel/archive/refs/tags/openbabel-3-1-1.tar.gz
-          tar xzf openbabel-3-1-1.tar.gz
-          cd openbabel-openbabel-3-1-1
-          mkdir build
-          cd build
-          cmake .. -DRUN_SWIG=ON -DPYTHON_BINDINGS=ON
-          make -j2
-          make install
-          cd ../../
-          #pip install openbabel==3.1.1.1
+      #- name: Install openbabel
+      #  run: |
+      #    cmake --version
+      #    python --version
+      #    python3 --version
+      #    wget https://github.com/openbabel/openbabel/archive/refs/tags/openbabel-3-1-1.tar.gz
+      #    tar xzf openbabel-3-1-1.tar.gz
+      #    cd openbabel-openbabel-3-1-1
+      #    mkdir build
+      #    cd build
+      #    cmake .. -DRUN_SWIG=ON -DPYTHON_BINDINGS=ON
+      #    make -j2
+      #    make install
+      #    cd ../../
 
       - name: Install requirements
         run: |
-          pip3 install https://github.com/lmdu/pymol-wheel/releases/download/2.6.0a0/pymol-2.6.0a0-cp38-cp38-macosx_10_9_x86_64.whl
-          #pip install https://github.com/lmdu/openbabel-wheel/releases/download/3.1.1/openbabel-3.1.1.1-cp38-cp38-macosx_10_9_x86_64.whl
+          pip3 install https://github.com/lmdu/pymol-wheel/releases/download/2.6.0/pymol-2.6.0a0-cp39-cp39-macosx_10_9_x86_64.whl
+          #pip install https://github.com/lmdu/openbabel-wheel/releases/download/3.1.1.1/openbabel-3.1.1.1-cp39-cp39-macosx_10_9_x86_64.whl
+          brew install open-babel
           pip3 install psutil==5.9.0
           pip3 install apsw-wheels==3.36.0.post1
           pip3 install PySide6==6.2.2.1
