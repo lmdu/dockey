@@ -103,7 +103,7 @@ jobs:
       #  with:
       #    python-version: 3.8
       - run: dnf module -y install python39
-      - run: dnf groupinstall --allowerasing workstation
+      - run: dnf groupinstall -y --allowerasing workstation
 
       - name: Install requirements
         run: |
