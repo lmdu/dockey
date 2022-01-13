@@ -102,11 +102,12 @@ jobs:
       #  uses: actions/setup-python@v2
       #  with:
       #    python-version: 3.8
-      - run: dnf module -y install python39
       - run: dnf groupinstall -y --allowerasing workstation
+      - run: dnf module -y install python39
 
       - name: Install requirements
         run: |
+          pip3 --version
           pip3 install https://github.com/lmdu/pymol-wheel/releases/download/2.6.0/pymol-2.6.0a0-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
           pip3 install https://github.com/lmdu/openbabel-wheel/releases/download/3.1.1.1/openbabel-3.1.1.1-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
           pip3 install psutil==5.9.0
@@ -154,6 +155,7 @@ jobs:
       - name: Install openbabel
         run: |
           brew install open-babel
+          brew unlink python
           brew link --overwrite python@3.9
         #run: |
         #  brew install python@3.9
@@ -170,6 +172,7 @@ jobs:
 
       - name: Install requirements
         run: |
+          pip3 --version
           pip3 install https://github.com/lmdu/pymol-wheel/releases/download/2.6.0/pymol-2.6.0a0-cp39-cp39-macosx_10_9_x86_64.whl
           #pip install https://github.com/lmdu/openbabel-wheel/releases/download/3.1.1.1/openbabel-3.1.1.1-cp39-cp39-macosx_10_9_x86_64.whl
           #brew install open-babel
