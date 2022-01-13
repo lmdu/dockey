@@ -152,8 +152,9 @@ jobs:
       #    python-version: 3.8
 
       - name: Install openbabel
-        brew install open-babel
-        brew link --overwrite python@3.9
+        run: |
+          brew install open-babel
+          brew link --overwrite python@3.9
         #run: |
         #  brew install python@3.9
         #  brew link --overwrite python@3.9
