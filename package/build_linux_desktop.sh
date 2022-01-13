@@ -5,6 +5,7 @@ packager=$2
 
 wget https://github.com/goreleaser/nfpm/releases/download/v2.11.3/nfpm_2.11.3_Linux_x86_64.tar.gz
 tar xzvf nfpm_2.11.3_Linux_x86_64.tar.gz
+rm nfpm_2.11.3_Linux_x86_64.tar.gz
 
 desktop="[Desktop Entry]
 Version=${version}

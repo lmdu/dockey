@@ -103,8 +103,7 @@ jobs:
       #  with:
       #    python-version: 3.8
       - run: dnf module -y install python39
-      - run: yum -y group install "Server with GUI"
-      - run: yum -y install mesa* freeglut*
+      - run: dnf groupinstall workstation
 
       - name: Install requirements
         run: |
@@ -154,9 +153,8 @@ jobs:
 
       - name: Install openbabel
         run: |
-          cmake --version
-          python --version
-          python3 --version
+          brew install python@3.9
+          brew link --overwrite python@3.9
           wget https://github.com/openbabel/openbabel/archive/refs/tags/openbabel-3-1-1.tar.gz
           tar xzf openbabel-3-1-1.tar.gz
           cd openbabel-openbabel-3-1-1
