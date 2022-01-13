@@ -98,23 +98,23 @@ jobs:
     steps:
       - uses: actions/checkout@v2.4.0
 
-      #- name: Install Python
-      #  uses: actions/setup-python@v2
-      #  with:
-      #    python-version: 3.8
-      - run: dnf module -y install python38
-      - run: which python
-      - run: which python3
-      - run: which pip
+      - name: Install Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.8
+      #- run: dnf module -y install python38
+      #- run: which python
+      #- run: which python3
+      #- run: which pip
 
       - name: Install requirements
         run: |
-          sudo pip3 install https://github.com/lmdu/pymol-wheel/releases/download/2.6.0a0/pymol-2.6.0a0-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
-          sudo pip3 install https://github.com/lmdu/openbabel-wheel/releases/download/3.1.1/openbabel-3.1.1.1-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
-          sudo pip3 install psutil==5.9.0
-          sudo pip3 install apsw-wheels==3.36.0.post1
-          sudo pip3 install PySide6==6.2.2.1
-          sudo pip3 install pyinstaller==4.7
+          pip3 install https://github.com/lmdu/pymol-wheel/releases/download/2.6.0a0/pymol-2.6.0a0-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
+          pip3 install https://github.com/lmdu/openbabel-wheel/releases/download/3.1.1/openbabel-3.1.1.1-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
+          pip3 install psutil==5.9.0
+          pip3 install apsw-wheels==3.36.0.post1
+          pip3 install PySide6==6.2.2.1
+          pip3 install pyinstaller==4.7
 
       - name: Build executable
         run: pyinstaller package/build_linux.spec
