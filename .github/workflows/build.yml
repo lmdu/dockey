@@ -98,14 +98,11 @@ jobs:
     steps:
       - uses: actions/checkout@v2.4.0
 
-      - name: Install Python
-        uses: actions/setup-python@v2
-        with:
-          python-version: 3.8
-      #- run: dnf module -y install python38
-      #- run: which python
-      #- run: which python3
-      #- run: which pip
+      #- name: Install Python
+      #  uses: actions/setup-python@v2
+      #  with:
+      #    python-version: 3.8
+      - run: dnf module -y install python38
 
       - name: Install requirements
         run: |
