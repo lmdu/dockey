@@ -102,7 +102,7 @@ jobs:
       #  uses: actions/setup-python@v2
       #  with:
       #    python-version: 3.8
-      - run: dnf -y --allowerasing groupinstallworkstation
+      - run: dnf -y --allowerasing groupinstall workstation
       - run: dnf -y install python39
       - run: alternatives --set python /usr/bin/python3.9
 
