@@ -103,7 +103,7 @@ jobs:
       #  with:
       #    python-version: 3.8
       - run: dnf module -y install python39
-      - run: dnf groupinstall workstation
+      - run: dnf groupinstall --allowerasing workstation
 
       - name: Install requirements
         run: |
@@ -152,18 +152,20 @@ jobs:
       #    python-version: 3.8
 
       - name: Install openbabel
-        run: |
-          brew install python@3.9
-          brew link --overwrite python@3.9
-          wget https://github.com/openbabel/openbabel/archive/refs/tags/openbabel-3-1-1.tar.gz
-          tar xzf openbabel-3-1-1.tar.gz
-          cd openbabel-openbabel-3-1-1
-          mkdir build
-          cd build
-          cmake .. -DRUN_SWIG=ON -DPYTHON_BINDINGS=ON
-          make -j2
-          make install
-          cd ../../
+        brew install open-babel
+        brew link --overwrite python@3.9
+        #run: |
+        #  brew install python@3.9
+        #  brew link --overwrite python@3.9
+        #  wget https://github.com/openbabel/openbabel/archive/refs/tags/openbabel-3-1-1.tar.gz
+        #  tar xzf openbabel-3-1-1.tar.gz
+        #  cd openbabel-openbabel-3-1-1
+        #  mkdir build
+        #  cd build
+        #  cmake .. -DRUN_SWIG=ON -DPYTHON_BINDINGS=ON
+        #  make -j2
+        #  make install
+        #  cd ../../
 
       - name: Install requirements
         run: |
