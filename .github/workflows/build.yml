@@ -93,7 +93,7 @@ jobs:
     name: Build on Fedora
     runs-on: ubuntu-20.04
     container:
-      image: centos:latest
+      image: fedora:33
       options: --user root
 
     steps:
