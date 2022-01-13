@@ -145,20 +145,22 @@ jobs:
     steps:
       - uses: actions/checkout@v2.4.0
 
-      - name: Install Python
-        uses: actions/setup-python@v2
-        with:
-          python-version: 3.8
+      #- name: Install Python
+      #  uses: actions/setup-python@v2
+      #  with:
+      #    python-version: 3.8
 
       - name: Install openbabel
         run: |
           cmake --version
+          python --version
+          python3 --version
           wget https://github.com/openbabel/openbabel/archive/refs/tags/openbabel-3-1-1.tar.gz
           tar xzf openbabel-3-1-1.tar.gz
           cd openbabel-openbabel-3-1-1
           mkdir build
           cd build
-          cmake .. -DRUN_SWIG=ON -DPYTHON_BINDINGS=ON -DPYTHON_EXECUTABLE=/Users/runner/hostedtoolcache/Python/3.8.12/x64/bin/python
+          cmake .. -DRUN_SWIG=ON -DPYTHON_BINDINGS=ON
           make -j2
           make install
           cd ../../
@@ -166,12 +168,12 @@ jobs:
 
       - name: Install requirements
         run: |
-          pip install https://github.com/lmdu/pymol-wheel/releases/download/2.6.0a0/pymol-2.6.0a0-cp38-cp38-macosx_10_9_x86_64.whl
+          pip3 install https://github.com/lmdu/pymol-wheel/releases/download/2.6.0a0/pymol-2.6.0a0-cp38-cp38-macosx_10_9_x86_64.whl
           #pip install https://github.com/lmdu/openbabel-wheel/releases/download/3.1.1/openbabel-3.1.1.1-cp38-cp38-macosx_10_9_x86_64.whl
-          pip install psutil==5.9.0
-          pip install apsw-wheels==3.36.0.post1
-          pip install PySide6==6.2.2.1
-          pip install pyinstaller==4.7
+          pip3 install psutil==5.9.0
+          pip3 install apsw-wheels==3.36.0.post1
+          pip3 install PySide6==6.2.2.1
+          pip3 install pyinstaller==4.7
 
       - name: Build executable
         run: pyinstaller package/build_mac.spec
