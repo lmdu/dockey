@@ -93,17 +93,19 @@ jobs:
     name: Build on Fedora
     runs-on: ubuntu-20.04
     container:
-      image: fedora:latest
+      image: centos:latest
+      options: --user root
 
     steps:
       - uses: actions/checkout@v2.4.0
 
-      - name: Install Python
-        uses: actions/setup-python@v2
-        with:
-          python-version: 3.8
+      #- name: Install Python
+      #  uses: actions/setup-python@v2
+      #  with:
+      #    python-version: 3.8
+      - run: yum install python3-pip
 
-      - run: python -m pip install -U pip
+      #- run: python -m pip install -U pip
 
       - name: Install requirements
         run: |
