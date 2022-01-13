@@ -102,8 +102,9 @@ jobs:
       #  uses: actions/setup-python@v2
       #  with:
       #    python-version: 3.8
-      - run: dnf groupinstall -y --allowerasing workstation
-      - run: dnf module -y install python39
+      - run: dnf -y --allowerasing groupinstallworkstation
+      - run: dnf -y install python39
+      - run: alternatives --set python /usr/bin/python3.9
 
       - name: Install requirements
         run: |
@@ -157,6 +158,7 @@ jobs:
           brew install open-babel
           brew unlink python
           brew link --overwrite python@3.9
+          alias python=/usr/local/bin/python3
         #run: |
         #  brew install python@3.9
         #  brew link --overwrite python@3.9
@@ -180,6 +182,7 @@ jobs:
           pip3 install apsw-wheels==3.36.0.post1
           pip3 install PySide6==6.2.2.1
           pip3 install pyinstaller==4.7
+          ls -l /usr/local/lib/python3.9/site-packages
 
       - name: Build executable
         run: pyinstaller package/build_mac.spec
