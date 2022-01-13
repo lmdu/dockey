@@ -71,7 +71,7 @@ jobs:
         run: |
           version=`awk '/^DOCKEY_VERSION/{print $NF}' src/config.py | sed 's/\"//g'`
           cd dist
-          tar -czvf Dockey-v${version}-linux.tar.gz Dockey
+          #tar -czvf Dockey-v${version}-linux.tar.gz Dockey
           chmod a+x ../package/build_linux_desktop.sh
           ../package/build_linux_desktop.sh $version deb
 
@@ -90,7 +90,7 @@ jobs:
             dist/*.tar.gz
 
   build_fedora:
-    name: Build on Fedora
+    name: Build on Centos
     runs-on: ubuntu-20.04
     container:
       image: centos:latest
@@ -103,6 +103,8 @@ jobs:
       #  with:
       #    python-version: 3.8
       - run: dnf module -y install python39
+      - run: yum -y group install "Server with GUI"
+      - run: yum -y install mesa* freeglut*
 
       - name: Install requirements
         run: |
@@ -120,7 +122,7 @@ jobs:
         run: |
           version=`awk '/^DOCKEY_VERSION/{print $NF}' src/config.py | sed 's/\"//g'`
           cd dist
-          tar -czvf Dockey-v${version}-linux.tar.gz Dockey
+          #tar -czvf Dockey-v${version}-linux.tar.gz Dockey
           chmod a+x ../package/build_linux_desktop.sh
           ../package/build_linux_desktop.sh $version rpm
 
@@ -150,26 +152,26 @@ jobs:
       #  with:
       #    python-version: 3.8
 
-      #- name: Install openbabel
-      #  run: |
-      #    cmake --version
-      #    python --version
-      #    python3 --version
-      #    wget https://github.com/openbabel/openbabel/archive/refs/tags/openbabel-3-1-1.tar.gz
-      #    tar xzf openbabel-3-1-1.tar.gz
-      #    cd openbabel-openbabel-3-1-1
-      #    mkdir build
-      #    cd build
-      #    cmake .. -DRUN_SWIG=ON -DPYTHON_BINDINGS=ON
-      #    make -j2
-      #    make install
-      #    cd ../../
+      - name: Install openbabel
+        run: |
+          cmake --version
+          python --version
+          python3 --version
+          wget https://github.com/openbabel/openbabel/archive/refs/tags/openbabel-3-1-1.tar.gz
+          tar xzf openbabel-3-1-1.tar.gz
+          cd openbabel-openbabel-3-1-1
+          mkdir build
+          cd build
+          cmake .. -DRUN_SWIG=ON -DPYTHON_BINDINGS=ON
+          make -j2
+          make install
+          cd ../../
 
       - name: Install requirements
         run: |
           pip3 install https://github.com/lmdu/pymol-wheel/releases/download/2.6.0/pymol-2.6.0a0-cp39-cp39-macosx_10_9_x86_64.whl
           #pip install https://github.com/lmdu/openbabel-wheel/releases/download/3.1.1.1/openbabel-3.1.1.1-cp39-cp39-macosx_10_9_x86_64.whl
-          brew install open-babel
+          #brew install open-babel
           pip3 install psutil==5.9.0
           pip3 install apsw-wheels==3.36.0.post1
           pip3 install PySide6==6.2.2.1
