@@ -105,7 +105,8 @@ jobs:
         run: |
           dnf -y --allowerasing groupinstall workstation
           dnf -y install python39 python39-devel
-          dnf -y install epel-release
+          dnf config-manager --set-enabled powertools
+          dnf repolist
           dnf -y install glew-devel freeglut-devel libpng-devel freetype-devel glm-devel libxml2-devel
           rm -rf /usr/bin/python3
           rm -rf /usr/bin/python
@@ -160,7 +161,7 @@ jobs:
       #- name: Install Python
       #  uses: actions/setup-python@v2
       #  with:
-      #    python-version: 3.8
+      #    python-version: 3.9
 
       - name: Install openbabel
         run: |
@@ -169,12 +170,16 @@ jobs:
           brew link --overwrite python@3.9
           rm -rf /usr/local/bin/python
           ln -s /usr/local/bin/python3.9 /usr/local/bin/python
-          brew install open-babel
+          brew install --verbose open-babel
+          python --version
+          python3 --version
+          pip3 --version
+          ls -l /usr/local/bin
 
 
         #run: |
-        #  brew install python@3.9
-        #  brew link --overwrite python@3.9
+          #brew install python@3.9
+          #brew link --overwrite python@3.9
         #  wget https://github.com/openbabel/openbabel/archive/refs/tags/openbabel-3-1-1.tar.gz
         #  tar xzf openbabel-3-1-1.tar.gz
         #  cd openbabel-openbabel-3-1-1
