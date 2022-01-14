@@ -105,7 +105,8 @@ jobs:
         run: |
           dnf -y --allowerasing groupinstall workstation
           dnf -y install python39 python39-devel
-          yum -y install glew-devel freeglut-devel libpng-devel freetype-devel glm-devel libxml2-devel
+          dnf -y install epel-release
+          dnf -y install glew-devel freeglut-devel libpng-devel freetype-devel glm-devel libxml2-devel
           rm -rf /usr/bin/python3
           rm -rf /usr/bin/python
           rm -rf /usr/bin/pip3
