@@ -105,7 +105,7 @@ jobs:
         run: |
           dnf -y --allowerasing groupinstall workstation
           dnf -y install python39 python39-devel
-          dnf -y install glew-devel freeglut-devel libpng-devel freetype-devel glm-devel libxml2-devel
+          yum -y install glew-devel freeglut-devel libpng-devel freetype-devel glm-devel libxml2-devel
           rm -rf /usr/bin/python3
           rm -rf /usr/bin/python
           rm -rf /usr/bin/pip3
@@ -166,13 +166,10 @@ jobs:
           brew install python@3.9
           brew unlink python
           brew link --overwrite python@3.9
-          which python
-          python --version
-          which python3
-          python3 --version
+          rm -rf /usr/local/bin/python
+          ln -s /usr/local/bin/python3.9 /usr/local/bin/python
           brew install open-babel
-          ls -l /usr/bin
-          ls -l /usr/local/bin
+
 
         #run: |
         #  brew install python@3.9
