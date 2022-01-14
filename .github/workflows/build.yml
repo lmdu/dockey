@@ -98,14 +98,20 @@ jobs:
     steps:
       - uses: actions/checkout@v2.4.0
 
-      #- name: Install Python
+      - name: Install Python
       #  uses: actions/setup-python@v2
       #  with:
       #    python-version: 3.8
-      - run: dnf -y --allowerasing groupinstall workstation
-      - run: dnf -y install python39
-      - run: alternatives --set python /usr/bin/python3.9
-      - run: ls -l /usr/bin
+        run: |
+          dnf -y --allowerasing groupinstall workstation
+          dnf -y install python39
+          rm -rf /usr/bin/python3
+          rm -rf /usr/bin/python
+          rm -rf /usr/bin/pip3
+          ln -s /usr/bin/python3.9 /usr/bin/python3
+          ln -s /usr/bin/python3.9 /usr/bin/python
+          ln -s /usr/bin/pip3.9 /usr/bin/pip3
+          ls -l /usr/bin
 
       - name: Install requirements
         run: |
@@ -157,12 +163,12 @@ jobs:
       - name: Install openbabel
         run: |
           brew install python@3.9
-          alias python=/usr/local/bin/python3
-          python --version
-          brew install open-babel
           brew unlink python
           brew link --overwrite python@3.9
-          
+          which python
+          which python3
+          brew install open-babel
+
         #run: |
         #  brew install python@3.9
         #  brew link --overwrite python@3.9
