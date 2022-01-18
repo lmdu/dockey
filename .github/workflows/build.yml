@@ -22,7 +22,7 @@ jobs:
           pip install psutil==5.9.0
           pip install apsw-wheels==3.36.0.post1
           pip install PySide6==6.2.2.1
-          pip install pyinstaller==4.7
+          pip install pyinstaller==4.8
 
       - name: Build executable
         run: pyinstaller package/build_win.spec
@@ -62,7 +62,7 @@ jobs:
           pip install psutil==5.9.0
           pip install apsw-wheels==3.36.0.post1
           pip install PySide6==6.2.2.1
-          pip install pyinstaller==4.7
+          pip install pyinstaller==4.8
 
       - name: Build executable
         run: pyinstaller package/build_linux.spec
@@ -89,68 +89,6 @@ jobs:
             dist/*.deb
             dist/*.tar.gz
 
-  build_fedora:
-    name: Build on Centos
-    runs-on: ubuntu-20.04
-    container:
-      image: centos:latest
-
-    steps:
-      - uses: actions/checkout@v2.4.0
-
-      - name: Install Python
-      #  uses: actions/setup-python@v2
-      #  with:
-      #    python-version: 3.8
-        run: |
-          dnf -y --allowerasing groupinstall workstation
-          dnf -y install python39 python39-devel
-          dnf config-manager --set-enabled powertools
-          dnf repolist
-          dnf -y install glew-devel freeglut-devel libpng-devel freetype-devel glm-devel libxml2-devel
-          rm -rf /usr/bin/python3
-          rm -rf /usr/bin/python
-          rm -rf /usr/bin/pip3
-          ln -s /usr/bin/python3.9 /usr/bin/python3
-          ln -s /usr/bin/python3.9 /usr/bin/python
-          ln -s /usr/bin/pip3.9 /usr/bin/pip3
-          ls -l /usr/bin
-
-      - name: Install requirements
-        run: |
-          pip3 --version
-          pip3 install https://github.com/lmdu/pymol-wheel/releases/download/2.6.0/pymol-2.6.0a0-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
-          pip3 install https://github.com/lmdu/openbabel-wheel/releases/download/3.1.1.1/openbabel-3.1.1.1-cp39-cp39-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
-          pip3 install psutil==5.9.0
-          pip3 install apsw-wheels==3.36.0.post1
-          pip3 install PySide6==6.2.2.1
-          pip3 install pyinstaller==4.7
-
-      - name: Build executable
-        run: pyinstaller package/build_linux.spec
-
-      - name: Package installer
-        run: |
-          version=`awk '/^DOCKEY_VERSION/{print $NF}' src/config.py | sed 's/\"//g'`
-          cd dist
-          #tar -czvf Dockey-v${version}-linux.tar.gz Dockey
-          chmod a+x ../package/build_linux_desktop.sh
-          ../package/build_linux_desktop.sh $version rpm
-
-      - uses: actions/upload-artifact@v2
-        with:
-          name: Dockey-linux
-          path: |
-            dist/*.rpm
-            dist/*.tar.gz
-
-      - uses: softprops/action-gh-release@v1
-        if: startsWith(github.ref, 'refs/tags/')
-        with:
-          files: |
-            dist/*.rpm
-            dist/*.tar.gz
-
   build_mac:
     name: Build on Mac
     runs-on: macos-10.15
@@ -165,30 +103,20 @@ jobs:
 
       - name: Install openbabel
         run: |
-          brew install python@3.9
+          brew install python@3.9 swig eigen
           brew unlink python
           brew link --overwrite python@3.9
-          rm -rf /usr/local/bin/python
-          ln -s /usr/local/bin/python3.9 /usr/local/bin/python
-          brew install --verbose open-babel
-          python --version
-          python3 --version
-          pip3 --version
-          ls -l /usr/local/bin
-
-
-        #run: |
-          #brew install python@3.9
-          #brew link --overwrite python@3.9
-        #  wget https://github.com/openbabel/openbabel/archive/refs/tags/openbabel-3-1-1.tar.gz
-        #  tar xzf openbabel-3-1-1.tar.gz
-        #  cd openbabel-openbabel-3-1-1
-        #  mkdir build
-        #  cd build
-        #  cmake .. -DRUN_SWIG=ON -DPYTHON_BINDINGS=ON
-        #  make -j2
-        #  make install
-        #  cd ../../
+          rm -rf /usr/local/bin/python-config
+          ln -s /usr/local/bin/python-config ../Cellar/python@3.9/3.9.9/bin/python3.9-config
+          wget https://github.com/openbabel/openbabel/archive/refs/tags/openbabel-3-1-1.tar.gz
+          tar xzf openbabel-3-1-1.tar.gz
+          cd openbabel-openbabel-3-1-1
+          mkdir build
+          cd build
+          cmake .. -DRUN_SWIG=ON -DPYTHON_BINDINGS=ON
+          make -j4
+          make install
+          cd ../../
 
       - name: Install requirements
         run: |
@@ -199,7 +127,7 @@ jobs:
           pip3 install psutil==5.9.0
           pip3 install apsw-wheels==3.36.0.post1
           pip3 install PySide6==6.2.2.1
-          pip3 install pyinstaller==4.7
+          pip3 install pyinstaller==4.8
           ls -l /usr/local/lib/python3.9/site-packages
 
       - name: Build executable
