@@ -166,8 +166,6 @@ jobs:
       - name: Install openbabel
         run: |
           brew install python@3.9 swig eigen
-          brew unlink python
-          brew link --overwrite python@3.9
           rm -rf /usr/local/bin/python-config
           ln -s /usr/local/bin/python-config /usr/local/Cellar/python@3.9/3.9.9/bin/python3.9-config
           wget https://github.com/openbabel/openbabel/archive/refs/tags/openbabel-3-1-1.tar.gz
