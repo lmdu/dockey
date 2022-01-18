@@ -167,7 +167,9 @@ jobs:
         run: |
           brew install python@3.9 swig eigen
           rm -rf /usr/local/bin/python-config
-          ln -s /usr/local/bin/python-config /usr/local/Cellar/python@3.9/3.9.9/bin/python3.9-config
+          rm -rf /usr/local/bin/python2-config
+          rm -rf /usr/local/bin/python2.7-config
+          ln -s /usr/local/Cellar/python@3.9/3.9.9/bin/python3.9-config /usr/local/bin/python-config
           wget https://github.com/openbabel/openbabel/archive/refs/tags/openbabel-3-1-1.tar.gz
           tar xzf openbabel-3-1-1.tar.gz
           cd openbabel-openbabel-3-1-1
