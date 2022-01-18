@@ -175,7 +175,7 @@ jobs:
           cd openbabel-openbabel-3-1-1
           mkdir build
           cd build
-          cmake .. -DRUN_SWIG=ON -DPYTHON_BINDINGS=ON
+          cmake .. -DRUN_SWIG=ON -DPYTHON_BINDINGS=ON -DPYTHON_EXECUTABLE=/usr/local/bin/python3
           make -j4
           make install
           cd ../../
