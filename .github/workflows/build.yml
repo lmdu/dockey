@@ -106,7 +106,10 @@ jobs:
 
       - name: Install openbabel
         run: |
+          brew unlink python
+          brew unlink python@3.9
           brew install python@3.8 swig eigen
+          brew link --force --overwrite python@3.8
           pkg-config --variable pc_path pkg-config
           ls -l /usr/local/lib/pkgconfig
           ls -l /usr/lib/pkgconfig
