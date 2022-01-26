@@ -7,9 +7,9 @@ from PySide6.QtCore import __version__ as pyside_version
 
 __all__ = ['DOCKEY_VERSION', 'DOCKEY_BUILD', 'DOCKEY_ABOUT']
 
-DOCKEY_VERSION = "0.1.1"
+DOCKEY_VERSION = "0.2.0"
 
-DOCKEY_BUILD = "220113"
+DOCKEY_BUILD = "220126"
 
 DOCKEY_ABOUT = """
 <p>Dockey - Molecular Docking and Virtual Screening</p>
