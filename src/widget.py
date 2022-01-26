@@ -1,4 +1,5 @@
 import os
+import psutil
 
 from PySide6.QtGui import *
 from PySide6.QtCore import *
@@ -8,7 +9,8 @@ from utils import *
 
 __all__ = ['BrowseInput', 'CreateProjectDialog', 'AutodockConfigDialog',
 			'AutodockVinaConfigDialog', 'ExportImageDialog', 'FeedbackBrowser',
-			'PymolSettingDialog', 'DockingToolSettingDialog']
+			'PymolSettingDialog', 'DockingToolSettingDialog',
+			'JobConcurrentSettingDialog']
 
 class BrowseInput(QWidget):
 	def __init__(self, parent=None, is_file=True, is_save=False, _filter=""):
@@ -140,15 +142,15 @@ class DockingToolSettingDialog(QDialog):
 		self.ad4 = self.settings.value('Tools/autodock_4', '')
 		self.ag4 = self.settings.value('Tools/autogrid_4', '')
 		self.vina = self.settings.value('Tools/autodock_vina', '')
-		self.mglt = self.settings.value('Tools/mgltools', '')
+		#self.mglt = self.settings.value('Tools/mgltools', '')
 		self.autodock_input = BrowseInput(self)
 		self.autodock_input.set_text(self.ad4)
 		self.autogrid_input = BrowseInput(self)
 		self.autogrid_input.set_text(self.ag4)
 		self.vina_input = BrowseInput(self)
 		self.vina_input.set_text(self.vina)
-		self.mgltools_input = BrowseInput(self, False)
-		self.mgltools_input.set_text(self.mglt)
+		#self.mgltools_input = BrowseInput(self, False)
+		#self.mgltools_input.set_text(self.mglt)
 
 		self.layout = QVBoxLayout()
 		self.layout.addWidget(QLabel("Autodock4 executable", self))
@@ -157,8 +159,8 @@ class DockingToolSettingDialog(QDialog):
 		self.layout.addWidget(self.autogrid_input)
 		self.layout.addWidget(QLabel("Autodock vina executable", self))
 		self.layout.addWidget(self.vina_input)
-		self.layout.addWidget(QLabel("MGLTools directory", self))
-		self.layout.addWidget(self.mgltools_input)
+		#self.layout.addWidget(QLabel("MGLTools directory", self))
+		#self.layout.addWidget(self.mgltools_input)
 
 		btn_box = QDialogButtonBox(QDialogButtonBox.Save | QDialogButtonBox.Cancel)
 		btn_box.accepted.connect(self.save_settings)
@@ -173,7 +175,7 @@ class DockingToolSettingDialog(QDialog):
 		ad4 = self.autodock_input.get_text()
 		ag4 = self.autogrid_input.get_text()
 		vina = self.vina_input.get_text()
-		mglt = self.mgltools_input.get_text()
+		#mglt = self.mgltools_input.get_text()
 
 		if ad4 != self.ad4:
 			self.settings.setValue('Tools/autodock_4', ad4)
@@ -184,8 +186,8 @@ class DockingToolSettingDialog(QDialog):
 		if vina != self.vina:
 			self.settings.setValue('Tools/autodock_vina', vina)
 
-		if mglt != self.mglt:
-			self.settings.setValue('Tools/mgltools', mglt)
+		#if mglt != self.mglt:
+		#	self.settings.setValue('Tools/mgltools', mglt)
 
 		self.accept()
 
@@ -259,14 +261,14 @@ class AutodockConfigDialog(ProgramConfigDialog):
 	progs = [
 		('Tools/autodock_4', 'Autodock executable'),
 		('Tools/autogrid_4', 'Autogrid executable'),
-		('Tools/mgltools', 'MGLTools directory')
+		#('Tools/mgltools', 'MGLTools directory')
 	]
 
 class AutodockVinaConfigDialog(ProgramConfigDialog):
 	title = "Autodock Vina Config"
 	progs = [
 		('Tools/autodock_vina', 'Autodock Vina executable'),
-		('Tools/mgltools', 'MGLTools directory')
+		#('Tools/mgltools', 'MGLTools directory')
 	]
 
 class ExportImageDialog(QDialog):
@@ -390,3 +392,23 @@ class PymolSettingDialog(QDialog):
 		self.parent.cmd.bg_color(color)
 		self.settings.setValue('Pymol/background', val)
 
+class JobConcurrentSettingDialog(QDialog):
+	def __init__(self, parent=None):
+		super(JobConcurrentSettingDialog, self).__init__(parent)
+		self.parent = parent
+		self.settings = QSettings()
+		self.setWindowTitle("Concurrent Job Setting")
+		self.layout = QVBoxLayout()
+		self.label = QLabel("Number of concurrent running jobs", self)
+		self.number = QSpinBox(self)
+		self.number.setValue(self.settings.value('Job/concurrent', 1, int))
+		self.number.setRange(1, max(1, psutil.cpu_count()-2))
+		self.number.valueChanged.connect(self.on_job_number_changed)
+		self.layout.addWidget(self.label)
+		self.layout.addWidget(self.number)
+		self.setLayout(self.layout)
+
+	@Slot()
+	def on_job_number_changed(self, num):
+		self.parent.pool.setMaxThreadCount(num)
+		self.settings.setValue('Job/concurrent', num)

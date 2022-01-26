@@ -24,7 +24,7 @@ class DockeyMainWindow(QMainWindow):
 		super(DockeyMainWindow, self).__init__()
 		self.pymol_actions = {}
 		self.pool = QThreadPool(self)
-		self.pool.setMaxThreadCount(3)
+		#self.pool.setMaxThreadCount(3)
 
 		self.setWindowTitle("Dockey v{}".format(DOCKEY_VERSION))
 		self.setWindowIcon(QIcon(':/icons/logo.svg'))
@@ -68,6 +68,10 @@ class DockeyMainWindow(QMainWindow):
 		self.resize(settings.value('size', QSize(900, 600)))
 		self.move(settings.value('pos', QPoint(200, 200)))
 		settings.endGroup()
+
+		#set job number
+		num = settings.value('Job/concurrent', 1, int)
+		self.pool.setMaxThreadCount(num)
 
 	def write_settings(self):
 		settings = QSettings()
@@ -358,6 +362,10 @@ class DockeyMainWindow(QMainWindow):
 			triggered = self.docking_tool_settings
 		)
 
+		self.job_num_act = QAction("Concurrent execution", self,
+			triggered = self.concurrent_job_number
+		)
+
 		#view actions
 		#pymol sidebar
 		self.pymol_sidebar_act = QAction("Show Pymol Sidebar", self,
@@ -465,6 +473,7 @@ class DockeyMainWindow(QMainWindow):
 		bg_menu.addAction(self.pymol_opaque_act)
 
 		self.edit_menu.addAction(self.dock_tool_act)
+		self.edit_menu.addAction(self.job_num_act)
 
 		self.view_menu = self.menuBar().addMenu("&View")
 		#self.view_menu.addAction(self.open_project_dir_act)
@@ -715,6 +724,11 @@ class DockeyMainWindow(QMainWindow):
 	@Slot()
 	def docking_tool_settings(self):
 		dlg = DockingToolSettingDialog(self)
+		dlg.exec()
+
+	@Slot()
+	def concurrent_job_number(self):
+		dlg = JobConcurrentSettingDialog(self)
 		dlg.exec()
 
 	def pymol_sidebar_toggle(self, checked):

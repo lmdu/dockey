@@ -295,7 +295,7 @@ class PoseTableView(QTableView):
 	def on_custom_menu(self, pos):
 		self.current_index = self.indexAt(pos)
 		
-		save_act = QAction("Save Pose", self,
+		save_act = QAction("Save Selected Pose", self,
 			triggered = self.save_pose
 		)
 		save_act.setDisabled(not self.current_index.isValid())

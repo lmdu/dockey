@@ -9,6 +9,7 @@ from PySide6.QtCore import *
 from param import *
 from utils import *
 from backend import *
+from prepare import *
 
 __all__ = ['AutodockWorker', 'AutodockVinaWorker']
 
@@ -145,16 +146,18 @@ class BaseWorker(QRunnable):
 		proc.waitForFinished(-1)
 
 	def prepare_receptor(self, infile, outfile):
-		py27, folder = self.get_mgltools()
-		script = os.path.join(folder, 'prepare_receptor4.py')
-		args = [script, '-r', infile, '-o', outfile, '-A', 'bonds_hydrogens']
-		self.execute(py27, args, os.path.dirname(infile))
+		#py27, folder = self.get_mgltools()
+		#script = os.path.join(folder, 'prepare_receptor4.py')
+		#args = [script, '-r', infile, '-o', outfile, '-A', 'bonds_hydrogens']
+		#self.execute(py27, args, os.path.dirname(infile))
+		prepare_autodock_receptor(infile, outfile)
 
 	def prepare_ligand(self, infile, outfile):
-		py27, folder = self.get_mgltools()
-		script = os.path.join(folder, 'prepare_ligand4.py')
-		args = [script, '-l', infile, '-o', outfile, '-A', 'bonds_hydrogens']
-		self.execute(py27, args, os.path.dirname(infile))
+		#py27, folder = self.get_mgltools()
+		#script = os.path.join(folder, 'prepare_ligand4.py')
+		#args = [script, '-l', infile, '-o', outfile, '-A', 'bonds_hydrogens']
+		#self.execute(py27, args, os.path.dirname(infile))
+		prepare_autodock_ligand(infile, outfile)
 
 class AutodockWorker(BaseWorker):
 	def __init__(self, job, params):
