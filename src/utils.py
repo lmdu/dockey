@@ -213,6 +213,10 @@ def get_molecule_information(mol_file):
 	obc.ReadFile(mol, mol_file)
 	des = openbabel.OBDescriptor.FindType('logP')
 
+	print(os.environ['BABEL_LIBDIR'])
+	print(os.environ['BABEL_DATADIR'])
+	print(os.environ['BABEL'])
+
 	return AttrDict(
 		name = mol_name,
 		atoms = mol.NumAtoms(),
