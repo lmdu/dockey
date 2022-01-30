@@ -1,2 +1,2 @@
-from PyInstaller.utils.hooks import collect_data_files
-datas = collect_data_files('openbabel')
+from PyInstaller.utils.hooks import collect_all
+datas, binaries, _ = collect_all('openbabel')
