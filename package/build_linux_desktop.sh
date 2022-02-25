@@ -50,14 +50,17 @@ echo "$nfpmconfig" > nfpm.yaml
 # copy logo file
 cp ../src/icons/logo.svg ./logo.svg
 
-if [ "$packager" = "deb" ]
-then
-  ./nfpm pkg -t Dockey-v${version}-amd64.deb
-  tar -czvf Dockey-v${version}-ubuntu.tar.gz Dockey
-elif [ "$packager" = "rpm" ]
-then
-  ./nfpm pkg -t Dockey-v${version}-amd64.rpm
-  tar -czvf Dockey-v${version}-centos.tar.gz Dockey
-else
-  echo $version
-fi
+./nfpm pkg -t Dockey-v${version}-amd64.deb
+./nfpm pkg -t Dockey-v${version}-amd64.rpm
+
+#if [ "$packager" = "deb" ]
+#then
+#  ./nfpm pkg -t Dockey-v${version}-amd64.deb
+#  #tar -czvf Dockey-v${version}-ubuntu.tar.gz Dockey
+#elif [ "$packager" = "rpm" ]
+#then
+#  ./nfpm pkg -t Dockey-v${version}-amd64.rpm
+#  #tar -czvf Dockey-v${version}-centos.tar.gz Dockey
+#else
+#  echo $version
+#fi
