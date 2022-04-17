@@ -1,13 +1,18 @@
 import os
 import time
 import math
+from pymol import cmd
 from openbabel import openbabel
+from plip.basic import config
+from plip.structure.preparation import PDBComplex
+from plip.visualization.pymol import PyMOLVisualizer
 
 __all__ = ['AttrDict', 'draw_gridbox', 'convert_dimension_to_coordinates',
 	'convert_coordinates_to_dimension', 'get_atom_types_from_pdbqt',
 	'get_molecule_center_from_pdbqt', 'time_format', 'convert_pdbqt_to_pdb',
 	'ligand_efficiency_assessment', 'get_molecule_information', 'convert_ki_to_log',
-	'time_elapse'
+	'time_elapse', 'generate_complex_pdb', 'get_complex_interactions',
+	'interaction_visualize'
 ]
 
 class AttrDict(dict):
@@ -80,11 +85,72 @@ def draw_gridbox(cmd, data):
 		bg_z = data.bg_z
 	)
 
-def convert_pdbqt_to_pdb(pdbqt_str):
+def generate_complex_pdb(receptor_pdb, ligand_pdb):
+	complex_lines = []
+	no_tre = True
+	atom_num = 0
+
+	for line in receptor_pdb.split('\n'):
+		if line.startswith(('ATOM', 'HETATM', 'CRYST1')):
+			complex_lines.append(line)
+		elif line.startswith('TRE'):
+			complex_lines.append(line)
+			no_tre = False
+
+		#if line.startswith(('ATOM', 'HETATM')):
+		#	num = int(line[6:11].strip())
+
+		#	if num > atom_num:
+		#		atom_num = num
+
+	if no_tre:
+		complex_lines.append('TRE   ')
+
+	#if the atom number in ligand pdb is not sorted
+	#to keep right atom order
+	#get minimum atom number from ligand pdb
+	#ligand_lines = ligand_pdb.split('\n')
+	#min_num = 100000
+	#for line in ligand_lines:
+	#	if line.startswith(('ATOM', 'HETATM')):
+	#		num = int(line[6:11].strip())
+
+	#		if num < min_num:
+	#			min_num = num
+
+	for line in ligand_lines:
+		if line.startswith(('ATOM', 'HETATM', 'CONECT')):
+			#line_chars = list(line)
+
+			if line.startswith('ATOM'):
+				#line_chars[0:6] = list('HETATM')
+				line = line.replace('ATOM  ', 'HETATM')
+
+			#renumber atom or hetatm
+			#current atom number in ligand pdb
+			#curr_num = int(line[6:11].strip())
+			#new_num = atom_num + curr_num - min_num + 1
+			#line_chars[6:11] = list(str(new_num).rjust(5, ' '))
+			#complex_lines.append(''.join(line_chars))
+
+		#elif line.startswith('CONECT'):
+			complex_lines.append(line)
+
+	if complex_lines:
+		complex_lines.append('END')
+
+	return '\n'.join(complex_lines)
+
+def convert_pdbqt_to_pdb(pdbqt, as_string=True):
 	obc = openbabel.OBConversion()
 	obc.SetInAndOutFormats('pdbqt', 'pdb')
 	mol = openbabel.OBMol()
-	obc.ReadString(mol, pdbqt_str)
+
+	if as_string:
+		obc.ReadString(mol, pdbqt)
+	else:
+		obc.ReadFile(mol, pdbqt)
+
 	return obc.WriteString(mol)
 
 def convert_other_to_pdbqt(infile, informat, outfile):
@@ -261,6 +327,223 @@ def ligand_efficiency_assessment(pdb_str, energy, ki=0):
 		return (logki, le, lle, fq, lelp)
 	else:
 		return (logki, None, None, None, None)
+
+def get_complex_interactions(pose_ids, poses):
+	interactions = {
+		'binding_site': [],
+		'hydrogen_bond': [],
+		'hydrophobic_interaction': [],
+		'water_bridge': [],
+		'salt_bridge': [],
+		'pi_stacking': [],
+		'pi_cation': []
+	}
+
+	for i, pose in enumerate(poses):
+		pose[0] = pose_ids[i]
+		mol = PDBComplex()
+		mol.load_pdb(pose[-1], as_string=True)
+		mol.analyze()
+
+		for site in mol.interaction_sets:
+			interactions['binding_site'].append([None, pose[0], site])
+			s = mol.interaction_sets[site]
+
+			site = "{}:{}".format(pose[0], site)
+
+			#hydrogen bonds
+			for hb in s.hbonds_pdon + s.hbonds_ldon:
+				interactions['hydrogen_bond'].append([None, site,
+					hb.reschain, hb.resnr,
+					hb.restype.capitalize(),
+					"{:.2}".format(hb.distance_ah),
+					"{:.2}".format(hb.distance_ad),
+					"{:.2}".format(hb.angle),
+					'Yes' if hb.protisdon else 'No',
+					'Yes' if hb.sidechain else 'No',
+					"{} [{}]".format(hb.d_orig_idx, hb.dtype),
+					"{} [{}]".format(hb.a_orig_idx, hb.atype)
+				])
+
+			#hydrophobic interactions
+			for hc in s.hydrophobic_contacts:
+				interactions['hydrophobic_interaction'].append([None, site,
+					hc.reschain, hc.resnr,
+					hc.restype.capitalize(),
+					"{:.2}".format(hc.distance),
+					hc.ligatom_orig_idx,
+					hc.bsatom_orig_idx
+				])
+
+			#water bridges
+			for wb in s.water_bridges:
+				interactions['water_bridge'].append([None, site,
+					wb.reschain, wb.resnr,
+					wb.restype.capitalize(),
+					"{:.2}".format(wb.distance_aw),
+					"{:.2}".format(wb.distance_dw),
+					"{:.2}".format(wb.d_angle),
+					"{:.2}".format(wb.w_angle),
+					'Yes' if wb.protisdon else 'No',
+					"{} [{}]".format(wb.d_orig_idx, wb.dtype),
+					"{} [{}]".format(wb.a_orig_idx, wb.atype),
+					wb.water_orig_idx
+				])
+
+			#salt bridges
+			for sb in s.saltbridge_lneg + s.saltbridge_pneg:
+				if sb.protispos:
+					group = sb.negative.fgroup
+					ligand_atom_ids = ','.join(str(x) for x in sb.negative.atoms_orig_idx)
+					protein_atom_ids = ','.join(str(x) for x in sb.positive.atoms_orig_idx)
+				else:
+					group = sb.positive.fgroup
+					ligand_atom_ids = ','.join(str(x) for x in sb.positive.atoms_orig_idx)
+					protein_atom_ids = ','.join(str(x) for x in sb.negative.atoms_orig_idx)
+
+				interactions['salt_bridge'].append([None, site,
+					sb.reschain, sb.resnr,
+					sb.restype.capitalize(),
+					"{:.2}".format(sb.distance),
+					'Yes' if sb.protispos else 'No',
+					group.capitalize(),
+					ligand_atom_ids,
+					#protein_atom_ids
+				])
+
+			#pi-stacking
+			for ps in s.pistacking:
+				interactions['pi_stacking'].append([None, site,
+					ps.reschain, ps.resnr,
+					ps.restype.capitalize(),
+					"{:.2}".format(ps.distance),
+					"{:.2}".format(ps.angle),
+					"{:.2}".format(ps.offset),
+					ps.type,
+					','.join(str(x) for x in ps.ligandring.atoms_orig_idx)
+					#','.join(str(x) for x in ps.proteinring.atoms_orig_idx)
+				])
+
+			#pi-cation
+			for pc in s.pication_laro + s.pication_paro:
+				if pc.protcharged:
+					ligand_atom_ids = ','.join(str(x) for x in pc.ring.atoms_orig_idx)
+					protein_atom_ids = ','.join(str(x) for x in pc.charge.atoms_orig_idx)
+					group = 'Aromatic'
+				else:
+					ligand_atom_ids = ','.join(str(x) for x in pc.charge.atoms_orig_idx)
+					protein_atom_ids = ','.join(str(x) for x in pc.ring.atoms_orig_idx)
+					group = pc.charge.fgroup
+
+				interactions['pi_cation'].append([None, site,
+					pc.reschain, pc.resnr,
+					pc.restype.capitalize(),
+					"{:.2}".format(pc.distance),
+					"{:.2}".format(pc.offset),
+					'Yes' if pc.protcharged else 'No',
+					group.capitalize(),
+					ligand_atom_ids,
+					#protein_atom_ids
+				])
+
+			#halogen bonds
+			for hb in s.halogen_bonds:
+				interactions['halogen_bond'].append([None, site,
+					hb.reschain, hb.resnr,
+					hb.restype.capitalize(),
+					"{:.2}".format(hb.distance),
+					"{:.2}".format(hb.don_angle),
+					"{:.2}".format(hb.acc_angle),
+					"{} [{}]".format(hb.don_orig_idx, hb.donortype),
+					"{} [{}]".format(hb.acc_orig_idx, hb.acctype)
+				])
+
+			#metal complexes
+			for mc in s.metal_complexes:
+				interactions['metal_complex'].append([None, site,
+					mc.reschain, mc.resnr,
+					mc.restype.capitalize(),
+					"{} [{}]".format(mc.metal_orig_idx, mc.metal_type),
+					"{} [{}]".format(mc.target_orig_idx, mc.target_type),
+					"{:.2}".format(mc.distance),
+					mc.location
+				])
+
+	return interactions
+
+#https://github.com/pharmai/plip/blob/master/plip/visualization/visualize.py
+def interaction_visualize(plcomplex):
+	vis = PyMOLVisualizer(plcomplex)
+
+	pdbid = plcomplex.pdbid
+	lig_members = plcomplex.lig_members
+	chain = plcomplex.chain
+	if config.PEPTIDES:
+		vis.ligname = 'PeptideChain%s' % plcomplex.chain
+	if config.INTRA is not None:
+		vis.ligname = 'Intra%s' % plcomplex.chain
+
+	ligname = vis.ligname
+	hetid = plcomplex.hetid
+
+	metal_ids = plcomplex.metal_ids
+	metal_ids_str = '+'.join([str(i) for i in metal_ids])
+
+	vis.set_initial_representations()
+
+	cmd.load(plcomplex.sourcefile)
+	#cmd.read_pdbstr(plcomplex.sourcefiles['pdbstring'], 'complex')
+	cmd.frame(config.MODEL)
+	current_name = cmd.get_object_list(selection='(all)')[0]
+
+	cmd.set_name(current_name, pdbid)
+	cmd.hide('everything', 'all')
+	if config.PEPTIDES:
+		cmd.select(ligname, 'chain %s and not resn HOH' % plcomplex.chain)
+	else:
+		cmd.select(ligname, 'resn %s and chain %s and resi %s*' % (hetid, chain, plcomplex.position))
+
+	# Visualize and color metal ions if there are any
+	if not len(metal_ids) == 0:
+		vis.select_by_ids(ligname, metal_ids, selection_exists=True)
+		cmd.show('spheres', 'id %s and %s' % (metal_ids_str, pdbid))
+
+	# Additionally, select all members of composite ligands
+	if len(lig_members) > 1:
+		for member in lig_members:
+			resid, chain, resnr = member[0], member[1], str(member[2])
+			cmd.select(ligname, '%s or (resn %s and chain %s and resi %s)' % (ligname, resid, chain, resnr))
+
+	cmd.show('sticks', ligname)
+	cmd.color('myblue')
+	cmd.color('myorange', ligname)
+	cmd.util.cnc('all')
+	if not len(metal_ids) == 0:
+		cmd.color('hotpink', 'id %s' % metal_ids_str)
+		cmd.hide('sticks', 'id %s' % metal_ids_str)
+		cmd.set('sphere_scale', 0.3, ligname)
+	cmd.deselect()
+
+	vis.make_initial_selections()
+
+	vis.show_hydrophobic()  # Hydrophobic Contacts
+	vis.show_hbonds()  # Hydrogen Bonds
+	vis.show_halogen()  # Halogen Bonds
+	vis.show_stacking()  # pi-Stacking Interactions
+	vis.show_cationpi()  # pi-Cation Interactions
+	vis.show_sbridges()  # Salt Bridges
+	vis.show_wbridges()  # Water Bridges
+	vis.show_metal()  # Metal Coordination
+
+	vis.refinements()
+
+	vis.zoom_to_ligand()
+
+	vis.selections_cleanup()
+
+	vis.selections_group()
+	#vis.additional_cleanup()
+
 
 if __name__ == '__main__':
 	import sys

@@ -51,7 +51,8 @@ DB_TABLES = {
 		('lle', 'REAL'),
 		('fq', 'REAL'),
 		('lelp', 'REAL'),
-		('mode', 'TEXT')
+		('mode', 'TEXT'),
+		('complex', 'TEXT')
 	],
 	'logs': [
 		('id', 'INTEGER PRIMARY KEY'),
@@ -63,6 +64,108 @@ DB_TABLES = {
 		('id', 'INTEGER PRIMARY KEY'),
 		('name', 'TEXT'),
 		('value', 'TEXT')
+	],
+	'binding_site': [
+		('id', 'INTEGER PRIMARY KEY'),
+		('pid', 'INTEGER'),
+		('site', 'TEXT')
+	],
+	'hydrogen_bond': [
+		('id', 'INTEGER PRIMARY KEY'),
+		('bid', 'INTEGER'),
+		('chain', 'TEXT'),
+		('residue', 'INTEGER'),
+		('amino_acid', 'TEXT'),
+		('distance_ha', 'REAL'),
+		('distance_da', 'REAL'),
+		('donor_angle', 'REAL'),
+		('protein_donor', 'TEXT'),
+		('side_chain', 'TEXT'),
+		('donor_atom', 'TEXT'),
+		('acceptor_atom', 'TEXT')
+	],
+	'halogen_bond': [
+		('id', 'INTEGER PRIMARY KEY'),
+		('bid', 'INTEGER'),
+		('chain', 'TEXT'),
+		('residue', 'INTEGER'),
+		('amino_acid', 'TEXT'),
+		('distance', 'REAL'),
+		('donor_angle', 'REAL'),
+		('acceptor_angle', 'REAL'),
+		('donor_atom', 'TEXT'),
+		('acceptor_atom', 'TEXT')
+	],
+	'hydrophobic_interaction': [
+		('id', 'INTEGER PRIMARY KEY'),
+		('bid', 'INTEGER'),
+		('chain', 'TEXT'),
+		('residue', 'INTEGER'),
+		('amino_acid', 'TEXT'),
+		('distance', 'REAL'),
+		('ligand_atom', 'INTEGER'),
+		('protein_atom', 'INTEGER')
+	],
+	'salt_bridge': [
+		('id', 'INTEGER PRIMARY KEY'),
+		('bid', 'INTEGER'),
+		('chain', 'TEXT'),
+		('residue', 'INTEGER'),
+		('amino_acid', 'TEXT'),
+		('distance', 'REAL'),
+		('protein_positive', 'INTEGER'),
+		('ligand_group', 'TEXT'),
+		('ligand_atoms', 'TEXT')
+	],
+	'water_bridge': [
+		('id', 'INTEGER PRIMARY KEY'),
+		('bid', 'INTEGER'),
+		('chain', 'TEXT'),
+		('residue', 'INTEGER'),
+		('amino_acid', 'TEXT'),
+		('distance_aw', 'REAL'),
+		('distance_dw', 'REAL'),
+		('donor_angle', 'REAL'),
+		('water_angle', 'REAL'),
+		('protein_donor', 'INTEGER'),
+		('donor_atom', 'REAL'),
+		('acceptor_atom', 'REAL'),
+		('water_atom', 'INTEGER')
+	],
+	'pi_stacking': [
+		('id', 'INTEGER PRIMARY KEY'),
+		('bid', 'INTEGER'),
+		('chain', 'TEXT'),
+		('residue', 'INTEGER'),
+		('amino_acid', 'TEXT'),
+		('distance', 'REAL'),
+		('angle', 'REAL'),
+		('offset', 'REAL'),
+		('type', 'TEXT'),
+		('ligand_atoms', 'TEXT')
+	],
+	'pi_cation': [
+		('id', 'INTEGER PRIMARY KEY'),
+		('bid', 'INTEGER'),
+		('chain', 'TEXT'),
+		('residue', 'INTEGER'),
+		('amino_acid', 'TEXT'),
+		('distance', 'REAL'),
+		('offset', 'REAL'),
+		('protein_charged', 'INTEGER'),
+		('ligand_group', 'TEXT'),
+		('ligand_atoms', 'TEXT')
+	],
+	'metal_complex': [
+		('id', 'INTEGER PRIMARY KEY'),
+		('bid', 'INTEGER'),
+		('chain', 'TEXT'),
+		('residue', 'INTEGER'),
+		('amino_acid', 'TEXT'),
+		('metal', 'INTEGER'),
+		('target', 'INTEGER'),
+		('distance', 'REAL'),
+		('location', 'TEXT')
 	]
 }
 

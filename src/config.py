@@ -4,10 +4,11 @@ import pymol
 import psutil
 import openbabel
 from PySide6.QtCore import __version__ as pyside_version
+from plip.basic.config import __version__ as plip_version
 
 __all__ = ['DOCKEY_VERSION', 'DOCKEY_BUILD', 'DOCKEY_ABOUT']
 
-DOCKEY_VERSION = "0.2.0"
+DOCKEY_VERSION = "0.3.0"
 
 DOCKEY_BUILD = "220130"
 
@@ -63,6 +64,15 @@ DOCKEY_ABOUT = """
 		</td>
 	</tr>
 	<tr>
+		<td>Plip</td>
+		<td>v{plip}</td>
+		<td>
+			<a href="https://github.com/pharmai/plip">
+				https://github.com/pharmai/plip
+			</a>
+		</td>
+	</tr>
+	<tr>
 		<td>Psutil</td>
 		<td>v{psutil}</td>
 		<td>
@@ -83,15 +93,6 @@ DOCKEY_ABOUT = """
 </table>
 <p><b>Requirements:</b></p>
 <table cellpadding="0" cellspacing="5">
-	<tr>
-		<td>MGLTools</td>
-		<td>v1.5.7</td>
-		<td>
-			<a href="https://ccsb.scripps.edu/mgltools/">
-				https://ccsb.scripps.edu/mgltools
-			</a>
-		</td>
-	</tr>
 	<tr>
 		<td>AutoDock</td>
 		<td>v4.2.6</td>
@@ -119,6 +120,7 @@ DOCKEY_ABOUT = """
 	pyside = pyside_version,
 	pymol = pymol.cmd.get_version()[0],
 	babel = openbabel.__version__,
+	plip = plip_version,
 	psutil = psutil.__version__,
 	icon = '1.7.0'
 )

@@ -37,6 +37,7 @@ class DockeyMainWindow(QMainWindow):
 		self.create_job_table()
 		self.create_pose_table()
 		self.create_pymol_feedback()
+		self.create_interaction_tables()
 
 		self.create_molecular_model()
 		self.create_job_model()
@@ -103,6 +104,15 @@ class DockeyMainWindow(QMainWindow):
 		self.feedback_timer.setSingleShot(True)
 		self.feedback_timer.timeout.connect(self.update_feedback)
 		self.feedback_timer.start(100)
+
+	def create_interaction_tables(self):
+		self.interaction_tab = InteractionTabWidget(self)
+		#self.interaction_title = InteractionTitleWidget(self)
+		self.interaction_dock = QDockWidget("Interactions", self)
+		#self.interaction_dock.setTitleBarWidget(self.interaction_title)
+		self.interaction_dock.setAllowedAreas(Qt.TopDockWidgetArea | Qt.BottomDockWidgetArea)
+		self.interaction_dock.setWidget(self.interaction_tab)
+		self.addDockWidget(Qt.BottomDockWidgetArea, self.interaction_dock, Qt.Vertical)
 
 	@Slot()
 	def execute_pymol_cmd(self):
@@ -191,7 +201,7 @@ class DockeyMainWindow(QMainWindow):
 		self.job_table.setItemDelegateForColumn(4, JobsTableDelegate(self))
 		self.job_table.setSelectionBehavior(QAbstractItemView.SelectRows)
 		self.job_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
-		self.job_table.horizontalHeader().setStretchLastSection(True)
+		#self.job_table.horizontalHeader().setStretchLastSection(True)
 		#self.job_table.verticalHeader().hide()
 		#self.job_table.setAlternatingRowColors(True)
 		self.job_dock = QDockWidget("Jobs", self)
@@ -239,7 +249,7 @@ class DockeyMainWindow(QMainWindow):
 	def on_pose_changed(self, index):
 		new_index = self.pose_model.index(index.row(), 0)
 		pid = new_index.data(Qt.DisplayRole)
-
+		'''
 		sql = "SELECT jid, mode FROM {} WHERE id=? LIMIT 1".format(
 			self.pose_model.table
 		)
@@ -260,6 +270,9 @@ class DockeyMainWindow(QMainWindow):
 		self.cmd.read_pdbstr(pose, ligand)
 		#self.cmd.orient()
 		self.cmd.zoom()
+		'''
+		#display interactions
+		self.interaction_tab.change_pose(pid)
 
 	def create_molecular_model(self):
 		self.mol_model = MolecularTableModel()
@@ -634,6 +647,7 @@ class DockeyMainWindow(QMainWindow):
 		self.mol_model.reset()
 		self.job_model.reset()
 		self.pose_model.reset()
+		self.interaction_tab.reset()
 
 		#reset pymol
 		self.cmd.delete('all')
@@ -858,11 +872,9 @@ class DockeyMainWindow(QMainWindow):
 			if ret == QMessageBox.No:
 				return False
 
-		DB.query("DELETE FROM jobs")
-		DB.query("DELETE FROM pose")
-
-		self.job_model.select()
-		self.pose_model.select()
+		self.job_model.clear()
+		self.pose_model.clear()
+		self.interaction_tab.clear()
 
 		return True
 

@@ -7,7 +7,10 @@ from backend import *
 
 __all__ = ['DockeyListView', 'JobTableView', 'PoseTableView',
 	'DockeyTextBrowser', 'DockeyTableModel', 'MolecularTableModel',
-	'JobsTableModel', 'JobsTableDelegate', 'PoseTableModel'
+	'JobsTableModel', 'JobsTableDelegate', 'PoseTableModel',
+	'HydrogenBondsModel', 'HydrophobicInteractionModel', 'HalogenBondsModel',
+	'SaltBridgesModel', 'WaterBridgesModel', 'PiStackingModel', 'PiCationModel',
+	'MetalComplexModel', 'BindingSiteModel', 'InteractionTableView'
 ]
 
 class MoleculeDetailDialog(QDialog):
@@ -207,236 +210,6 @@ class DockeyListView(QListView):
 
 		return ''.join(formulas)
 
-
-class JobTableView(QTableView):
-	def __init__(self, parent=None):
-		super(JobTableView, self).__init__(parent)
-		self.parent = parent
-		self.setContextMenuPolicy(Qt.CustomContextMenu)
-		self.customContextMenuRequested.connect(self.on_custom_menu)
-
-	def sizeHint(self):
-		return QSize(300, 150)
-
-	@Slot()
-	def on_custom_menu(self, pos):
-		self.current_index = self.indexAt(pos)
-
-		view_detail_act = QAction("View Details", self,
-			triggered = self.view_details
-		)
-		view_detail_act.setEnabled(self.current_index.isValid())
-
-		view_logs_act = QAction("View Log Files", self,
-			triggered = self.view_logs
-		)
-		view_logs_act.setEnabled(self.current_index.isValid())
-
-		menu = QMenu(self)
-		menu.addAction(view_detail_act)
-		menu.addAction(view_logs_act)
-		menu.popup(self.viewport().mapToGlobal(pos))
-
-	@Slot()
-	def view_details(self):
-		if not self.current_index.isValid():
-			return
-
-		jid = self.current_index.row() + 1
-		sql = "SELECT * FROM jobs WHERE id=? LIMIT 1"
-		job = DB.get_dict(sql, (jid,))
-		sql = "SELECT name FROM molecular WHERE id=? LIMIT 1"
-		receptor = DB.get_one(sql, (job.rid,))
-		sql = "SELECT name FROM molecular WHERE id=? LIMIT 1"
-		ligand = DB.get_one(sql, (job.lid,))
-
-		info = (
-			"<table cellspacing='10'>"
-			"<tr><td>Receptor name: </td><td>{}</td></tr>"
-			"<tr><td>Ligand name: </td><td>{}</td></tr>"
-			"<tr><td>Job status: </td><td>{}</td></tr>"
-			"<tr><td>Start time: </td><td>{}</td></tr>"
-			"<tr><td>Finish time: </td><td>{}</td></tr>"
-			"<tr><td>Elapsed time: </d><td>{}</td></tr>"
-			"<tr><td>Message: </td><td>{}</td></tr>"
-			"</table>"
-		)
-
-		dlg = MoleculeDetailDialog(self.parent, info.format(
-			receptor,
-			ligand,
-			['Pending', 'Success', 'Running', 'Error'][job.status],
-			time_format(job.started),
-			time_format(job.finished),
-			time_elapse(job.started, job.finished),
-			job.message
-		))
-		dlg.exec()
-
-	@Slot()
-	def view_logs(self):
-		if not self.current_index.isValid():
-			return
-
-		jid = self.current_index.row() + 1
-		JobLogDialog.view_log(self.parent, jid)
-
-class PoseTableView(QTableView):
-	def __init__(self, parent=None):
-		super(PoseTableView, self).__init__(parent)
-		self.parent = parent
-		self.setContextMenuPolicy(Qt.CustomContextMenu)
-		self.customContextMenuRequested.connect(self.on_custom_menu)
-
-	def sizeHint(self):
-		return QSize(300, 150)
-
-	@Slot()
-	def on_custom_menu(self, pos):
-		self.current_index = self.indexAt(pos)
-		
-		save_act = QAction("Save Selected Pose", self,
-			triggered = self.save_pose
-		)
-		save_act.setDisabled(not self.current_index.isValid())
-		all_act = QAction("Save All Poses", self,
-			triggered = self.save_all
-		)
-
-		export_act = QAction("Export Table", self,
-			triggered = self.export_table
-		)
-
-		view_act = QAction("View Details", self,
-			triggered = self.view_details
-		)
-		view_act.setDisabled(not self.current_index.isValid())
-
-		menu = QMenu(self)
-		
-		menu.addAction(save_act)
-		menu.addAction(all_act)
-		menu.addSeparator()
-		menu.addAction(export_act)
-		menu.addSeparator()
-		menu.addAction(view_act)
-		menu.popup(self.viewport().mapToGlobal(pos))
-
-	def get_pose_ids(self):
-		if not self.current_index.isValid():
-			return None, None
-
-		row = self.current_index.row()
-		index = self.current_index.model().createIndex(row, 0)
-		pid = index.data(role=Qt.DisplayRole)
-		index = self.current_index.model().createIndex(row, 1)
-		jid = index.data(role=Qt.DisplayRole)
-		return pid, jid
-
-	def export_table(self):
-		out, _ = QFileDialog.getSaveFileName(self.parent, filter="CSV file (*.csv)")
-		if not out:
-			return
-
-		_, jid = self.get_pose_ids()
-
-		if not jid:
-			return
-
-		headers = self.model().custom_headers
-		sql = "SELECT * FROM pose WHERE jid=?"
-
-		with open(out, 'w') as fw:
-			fw.write("{}\n".format(','.join(headers[2:])))
-
-			for row in DB.query(sql, (jid,)):
-				fw.write("{}\n".format(','.join(map(str,row[2:11]))))
-
-		self.parent.show_message("Export table to {}".format(out))
-
-	def save_all(self):
-		pdb, _ = QFileDialog.getSaveFileName(self.parent, filter="PDB file (*.pdb)")
-
-		if not pdb:
-			return
-
-		_, jid = self.get_pose_ids()
-
-		if not jid:
-			return
-
-		sql = "SELECT mode FROM pose WHERE jid=?"
-
-		with open(pdb, 'w') as fw:
-			for row in DB.query(sql, (jid,)):
-				if row[0]:
-					fw.write(row[0])
-					fw.write('\n')
-
-		self.parent.show_message("Save all poses to {}".format(pdb))
-
-	def save_pose(self):
-		pdb, _ = QFileDialog.getSaveFileName(self.parent, filter="PDB file (*.pdb)")
-
-		if not pdb:
-			return
-
-		pid, _ = self.get_pose_ids()
-		sql = "SELECT mode FROM pose WHERE id=? LIMIT 1"
-		pose = DB.get_one(sql, (pid,))
-
-		with open(pdb, 'w') as fw:
-			fw.write(pose)
-
-		self.parent.show_message("Save pose to {}".format(pdb))
-
-	def view_details(self):
-		pid, _ = self.get_pose_ids()
-		sql = "SELECT * FROM pose WHERE id=? LIMIT 1"
-		pose = DB.get_dict(sql, (pid,))
-
-		tool = DB.get_option('tool')
-		if tool == 'autodock4':
-			titles = ['Run', 'Free energy of binding', 'Cluster RMSD', 'Reference RMSD']
-
-		elif tool == 'vina':
-			titles = ['Mode', 'Binding affinity', 'RMSD l.b.', 'RMSD u.b.']
-
-		info = (
-			"<table cellspacing='10'>"
-			"<tr><td>{}: </td><td>{}</td></tr>"
-			"<tr><td>{}: </td><td>{}</td></tr>"
-			"<tr><td>{}: </td><td>{}</td></tr>"
-			"<tr><td>{}: </td><td>{}</td></tr>"
-			"<tr><td>logKi: </td><td>{}</td></tr>"
-			"<tr><td>Ligand efficiency (LE): </d><td>{}</td></tr>"
-			"<tr><td>Lipophilic ligand efficiency (LLE): </td><td>{}</td></tr>"
-			"<tr><td>Fit Quality (FQ): </td><td>{}</td></tr>"
-			"<tr><td>Ligand efficiency lipophilic price (LELP): </td><td>{}</td></tr>"
-			"</table>"
-		)
-
-		dlg = MoleculeDetailDialog(self.parent, info.format(
-			titles[0],
-			pose.run,
-			titles[1],
-			pose.energy,
-			titles[2],
-			pose.rmsd1,
-			titles[3],
-			pose.rmsd2,
-			pose.logki,
-			pose.le,
-			pose.lle,
-			pose.fq,
-			pose.lelp
-		))
-		dlg.exec()
-
-class DockeyTextBrowser(QTextBrowser):
-	def sizeHint(self):
-		return QSize(300, 150)
-
 class DockeyTableModel(QAbstractTableModel):
 	table = None
 	custom_headers = []
@@ -564,6 +337,10 @@ class DockeyTableModel(QAbstractTableModel):
 		self.total_count = 0
 		self.displayed = []
 		self.endResetModel()
+
+	def clear(self):
+		DB.query("DELETE FROM {}".format(self.table))
+		self.reset()
 
 class MolecularTableModel(DockeyTableModel):
 	table = 'molecular'
@@ -728,3 +505,382 @@ class PoseTableModel(DockeyTableModel):
 		self.switch_table(tool)
 		self.job = job_id
 		self.select()
+
+class BindingSiteModel(DockeyTableModel):
+	table = 'binding_site'
+	pose_id = 0
+	custom_headers = ['ID', 'PID', 'Site']
+
+	@property
+	def count_sql(self):
+		return "SELECT COUNT(1) FROM {} WHERE pid={} LIMIT 1".format(self.table, self.pose_id)
+
+	@property
+	def read_sql(self):
+		remainder = self.total_count - self.read_count
+		fetch_count = min(self._reads, remainder)
+
+		return "SELECT id FROM {} WHERE pid={} LIMIT {},{}".format(
+			self.table,
+			self.pose_id,
+			self.read_count,
+			fetch_count
+		)
+
+	@property
+	def all_sql(self):
+		return "SELECT id FROM {} WHERE pid={}".format(self.table, self.pose_id)
+
+	@property
+	def get_sql(self):
+		return "SELECT * FROM {} WHERE pid={} AND id=? LIMIT 1".format(self.table, self.pose_id)
+
+	def change_pose(self, pose_id):
+		self.pose_id = pose_id
+		self.select()
+
+class InteractionModel(DockeyTableModel):
+	binding_site = 0
+	custom_headers = ['ID', 'BID', 'Residue']
+
+	@property
+	def count_sql(self):
+		return "SELECT COUNT(1) FROM {} WHERE bid={} LIMIT 1".format(self.table, self.binding_site)
+
+	@property
+	def read_sql(self):
+		remainder = self.total_count - self.read_count
+		fetch_count = min(self._reads, remainder)
+
+		return "SELECT id FROM {} WHERE bid={} LIMIT {},{}".format(
+			self.table,
+			self.binding_site,
+			self.read_count,
+			fetch_count
+		)
+
+	@property
+	def all_sql(self):
+		return "SELECT id FROM {} WHERE bid={}".format(self.table, self.binding_site)
+
+	@property
+	def get_sql(self):
+		return "SELECT * FROM {} WHERE bid={} AND id=? LIMIT 1".format(self.table, self.binding_site)
+
+	def change_binding_site(self, site_id):
+		self.binding_site = site_id
+		self.select()
+
+	def clear(self):
+		DB.query("DELETE FROM {}".format(self.table))
+		self.change_binding_site(0)
+
+class HydrogenBondsModel(InteractionModel):
+	table = 'hydrogen_bond'
+	custom_headers = ['ID', 'Site', 'Chain', 'Residue', 'Amino Acid', 'Distance HA',
+		'Distance DA', 'Donor Angle', 'Protein Donor', 'Side Chain', 'Donor Atom',
+		'Acceptor Atom'
+	]
+
+class HalogenBondsModel(InteractionModel):
+	table = 'halogen_bond'
+	custom_headers = ['ID', 'Site', 'Chain', 'Residue', 'Amino Acid', 'Distance',
+		'Donor Angle', 'Acceptor Angle', 'Donor Atom', 'Acceptor Atom'
+	]
+
+class HydrophobicInteractionModel(InteractionModel):
+	table = 'hydrophobic_interaction'
+	custom_headers = ['ID', 'Site', 'Chain', 'Residue', 'Amino Acid', 'Distance',
+		'Ligand Atom', 'Protein Atom'
+	]
+
+class SaltBridgesModel(InteractionModel):
+	table = 'salt_bridge'
+	custom_headers = ['ID', 'Site', 'Chain', 'Residue', 'Amino Acid', 'Distance',
+		'Protein Positive', 'Ligand Group', 'Ligand Atoms'
+	]
+
+class WaterBridgesModel(InteractionModel):
+	table = 'water_bridge'
+	custom_headers = ['ID', 'Site', 'Chain', 'Residue', 'Amino Acid', 'Distance AW',
+		'Distance DW', 'Donor Angle', 'Water Angle', 'Protein Donor', 'Donor Atom',
+		'Acceptor Atom', 'Water Atom'
+	]
+
+class PiStackingModel(InteractionModel):
+	table = 'pi_stacking'
+	custom_headers = ['ID', 'Site', 'Chain', 'Residue', 'Amino Acid', 'Distance',
+		'Angle', 'Offset', 'Stacking Type', 'Ligand Atoms'
+	]
+
+class PiCationModel(InteractionModel):
+	table = 'pi_cation'
+	custom_headers = ['ID', 'Site', 'Chain', 'Residue', 'Amino Acid', 'Distance',
+		'Offset', 'Protein Charged', 'Ligand Group', 'Ligand Atoms'
+	]
+
+class MetalComplexModel(InteractionModel):
+	table = 'metal_complex'
+	custom_headers = ['ID', 'Site', 'Chain', 'Residue', 'Amino Acid', 'Metal',
+		'Target', 'Distance', 'Location'
+	]
+
+class JobTableView(QTableView):
+	def __init__(self, parent=None):
+		super(JobTableView, self).__init__(parent)
+		self.parent = parent
+		self.setContextMenuPolicy(Qt.CustomContextMenu)
+		self.customContextMenuRequested.connect(self.on_custom_menu)
+
+	def sizeHint(self):
+		return QSize(300, 150)
+
+	@Slot()
+	def on_custom_menu(self, pos):
+		self.current_index = self.indexAt(pos)
+
+		view_detail_act = QAction("View Details", self,
+			triggered = self.view_details
+		)
+		view_detail_act.setEnabled(self.current_index.isValid())
+
+		view_logs_act = QAction("View Log Files", self,
+			triggered = self.view_logs
+		)
+		view_logs_act.setEnabled(self.current_index.isValid())
+
+		menu = QMenu(self)
+		menu.addAction(view_detail_act)
+		menu.addAction(view_logs_act)
+		menu.popup(self.viewport().mapToGlobal(pos))
+
+	@Slot()
+	def view_details(self):
+		if not self.current_index.isValid():
+			return
+
+		jid = self.current_index.row() + 1
+		sql = "SELECT * FROM jobs WHERE id=? LIMIT 1"
+		job = DB.get_dict(sql, (jid,))
+		sql = "SELECT name FROM molecular WHERE id=? LIMIT 1"
+		receptor = DB.get_one(sql, (job.rid,))
+		sql = "SELECT name FROM molecular WHERE id=? LIMIT 1"
+		ligand = DB.get_one(sql, (job.lid,))
+
+		info = (
+			"<table cellspacing='10'>"
+			"<tr><td>Receptor name: </td><td>{}</td></tr>"
+			"<tr><td>Ligand name: </td><td>{}</td></tr>"
+			"<tr><td>Job status: </td><td>{}</td></tr>"
+			"<tr><td>Start time: </td><td>{}</td></tr>"
+			"<tr><td>Finish time: </td><td>{}</td></tr>"
+			"<tr><td>Elapsed time: </d><td>{}</td></tr>"
+			"<tr><td>Message: </td><td>{}</td></tr>"
+			"</table>"
+		)
+
+		dlg = MoleculeDetailDialog(self.parent, info.format(
+			receptor,
+			ligand,
+			['Pending', 'Success', 'Running', 'Error'][job.status],
+			time_format(job.started),
+			time_format(job.finished),
+			time_elapse(job.started, job.finished),
+			job.message
+		))
+		dlg.exec()
+
+	@Slot()
+	def view_logs(self):
+		if not self.current_index.isValid():
+			return
+
+		jid = self.current_index.row() + 1
+		JobLogDialog.view_log(self.parent, jid)
+
+class PoseTableView(QTableView):
+	def __init__(self, parent=None):
+		super(PoseTableView, self).__init__(parent)
+		self.parent = parent
+		self.setContextMenuPolicy(Qt.CustomContextMenu)
+		self.customContextMenuRequested.connect(self.on_custom_menu)
+
+	def sizeHint(self):
+		return QSize(300, 150)
+
+	@Slot()
+	def on_custom_menu(self, pos):
+		self.current_index = self.indexAt(pos)
+		
+		save_pose_act = QAction("Save Selected Pose", self,
+			triggered = self.save_pose
+		)
+		save_pose_act.setDisabled(not self.current_index.isValid())
+		save_all_act = QAction("Save All Poses", self,
+			triggered = self.save_all
+		)
+
+		save_complex_act = QAction("Save Receptor Ligand Complex", self,
+			triggered = self.save_complex
+		)
+		save_complex_act.setDisabled(not self.current_index.isValid())
+
+		export_act = QAction("Export Table", self,
+			triggered = self.export_table
+		)
+
+		view_act = QAction("View Details", self,
+			triggered = self.view_details
+		)
+		view_act.setDisabled(not self.current_index.isValid())
+
+		menu = QMenu(self)
+		
+		menu.addAction(save_pose_act)
+		menu.addAction(save_all_act)
+		menu.addAction(save_complex_act)
+		menu.addSeparator()
+		menu.addAction(export_act)
+		menu.addSeparator()
+		menu.addAction(view_act)
+		menu.popup(self.viewport().mapToGlobal(pos))
+
+	def get_pose_ids(self):
+		if not self.current_index.isValid():
+			return None, None
+
+		row = self.current_index.row()
+		index = self.current_index.model().createIndex(row, 0)
+		pid = index.data(role=Qt.DisplayRole)
+		index = self.current_index.model().createIndex(row, 1)
+		jid = index.data(role=Qt.DisplayRole)
+		return pid, jid
+
+	def export_table(self):
+		out, _ = QFileDialog.getSaveFileName(self.parent, filter="CSV file (*.csv)")
+		if not out:
+			return
+
+		_, jid = self.get_pose_ids()
+
+		if not jid:
+			return
+
+		headers = self.model().custom_headers
+		sql = "SELECT * FROM pose WHERE jid=?"
+
+		with open(out, 'w') as fw:
+			fw.write("{}\n".format(','.join(headers[2:])))
+
+			for row in DB.query(sql, (jid,)):
+				fw.write("{}\n".format(','.join(map(str,row[2:11]))))
+
+		self.parent.show_message("Export table to {}".format(out))
+
+	def save_all(self):
+		pdb, _ = QFileDialog.getSaveFileName(self.parent, filter="PDB file (*.pdb)")
+
+		if not pdb:
+			return
+
+		_, jid = self.get_pose_ids()
+
+		if not jid:
+			return
+
+		sql = "SELECT mode FROM pose WHERE jid=?"
+
+		with open(pdb, 'w') as fw:
+			for row in DB.query(sql, (jid,)):
+				if row[0]:
+					fw.write(row[0])
+					fw.write('\n')
+
+		self.parent.show_message("Save all poses to {}".format(pdb))
+
+	def save_pose(self):
+		pdb, _ = QFileDialog.getSaveFileName(self.parent, filter="PDB file (*.pdb)")
+
+		if not pdb:
+			return
+
+		pid, _ = self.get_pose_ids()
+		sql = "SELECT mode FROM pose WHERE id=? LIMIT 1"
+		pose = DB.get_one(sql, (pid,))
+
+		with open(pdb, 'w') as fw:
+			fw.write(pose)
+
+		self.parent.show_message("Save pose to {}".format(pdb))
+
+	def save_complex(self):
+		pdb_file, _ = QFileDialog.getSaveFileName(self.parent, filter="PDB file (*.pdb)")
+
+		if not pdb_file:
+			return
+
+		pid, jid = self.get_pose_ids()
+		sql = "SELECT complex FROM pose WHERE id=? LIMIT 1"
+		content = DB.get_one(sql, (pid,))
+
+		with open(pdb_file, 'w') as fw:
+			fw.write(content)
+
+	def view_details(self):
+		pid, _ = self.get_pose_ids()
+		sql = "SELECT * FROM pose WHERE id=? LIMIT 1"
+		pose = DB.get_dict(sql, (pid,))
+
+		tool = DB.get_option('tool')
+		if tool == 'autodock4':
+			titles = ['Run', 'Free energy of binding', 'Cluster RMSD', 'Reference RMSD']
+
+		elif tool == 'vina':
+			titles = ['Mode', 'Binding affinity', 'RMSD l.b.', 'RMSD u.b.']
+
+		info = (
+			"<table cellspacing='10'>"
+			"<tr><td>{}: </td><td>{}</td></tr>"
+			"<tr><td>{}: </td><td>{}</td></tr>"
+			"<tr><td>{}: </td><td>{}</td></tr>"
+			"<tr><td>{}: </td><td>{}</td></tr>"
+			"<tr><td>logKi: </td><td>{}</td></tr>"
+			"<tr><td>Ligand efficiency (LE): </d><td>{}</td></tr>"
+			"<tr><td>Lipophilic ligand efficiency (LLE): </td><td>{}</td></tr>"
+			"<tr><td>Fit Quality (FQ): </td><td>{}</td></tr>"
+			"<tr><td>Ligand efficiency lipophilic price (LELP): </td><td>{}</td></tr>"
+			"</table>"
+		)
+
+		dlg = MoleculeDetailDialog(self.parent, info.format(
+			titles[0],
+			pose.run,
+			titles[1],
+			pose.energy,
+			titles[2],
+			pose.rmsd1,
+			titles[3],
+			pose.rmsd2,
+			pose.logki,
+			pose.le,
+			pose.lle,
+			pose.fq,
+			pose.lelp
+		))
+		dlg.exec()
+
+class DockeyTextBrowser(QTextBrowser):
+	def sizeHint(self):
+		return QSize(300, 150)
+
+class InteractionTableView(QTableView):
+	def __init__(self, parent):
+		super(InteractionTableView, self).__init__(parent)
+		#self.verticalHeader().hide()
+		self.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+		self.setSelectionBehavior(QAbstractItemView.SelectRows)
+		self.setEditTriggers(QAbstractItemView.NoEditTriggers)
+
+	def sizeHint(self):
+		return QSize(300, 150)
+	

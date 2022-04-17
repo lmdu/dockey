@@ -3,6 +3,7 @@ import time
 import psutil
 import traceback
 import subprocess
+import multiprocessing
 
 from PySide6.QtCore import *
 
@@ -54,8 +55,47 @@ class BaseWorker(QRunnable):
 		})
 
 	def save_pose(self, poses):
-		sql = "INSERT INTO pose VALUES (?,?,?,?,?,?,?,?,?,?,?,?)"
+		sql = "INSERT INTO pose VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)"
 		DB.insert_rows(sql, poses)
+		sql = "SELECT id FROM pose WHERE jid=?"
+		return DB.get_column(sql, (self.job.id,))
+
+	def save_interaction(self, pids, poses):
+		self.update_message("Analyzing interactions")
+		with multiprocessing.Pool(1) as pool:
+			proc = pool.apply_async(get_complex_interactions, (pids, poses))
+			interactions = proc.get()
+
+		#pids = ','.join(bs[1] for bs in interactions.binding_site)
+		pids = ','.join(map(str, pids))
+		sql = "INSERT INTO binding_site VALUES (?,?,?)"
+		DB.insert_rows(sql, interactions['binding_site'])
+		sql = "SELECT * FROM binding_site WHERE pid IN ({})".format(pids)
+		site_mapping = {"{}:{}".format(row[1], row[2]): row[0] for row in DB.query(sql)}
+		cols_mapping = {
+			'hydrogen_bond': 12,
+			'halogen_bond': 10,
+			'hydrophobic_interaction': 8,
+			'water_bridge': 13,
+			'salt_bridge': 9,
+			'pi_stacking': 10,
+			'pi_cation': 10,
+			'metal_complex': 9
+		}
+
+		for k in interactions:
+			if k == 'binding_site':
+				continue
+
+			if not interactions[k]:
+				continue
+
+			for i in range(len(interactions[k])):
+				site = interactions[k][i][1]
+				interactions[k][i][1] = site_mapping[site]
+
+			sql = "INSERT INTO {} VALUES ({})".format(k, ','.join(['?']*cols_mapping[k]))
+			DB.insert_rows(sql, interactions[k])
 
 	def save_log(self, name, log_file):
 		sql = "INSERT INTO logs VALUES (?,?,?,?)"
@@ -105,7 +145,6 @@ class BaseWorker(QRunnable):
 
 	def pipline(self):
 		pass
-
 
 	@Slot()
 	def run(self):
@@ -219,7 +258,7 @@ class AutodockWorker(BaseWorker):
 
 					for line in log:
 						if '%' in line:
-							p = round(float(line.strip().split()[2].replace('%', ''))*0.09, 2)
+							p = round(float(line.strip().split()[2].strip('%'))*0.05, 2)
 
 					read_start = log.tell()
 
@@ -260,7 +299,7 @@ class AutodockWorker(BaseWorker):
 					for line in log:
 						if line.startswith('Run:'):
 							cols = line.strip().split()
-							p = round(int(cols[1])/int(cols[9])*90, 2)
+							p = round(5+int(cols[1])/int(cols[9])*90, 2)
 
 					read_start = log.tell()
 
@@ -278,6 +317,8 @@ class AutodockWorker(BaseWorker):
 		self.update_message("Analyzing docking results")
 		runs = {}
 		rows = []
+
+		receptor = convert_pdbqt_to_pdb(rpdbqt, as_string=False)
 
 		with open(dlg_file) as fh:
 			for line in fh:
@@ -309,14 +350,16 @@ class AutodockWorker(BaseWorker):
 					crmsd = float(cols[4])
 					rrmsd = float(cols[5])
 					pose = convert_pdbqt_to_pdb(''.join(runs[rid][1]))
-
+					comp = generate_complex_pdb(receptor, pose)
 					row = [None, self.job.id, rid, energy, crmsd, rrmsd]
 					lea = ligand_efficiency_assessment(pose, energy, ki)
 					row.extend(lea)
 					row.append(pose)
+					row.append(comp)
 					rows.append(row)
 
-		self.save_pose(rows)
+		pids = self.save_pose(rows)
+		self.save_interaction(pids, rows)
 
 class AutodockVinaWorker(BaseWorker):
 	def __init__(self, job, params):
@@ -382,7 +425,7 @@ class AutodockVinaWorker(BaseWorker):
 
 						for line in log:
 							if '%' in line:
-								p = round(float(line.strip().split()[2].replace('%', ''))*0.09, 2)
+								p = round(float(line.strip().split()[2].replace('%', ''))*0.05, 2)
 
 						read_start = log.tell()
 
@@ -440,7 +483,7 @@ class AutodockVinaWorker(BaseWorker):
 				if char == '*':
 					star += 1
 					
-			p = round(star/51*100, 2)
+			p = round(star/51*90, 2)
 			self.update_progress(p)
 
 			if chars:
@@ -487,11 +530,21 @@ class AutodockVinaWorker(BaseWorker):
 				else:
 					lines.append(line)
 
+		receptor = convert_pdbqt_to_pdb(rpdbqt, as_string=False)
+
 		for i, row in enumerate(rows):
 			mode = modes.get(i, '')
+
+			if mode:
+				comp = generate_complex_pdb(receptor, mode)
+			else:
+				comp = ''
+
 			lea = ligand_efficiency_assessment(mode, row[3])
 			rows[i].extend(lea)
 			rows[i].append(mode)
+			rows[i].append(comp)
 
-		self.save_pose(rows)
+		pids = self.save_pose(rows)
+		self.save_interaction(pids, rows)
 

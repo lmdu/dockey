@@ -4,12 +4,16 @@ import psutil
 from PySide6.QtGui import *
 from PySide6.QtCore import *
 from PySide6.QtWidgets import *
+from plip.basic.remote import VisualizerData
+from plip.structure.preparation import PDBComplex
 
 from utils import *
+from table import *
+from backend import *
 
 __all__ = ['BrowseInput', 'CreateProjectDialog', 'AutodockConfigDialog',
 			'AutodockVinaConfigDialog', 'ExportImageDialog', 'FeedbackBrowser',
-			'PymolSettingDialog', 'DockingToolSettingDialog',
+			'PymolSettingDialog', 'DockingToolSettingDialog', 'InteractionTabWidget',
 			'JobConcurrentSettingDialog']
 
 class BrowseInput(QWidget):
@@ -412,3 +416,155 @@ class JobConcurrentSettingDialog(QDialog):
 	def on_job_number_changed(self, num):
 		self.parent.pool.setMaxThreadCount(num)
 		self.settings.setValue('Job/concurrent', num)
+
+class InteractionTabWidget(QTabWidget):
+	def __init__(self, parent=None):
+		super(InteractionTabWidget, self).__init__(parent)
+		self.parent = parent
+		self.pose_id = 0
+		self.binding_site = None
+		self.complex_pdb = None
+		self.complex_vis = None
+
+		self.create_hydrogen_table()
+		self.create_halogen_table()
+		self.create_hydrophobic_table()
+		self.create_salt_table()
+		self.create_water_table()
+		self.create_stacking_table()
+		self.create_cation_table()
+		self.create_metal_table()
+		self.create_site_select()
+
+		for i in range(8):
+			self.setTabVisible(i, False)
+			self.widget(i).hideColumn(0)
+			self.widget(i).hideColumn(1)
+			self.widget(i).clicked.connect(self.on_interaction_changed)
+
+	def create_hydrogen_table(self):
+		self.hydrogen_table = InteractionTableView(self)
+		self.hydrogen_model = HydrogenBondsModel()
+		self.hydrogen_table.setModel(self.hydrogen_model)
+		self.addTab(self.hydrogen_table, "Hydrogen bonds")
+		self.hydrogen_model.row_count.connect(lambda x: self.setTabVisible(0, x))
+
+	def create_halogen_table(self):
+		self.halogen_table = InteractionTableView(self)
+		self.halogen_model = HalogenBondsModel()
+		self.halogen_table.setModel(self.halogen_model)
+		self.addTab(self.halogen_table, "Halogen bonds")
+		self.halogen_model.row_count.connect(lambda x: self.setTabVisible(1, x))
+
+	def create_hydrophobic_table(self):
+		self.hydrophobic_table = InteractionTableView(self)
+		self.hydrophobic_model = HydrophobicInteractionModel()
+		self.hydrophobic_table.setModel(self.hydrophobic_model)
+		self.addTab(self.hydrophobic_table, "hydrophobic interactions")
+		self.hydrophobic_model.row_count.connect(lambda x: self.setTabVisible(2, x))
+
+	def create_salt_table(self):
+		self.salt_table = InteractionTableView(self)
+		self.salt_model = SaltBridgesModel()
+		self.salt_table.setModel(self.salt_model)
+		self.addTab(self.salt_table, "Salt bridges")
+		self.salt_model.row_count.connect(lambda x: self.setTabVisible(3, x))
+		self.salt_table.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
+		self.salt_table.horizontalHeader().setStretchLastSection(True)
+
+	def create_water_table(self):
+		self.water_table = InteractionTableView(self)
+		self.water_model = WaterBridgesModel()
+		self.water_table.setModel(self.water_model)
+		self.addTab(self.water_table, "Water bridges")
+		self.water_model.row_count.connect(lambda x: self.setTabVisible(4, x))
+
+	def create_stacking_table(self):
+		self.stacking_table = InteractionTableView(self)
+		self.stacking_model = PiStackingModel()
+		self.stacking_table.setModel(self.stacking_model)
+		self.addTab(self.stacking_table, "π-stacking")
+		self.stacking_model.row_count.connect(lambda x: self.setTabVisible(5, x))
+		self.stacking_table.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
+		self.stacking_table.horizontalHeader().setStretchLastSection(True)
+
+	def create_cation_table(self):
+		self.cation_table = InteractionTableView(self)
+		self.cation_model = PiCationModel()
+		self.cation_table.setModel(self.cation_model)
+		self.addTab(self.cation_table, "π-cation")
+		self.cation_model.row_count.connect(lambda x: self.setTabVisible(6, x))
+		self.cation_table.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
+		self.cation_table.horizontalHeader().setStretchLastSection(True)
+
+	def create_metal_table(self):
+		self.metal_table = InteractionTableView(self)
+		self.metal_model = MetalComplexModel()
+		self.metal_table.setModel(self.metal_model)
+		self.addTab(self.metal_table, "Metal complexes")
+		self.metal_model.row_count.connect(lambda x: self.setTabVisible(7, x))
+
+	def create_site_select(self):
+		layout = QHBoxLayout()
+		layout.setAlignment(Qt.AlignTop)
+		layout.setContentsMargins(0,0,0,0)
+		spacer = QSpacerItem(10, 1, QSizePolicy.Expanding, QSizePolicy.Minimum)
+		layout.addItem(spacer)
+		self.site_select = QComboBox(self)
+		self.site_model = BindingSiteModel()
+		self.site_select.setModel(self.site_model)
+		self.site_select.setModelColumn(2)
+		self.site_select.currentTextChanged.connect(self.on_binding_site_changed)
+		layout.addWidget(QLabel("Binding site: ", self))
+		layout.addWidget(self.site_select)
+		self.setLayout(layout)
+
+	def change_pose(self, pose):
+		if pose != self.pose_id:
+			self.pose_id = pose
+			sql = "SELECT complex FROM pose WHERE id=? LIMIT 1"
+			self.complex_pdb = DB.get_one(sql, (self.pose_id,))
+
+		self.site_model.change_pose(pose)
+
+		if self.complex_pdb:
+			self.parent.cmd.delete('all')
+			self.parent.cmd.reinitialize()
+			self.parent.cmd.read_pdbstr(self.complex_pdb, 'complex')
+			self.parent.cmd.zoom()
+
+	@Slot()
+	def on_binding_site_changed(self, site):
+		sql = "SELECT id FROM binding_site WHERE pid=? AND site=? LIMIT 1"
+		site_id = DB.get_one(sql, (self.pose_id, site))
+
+		for i in range(8):
+			self.widget(i).model().change_binding_site(site_id)
+
+		if site != self.binding_site:
+			self.binding_site = site
+			mol = PDBComplex()
+			mol.load_pdb(self.complex_pdb, as_string=True)
+
+			for ligand in mol.ligands:
+				mol.characterize_complex(ligand)
+
+			self.complex_vis = VisualizerData(mol, self.binding_site)
+
+	@Slot()
+	def on_interaction_changed(self):
+		if self.complex_vis:
+			interaction_visualize(self.complex_vis)
+
+	def clear(self):
+		self.site_model.clear()
+
+		for i in range(8):
+			self.widget(i).model().clear()
+
+	def reset(self):
+		self.site_model.reset()
+
+		for i in range(8):
+			self.widget(i).model().reset()
+
