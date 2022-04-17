@@ -97,11 +97,11 @@ def generate_complex_pdb(receptor_pdb, ligand_pdb):
 			complex_lines.append(line)
 			no_tre = False
 
-		#if line.startswith(('ATOM', 'HETATM')):
-		#	num = int(line[6:11].strip())
+		if line.startswith(('ATOM', 'HETATM')):
+			num = int(line[6:11].strip())
 
-		#	if num > atom_num:
-		#		atom_num = num
+			if num > atom_num:
+				atom_num = num
 
 	if no_tre:
 		complex_lines.append('TRE   ')
@@ -109,32 +109,50 @@ def generate_complex_pdb(receptor_pdb, ligand_pdb):
 	#if the atom number in ligand pdb is not sorted
 	#to keep right atom order
 	#get minimum atom number from ligand pdb
-	#ligand_lines = ligand_pdb.split('\n')
-	#min_num = 100000
-	#for line in ligand_lines:
-	#	if line.startswith(('ATOM', 'HETATM')):
-	#		num = int(line[6:11].strip())
-
-	#		if num < min_num:
-	#			min_num = num
-
+	ligand_lines = ligand_pdb.split('\n')
+	min_num = 100000
 	for line in ligand_lines:
-		if line.startswith(('ATOM', 'HETATM', 'CONECT')):
-			#line_chars = list(line)
+		if line.startswith(('ATOM', 'HETATM')):
+			num = int(line[6:11].strip())
+
+			if num < min_num:
+				min_num = num
+
+	num_mapping = {}
+	for line in ligand_lines:
+		if line.startswith(('ATOM', 'HETATM')):
+			line_chars = list(line)
 
 			if line.startswith('ATOM'):
-				#line_chars[0:6] = list('HETATM')
-				line = line.replace('ATOM  ', 'HETATM')
+				line_chars[0:6] = list('HETATM')
 
 			#renumber atom or hetatm
 			#current atom number in ligand pdb
-			#curr_num = int(line[6:11].strip())
-			#new_num = atom_num + curr_num - min_num + 1
-			#line_chars[6:11] = list(str(new_num).rjust(5, ' '))
-			#complex_lines.append(''.join(line_chars))
+			curr_num = int(line[6:11].strip())
+			new_num = atom_num + curr_num - min_num + 1
+			line_chars[6:11] = list(str(new_num).rjust(5, ' '))
+			complex_lines.append(''.join(line_chars))
+			num_mapping[curr_num] = new_num
 
-		#elif line.startswith('CONECT'):
-			complex_lines.append(line)
+		elif line.startswith('CONECT'):
+			line_chars = list(line)
+
+			start = 6
+			end = 11
+
+			while 1:
+				num_chars = line[start:end].strip()
+
+				if not num_chars:
+					break
+
+				new_num = num_mapping[int(num_chars)]
+				line_chars[start:end] = list(str(new_num).rjust(5, ' '))
+
+				start = end
+				end += 5
+
+			complex_lines.append(''.join(line_chars))
 
 	if complex_lines:
 		complex_lines.append('END')
@@ -542,7 +560,7 @@ def interaction_visualize(plcomplex):
 	vis.selections_cleanup()
 
 	vis.selections_group()
-	#vis.additional_cleanup()
+	vis.additional_cleanup()
 
 
 if __name__ == '__main__':
