@@ -491,6 +491,10 @@ def get_complex_interactions(pose_ids, poses):
 
 #https://github.com/pharmai/plip/blob/master/plip/visualization/visualize.py
 def interaction_visualize(plcomplex):
+	#clear pymol viewer
+	cmd.delete('all')
+	cmd.reinitialize()
+
 	vis = PyMOLVisualizer(plcomplex)
 
 	pdbid = plcomplex.pdbid
