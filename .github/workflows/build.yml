@@ -70,7 +70,7 @@ jobs:
           pip install apsw-wheels==3.36.0.post1
           pip install PySide6==6.2.4
           pip install pyinstaller==5.0.1
-          pip install plip==2.2.2
+          pip install --no-deps plip==2.2.2
 
       - name: Build executable
         run: pyinstaller package/build_linux.spec
@@ -127,7 +127,7 @@ jobs:
           pip3 install apsw-wheels==3.36.0.post1
           pip3 install PySide6==6.2.4
           pip3 install pyinstaller==5.0.1
-          pip3 install plip==2.2.2
+          pip3 install --no-deps plip==2.2.2
 
       - name: Build executable
         run: pyinstaller package/build_mac.spec
