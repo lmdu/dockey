@@ -424,9 +424,9 @@ class JobsTableModel(DockeyTableModel):
 		#	if col == 3:
 		#		return self.status_icons[val]
 
-		elif role == Qt.TextAlignmentRole:
-			if col != 7:
-				return Qt.AlignCenter
+		#elif role == Qt.TextAlignmentRole:
+		#	if col != 7:
+		#		return Qt.AlignCenter
 
 	@Slot()
 	def update_row(self, rowid):
@@ -481,14 +481,14 @@ class PoseTableModel(DockeyTableModel):
 			fetch_count
 		)
 
-	def data(self, index, role=Qt.DisplayRole):
-		if not index.isValid():
-			return None
+	#def data(self, index, role=Qt.DisplayRole):
+	#	if not index.isValid():
+	#		return None
 
-		if role == Qt.TextAlignmentRole:
-			return Qt.AlignCenter
+	#	if role == Qt.TextAlignmentRole:
+	#		return Qt.AlignCenter
 
-		return super(PoseTableModel, self).data(index, role)
+	#	return super(PoseTableModel, self).data(index, role)
 
 	def switch_table(self, tool):
 		if tool == 'autodock4':
@@ -877,10 +877,17 @@ class InteractionTableView(QTableView):
 	def __init__(self, parent):
 		super(InteractionTableView, self).__init__(parent)
 		#self.verticalHeader().hide()
+		self.parent = parent
 		self.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
 		self.setSelectionBehavior(QAbstractItemView.SelectRows)
 		self.setEditTriggers(QAbstractItemView.NoEditTriggers)
+		self.doubleClicked.connect(self.on_double_clicked)
 
 	def sizeHint(self):
 		return QSize(300, 150)
+
+	def on_double_clicked(self, index):
+		chain = index.siblingAtColumn(2).data()
+		residue = index.siblingAtColumn(3).data()
+		self.parent.cmd.zoom('{}/{}/'.format(chain, residue), animate=0.5)
 	

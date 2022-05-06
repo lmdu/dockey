@@ -5,6 +5,8 @@ from PySide6.QtGui import *
 from PySide6.QtCore import *
 from PySide6.QtWidgets import *
 
+from pymol._gui import PyMOLDesktopGUI
+
 from view import *
 from table import *
 from utils import *
@@ -17,7 +19,7 @@ from gridbox import *
 
 __all__ = ['DockeyMainWindow']
 
-class DockeyMainWindow(QMainWindow):
+class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 	project_ready = Signal(bool)
 
 	def __init__(self):
@@ -36,8 +38,8 @@ class DockeyMainWindow(QMainWindow):
 		self.create_gridbox_adjuster()
 		self.create_job_table()
 		self.create_pose_table()
-		self.create_pymol_feedback()
 		self.create_interaction_tables()
+		self.create_pymol_feedback()
 
 		self.create_molecular_model()
 		self.create_job_model()
@@ -47,11 +49,15 @@ class DockeyMainWindow(QMainWindow):
 		self.create_menus()
 		self.create_toolbar()
 		self.create_statusbar()
+		self.create_pymol_menus()
 
 		self.read_settings()
 
 	def closeEvent(self, event):
 		self.write_settings()
+
+		#quit pymol
+		#self.cmd.quit()
 
 		#remove all jobs
 		self.pool.clear()
@@ -87,6 +93,113 @@ class DockeyMainWindow(QMainWindow):
 		self.pymol_viewer = PymolGLWidget(self)
 		self.cmd = self.pymol_viewer.cmd
 		self.setCentralWidget(self.pymol_viewer)
+
+	def create_pymol_menus(self):
+		#tb = self.addToolBar('PyMOL')
+
+		#settingaction and _addmenu function was extracted from
+		#https://github.com/schrodinger/pymol-open-source/blob/master/modules/pmg_qt/pymol_qt_gui.py
+		actiongroups = {}
+		cmd = self.cmd
+
+		def SettingAction(parent, cmd, name, label='', true_value=1, false_value=0, command=None):
+			'''
+			Menu toggle action for a PyMOL setting
+			parent: parent QObject
+			cmd: PyMOL instance
+			name: setting name
+			label: menu item text
+			'''
+			if not label:
+				label = name
+
+			index = cmd.setting._get_index(name)
+			type_, values = cmd.get_setting_tuple(index)
+			action = QAction(label, parent)
+
+			if not command:
+				command = lambda: cmd.set(
+					index,
+					true_value if action.isChecked() else false_value,
+					log=1,
+					quiet=0)
+
+			parent.pymol_actions.setdefault(index, []).append(lambda v: action.setChecked(v != false_value))
+
+			if type_ in (
+					1,  # bool
+					2,  # int
+					3,  # float
+					5,  # color
+					6,  # str
+			):
+				action.setCheckable(True)
+				if values[0] == true_value:
+					action.setChecked(True)
+			else:
+				print('TODO', type_, name)
+
+			action.triggered.connect(command)
+			return action
+
+		def _addmenu(data, menu):
+			#menu.setTearOffEnabled(True)
+			#menu.setWindowTitle(menu.title())  # needed for Windows
+			for item in data:
+				if item[0] == 'separator':
+					menu.addSeparator()
+				elif item[0] == 'menu':
+					_addmenu(item[2], menu.addMenu(item[1].replace('&', '&&')))
+				elif item[0] == 'command':
+					command = item[2]
+					if command is None:
+						print('warning: skipping', item)
+					else:
+						if isinstance(command, str):
+							command = lambda c=command: cmd.do(c)
+						menu.addAction(item[1], command)
+				elif item[0] == 'check':
+					if len(item) > 4:
+						menu.addAction(SettingAction(self, cmd, item[2], item[1], item[3], item[4]))
+					else:
+						menu.addAction(SettingAction(self, cmd, item[2], item[1]))
+				elif item[0] == 'radio':
+					label, name, value = item[1:4]
+					try:
+						group, type_, values = actiongroups[item[2]]
+					except KeyError:
+						group = QActionGroup(self)
+						type_, values = cmd.get_setting_tuple(name)
+						actiongroups[item[2]] = group, type_, values
+					action = QAction(label, self)
+					action.triggered.connect(lambda _=0, args=(name, value): cmd.set(*args, log=1, quiet=0))
+
+					index = cmd.setting._get_index(name)
+					self.pymol_actions.setdefault(index, []).append(
+						lambda v, V=value, a=action: a.setChecked(v == V)
+					)
+
+					group.addAction(action)
+					menu.addAction(action)
+					action.setCheckable(True)
+
+					if values[0] == value:
+						action.setChecked(True)
+				elif item[0] == 'open_recent_menu':
+					self.open_recent_menu = menu.addMenu('Open Recent...')
+				else:
+					print('error:', item)
+
+		#fix scene panel dialog
+		self.scene_panel_menu_dialog = None
+		for _, label, data in self.get_menudata(self.cmd):
+			assert _ == 'menu'
+
+			if label in ['File', 'Edit', 'Plugin', 'Help']:
+				continue
+
+			menu = self.pymol_menu.addMenu(label)
+			_addmenu(data, menu)
 
 	def create_pymol_feedback(self):
 		self.feedback_edit = QLineEdit(self)
@@ -130,11 +243,13 @@ class DockeyMainWindow(QMainWindow):
 			feedbacks = ["<p>{}</p>".format(feedback) for feedback in feedbacks]
 			self.feedback_browser.appendHtml('\n'.join(feedbacks))
 
-		settings = self.cmd.get_setting_updates()
+		settings = self.cmd.get_setting_updates() or ()
 		for setting in settings:
 			if setting in self.pymol_actions:
 				val = self.cmd.get_setting_tuple(setting)[1][0]
-				self.pymol_actions[setting].setChecked(val)
+				#self.pymol_actions[setting].setChecked(val)
+				for callback in self.pymol_actions[setting]:
+					callback(val)
 
 		self.feedback_timer.start(500)
 
@@ -161,7 +276,7 @@ class DockeyMainWindow(QMainWindow):
 	@Slot()
 	def on_molecular_changed(self, index):
 		self.cmd.delete('all')
-		self.cmd.reinitialize()
+		self.cmd.initialize()
 
 		name = index.data(Qt.DisplayRole)
 		sql = "SELECT id,type,pdb FROM molecular WHERE name=? LIMIT 1"
@@ -265,7 +380,7 @@ class DockeyMainWindow(QMainWindow):
 		receptor, ligand, rpdb = DB.get_row(sql, (jid,))
 
 		self.cmd.delete('all')
-		self.cmd.reinitialize()
+		self.cmd.initialize()
 		self.cmd.read_pdbstr(rpdb, receptor)
 		self.cmd.read_pdbstr(pose, ligand)
 		#self.cmd.orient()
@@ -282,7 +397,7 @@ class DockeyMainWindow(QMainWindow):
 	def create_job_model(self):
 		self.job_model = JobsTableModel()
 		self.job_table.setModel(self.job_model)
-		fm = self.fontMetrics()
+		#fm = self.fontMetrics()
 		header = self.job_table.horizontalHeader()
 		header.setStretchLastSection(False)
 		#header.resizeSection(0, fm.maxWidth()*3)
@@ -302,19 +417,19 @@ class DockeyMainWindow(QMainWindow):
 		self.pose_table.hideColumn(1)
 
 	def create_actions(self):
-		self.new_project_act = QAction(QIcon(':/icons/new.svg'), "&New Project...", self,
+		self.new_project_act = QAction(QIcon(':/icons/new.svg'), "&New Project", self,
 			shortcut = QKeySequence.New,
 			triggered = self.new_project
 		)
 		self.new_project_act.setIconVisibleInMenu(False)
 
-		self.open_project_act = QAction(QIcon(':/icons/open.svg'), "&Open Project...", self,
+		self.open_project_act = QAction(QIcon(':/icons/open.svg'), "&Open Project", self,
 			shortcut = QKeySequence.Open,
 			triggered = self.open_project
 		)
 		self.open_project_act.setIconVisibleInMenu(False)
 
-		self.save_project_as_act = QAction("&Save Project As...", self,
+		self.save_project_as_act = QAction("&Save Project As", self,
 			disabled = True,
 			shortcut = QKeySequence.SaveAs,
 			triggered = self.save_project_as
@@ -328,48 +443,91 @@ class DockeyMainWindow(QMainWindow):
 		)
 		self.project_ready.connect(self.close_project_act.setEnabled)
 
-		self.import_receptor_act = QAction("&Import Receptors...", self,
+		self.import_receptor_act = QAction("&Import Receptors", self,
 			disabled = True,
 			triggered = self.import_receptors
 		)
 		self.project_ready.connect(self.import_receptor_act.setEnabled)
 
-		self.import_ligand_act = QAction("&Import Ligands...", self,
+		self.import_pdb_act = QAction("&Import Receptor from PDB", self,
+			disabled = True,
+			triggered = self.import_receptor_from_pdb
+		)
+		self.project_ready.connect(self.import_pdb_act.setEnabled)
+
+		self.import_ligand_act = QAction("&Import Ligands", self,
 			disabled = True,
 			triggered = self.import_ligands
 		)
 		self.project_ready.connect(self.import_ligand_act.setEnabled)
 
-		self.export_image_act = QAction(QIcon(':/icons/save.svg'), "&Export As Image...", self,
+		self.import_zinc_act = QAction("&Import Ligand from ZINC", self,
+			disabled = True,
+			triggered = self.import_ligand_from_zinc
+		)
+		self.project_ready.connect(self.import_zinc_act.setEnabled)
+
+		self.export_image_act = QAction(QIcon(':/icons/image.svg'), "&Export As Image", self,
 			triggered = self.export_as_image
 		)
 		self.export_image_act.setIconVisibleInMenu(False)
 
-		self.export_file_act = QAction("&Export As File...", self,
+		self.export_file_act = QAction("&Export As File", self,
 			triggered = self.export_as_file
+		)
+
+		self.exit_act = QAction("&Exit", self,
+			triggered = self.close,
+			shortcut = QKeySequence.Quit
 		)
 
 		#edit actions
 		self.pymol_undo_act = QAction("Undo", self,
 			shortcut = QKeySequence.Undo,
-			triggered = self.pymol_undo
+			#triggered = self.pymol_undo
+			triggered = self.cmd.undo
 		)
 		self.pymol_redo_act = QAction("Redo", self,
 			shortcut = QKeySequence.Redo,
-			triggered = self.pymol_redo
+			#triggered = self.pymol_redo
+			triggered = self.cmd.redo
 		)
 
-		self.pymol_color_act = QAction("Color", self,
-			triggered = self.pymol_settings
+		self.all_hydro_act = QAction("Add All Hydrogens", self,
+			triggered = self.pymol_add_all_hydrogens
 		)
 
-		self.pymol_opaque_act = QAction("Opaque", self,
-			checkable = True,
-			checked = False
+		self.polar_hydro_act = QAction("Add Polar Hydrogens", self,
+			triggered = self.pymol_add_polar_hydrogens
 		)
-		self.pymol_opaque_act.toggled.connect(self.pymol_opaque_background)
-		index = self.cmd.setting._get_index('opaque_background')
-		self.pymol_actions[index] = self.pymol_opaque_act
+
+		self.del_water_act = QAction("Remove Water", self,
+			triggered = self.pymol_remove_water
+		)
+
+		self.del_solvent_act = QAction("Remove Solvent", self,
+			triggered = self.pymol_remove_solvent
+		)
+
+		self.del_organic_act = QAction("Remove Organic", self,
+			triggered = self.pymol_remove_organic
+		)
+
+		self.del_chain_act = QAction("Remove Chain", self,
+			triggered = self.pymol_remove_chain
+		)
+
+		#self.pymol_color_act = QAction("Color", self,
+		#	triggered = self.pymol_settings
+		#)
+
+		#self.pymol_opaque_act = QAction("Opaque", self,
+		#	checkable = True,
+		#	checked = False
+		#)
+		#self.pymol_opaque_act.toggled.connect(self.pymol_opaque_background)
+		#index = self.cmd.setting._get_index('opaque_background')
+		#self.pymol_actions.setdefault(index, []).append(self.pymol_opaque_act)
 
 		self.dock_tool_act = QAction("Docking Tools", self,
 			triggered = self.docking_tool_settings
@@ -377,6 +535,11 @@ class DockeyMainWindow(QMainWindow):
 
 		self.job_num_act = QAction("Concurrent execution", self,
 			triggered = self.concurrent_job_number
+		)
+
+		self.setting_act = QAction("Settings", self,
+			triggered = self.open_settings_dialog,
+			shortcut = QKeySequence.Preferences
 		)
 
 		#view actions
@@ -388,7 +551,7 @@ class DockeyMainWindow(QMainWindow):
 		self.pymol_sidebar_act.toggled.connect(self.pymol_sidebar_toggle)
 
 		index = self.cmd.setting._get_index('internal_gui')
-		self.pymol_actions[index] = self.pymol_sidebar_act
+		self.pymol_actions.setdefault(index, []).append(lambda v: self.pymol_sidebar_act.setChecked(v))
 
 		self.pymol_feedback_act = self.feedback_dock.toggleViewAction()
 		self.pymol_feedback_act.setText("Show Pymol Feedback")
@@ -421,6 +584,11 @@ class DockeyMainWindow(QMainWindow):
 		self.pose_table_act.setIcon(QIcon(':/icons/pose.svg'))
 		self.pose_table_act.setIconVisibleInMenu(False)
 		self.pose_table_act.setText("Show Pose Table")
+
+		self.interaction_table_act = self.interaction_dock.toggleViewAction()
+		self.interaction_table_act.setIcon(QIcon(':/icons/share.svg'))
+		self.interaction_table_act.setIconVisibleInMenu(False)
+		self.interaction_table_act.setText("Show Interaction Table")
 
 		self.bounding_box_act = QAction(QIcon(':/icons/bounding.svg'), "Draw Bounding Box", self,
 			triggered = self.draw_bounding_box
@@ -472,21 +640,34 @@ class DockeyMainWindow(QMainWindow):
 		self.file_menu.addAction(self.close_project_act)
 		self.file_menu.addSeparator()
 		self.file_menu.addAction(self.import_receptor_act)
+		self.file_menu.addAction(self.import_pdb_act)
 		self.file_menu.addAction(self.import_ligand_act)
+		self.file_menu.addAction(self.import_zinc_act)
 		self.file_menu.addSeparator()
 		self.file_menu.addAction(self.export_image_act)
 		self.file_menu.addAction(self.export_file_act)
+		self.file_menu.addSeparator()
+		self.file_menu.addAction(self.exit_act)
 
 		self.edit_menu = self.menuBar().addMenu("&Edit")
-		self.edit_menu.addAction(self.pymol_undo_act)
-		self.edit_menu.addAction(self.pymol_redo_act)
+		#self.edit_menu.addAction(self.pymol_undo_act)
+		#self.edit_menu.addAction(self.pymol_redo_act)
+		#self.edit_menu.addSeparator()
+		#bg_menu = self.edit_menu.addMenu("Background")
+		#bg_menu.addAction(self.pymol_color_act)
+		#bg_menu.addAction(self.pymol_opaque_act)
+		self.edit_menu.addAction(self.all_hydro_act)
+		self.edit_menu.addAction(self.polar_hydro_act)
 		self.edit_menu.addSeparator()
-		bg_menu = self.edit_menu.addMenu("Background")
-		bg_menu.addAction(self.pymol_color_act)
-		bg_menu.addAction(self.pymol_opaque_act)
+		self.edit_menu.addAction(self.del_water_act)
+		self.edit_menu.addAction(self.del_solvent_act)
+		self.edit_menu.addAction(self.del_organic_act)
+		self.edit_menu.addAction(self.del_chain_act)
+		self.edit_menu.addSeparator()
 
-		self.edit_menu.addAction(self.dock_tool_act)
-		self.edit_menu.addAction(self.job_num_act)
+		#self.edit_menu.addAction(self.dock_tool_act)
+		#self.edit_menu.addAction(self.job_num_act)
+		self.edit_menu.addAction(self.setting_act)
 
 		self.view_menu = self.menuBar().addMenu("&View")
 		#self.view_menu.addAction(self.open_project_dir_act)
@@ -494,6 +675,7 @@ class DockeyMainWindow(QMainWindow):
 		self.view_menu.addAction(self.mol_list_act)
 		self.view_menu.addAction(self.job_table_act)
 		self.view_menu.addAction(self.pose_table_act)
+		self.view_menu.addAction(self.interaction_table_act)
 		self.view_menu.addSeparator()
 		self.view_menu.addAction(self.box_sidebar_act)
 		self.view_menu.addSeparator()
@@ -513,6 +695,8 @@ class DockeyMainWindow(QMainWindow):
 		self.run_menu.addAction(self.run_autodock_act)
 		self.run_menu.addAction(self.run_vina_act)
 
+		self.pymol_menu = self.menuBar().addMenu("&PyMOL")
+
 		self.help_menu = self.menuBar().addMenu("&Help")
 		self.help_menu.addAction(self.about_act)
 		self.help_menu.addAction(self.doc_act)
@@ -530,6 +714,7 @@ class DockeyMainWindow(QMainWindow):
 		self.toolbar.addAction(self.mol_list_act)
 		self.toolbar.addAction(self.job_table_act)
 		self.toolbar.addAction(self.pose_table_act)
+		self.toolbar.addAction(self.interaction_table_act)
 		self.toolbar.addSeparator()
 		self.toolbar.addAction(self.box_sidebar_act)
 		self.toolbar.addAction(self.bounding_box_act)
@@ -594,6 +779,10 @@ class DockeyMainWindow(QMainWindow):
 					"{} is not a dockey project file".format(project_file)
 				)
 
+	def open_settings_dialog(self):
+		dlg = DockeyConfigDialog(self)
+		dlg.exec()
+
 	def new_project(self):
 		if DB.active():
 			ret = QMessageBox.warning(self, "Warning",
@@ -608,11 +797,17 @@ class DockeyMainWindow(QMainWindow):
 
 		project_file, _ = QFileDialog.getSaveFileName(self,
 			caption = "New Project File",
-			filter = "Dockey File (*.dky)"
+			filter = "Dockey Project File (*.dock)"
 		)
 
 		if not project_file:
 			return
+
+		if not project_file.endswith('.dock'):
+			project_file += '.dock'
+
+		if os.path.isfile(project_file):
+			os.remove(project_file)
 
 		self.create_db_connect(project_file)
 
@@ -628,7 +823,7 @@ class DockeyMainWindow(QMainWindow):
 			else:
 				self.close_project()
 
-		project_file, _ = QFileDialog.getOpenFileName(self, filter="Dockey File (*.dky)")
+		project_file, _ = QFileDialog.getOpenFileName(self, filter="Dockey Project File (*.dock)")
 
 		if not project_file:
 			return
@@ -636,10 +831,16 @@ class DockeyMainWindow(QMainWindow):
 		self.create_db_connect(project_file)
 
 	def save_project_as(self):
-		project_file, _ = QFileDialog.getSaveFileName(self, filter="Dockey File (*dky)")
+		project_file, _ = QFileDialog.getSaveFileName(self, filter="Dockey Project File (*.dock)")
 
 		if not project_file:
 			return
+
+		if not project_file.endswith('.dock'):
+			project_file += '.dock'
+
+		#if os.path.isfile(project_file):
+		#	os.remove(project_file)
 
 		DB.save(project_file)
 
@@ -651,7 +852,7 @@ class DockeyMainWindow(QMainWindow):
 
 		#reset pymol
 		self.cmd.delete('all')
-		self.cmd.reinitialize()
+		self.cmd.initialize()
 
 		DB.close()
 		self.project_ready.emit(False)
@@ -662,6 +863,10 @@ class DockeyMainWindow(QMainWindow):
 
 		for mol in mols:
 			mi = get_molecule_information(mol)
+
+			if 'error' in mi:
+				return QMessageBox.critical(self, "Error", mi.error)
+
 			rows.append([None, mi.name, _type, mi.pdb, mi.atoms, mi.bonds,
 				mi.hvyatoms, mi.residues, mi.rotors, mi.formula, mi.energy,
 				mi.weight, mi.logp
@@ -692,6 +897,14 @@ class DockeyMainWindow(QMainWindow):
 
 		self.import_moleculars(receptors, 1)
 
+	def import_receptor_from_pdb(self):
+		#pdb_url = PDBDownloader.get_url(self)
+
+		#if pdb_url:
+		#	self.import_moleculars([pdb_url], 1)
+		dlg = PDBDownloader(self)
+		dlg.exec()
+
 	def import_ligands(self):
 		ligands, _ = QFileDialog.getOpenFileNames(self,
 			caption = "Select ligand files",
@@ -706,6 +919,14 @@ class DockeyMainWindow(QMainWindow):
 
 		self.import_moleculars(ligands, 2)
 
+	def import_ligand_from_zinc(self):
+		#zinc_url = ZincDownloader.get_url(self)
+		
+		#if zinc_url:
+		#	self.import_moleculars([zinc_url], 2)
+		dlg = ZINCDownloader(self)
+		dlg.exec()
+
 	def export_as_image(self):
 		opt = ExportImageDialog.save_to_png(self)
 
@@ -715,20 +936,23 @@ class DockeyMainWindow(QMainWindow):
 		self.cmd.png(opt.image, opt.width, opt.height, opt.dpi, ray=1)
 
 	def export_as_file(self):
-		outfile, _ = QFileDialog.getSaveFileName(self, filter="PDB (*.pdb);;MOL (*.mol);;MOL2 (*.mol2)")
+		outfile, _ = QFileDialog.getSaveFileName(self, filter="PDB (*.pdb)")
 
 		if not outfile:
 			return
 
+		if not outfile.endswith('.pdb'):
+			outfile += '.pdb'
+
 		self.cmd.save(outfile)
 
-	@Slot()
-	def pymol_undo(self):
-		self.cmd.undo()
+	#@Slot()
+	#def pymol_undo(self):
+	#	self.cmd.undo()
 
-	@Slot()
-	def pymol_redo(self):
-		self.cmd.redo()
+	#@Slot()
+	#def pymol_redo(self):
+	#	self.cmd.redo()
 
 	@Slot()
 	def pymol_settings(self):
@@ -750,6 +974,61 @@ class DockeyMainWindow(QMainWindow):
 
 	def pymol_opaque_background(self, checked):
 		self.cmd.set('ray_opaque_background', checked)
+
+	def pymol_auto_save_pdb(self):
+		index = self.mol_viewer.currentIndex()
+		name = index.data()
+
+		if name not in self.cmd.get_names('all'):
+			return
+
+		pdb = self.cmd.get_pdbstr(name)
+
+		sql = "UPDATE molecular SET pdb=? WHERE name=?"
+		DB.query(sql, (pdb, name))
+
+	def pymol_add_all_hydrogens(self):
+		if not self.cmd.get_object_list():
+			return
+
+		self.cmd.h_add("(all)")
+		#self.cmd.sort("(all) extend 1")
+		self.pymol_auto_save_pdb()
+
+	def pymol_add_polar_hydrogens(self):
+		if not self.cmd.get_object_list():
+			return
+
+		self.cmd.h_add("(all) & (don.|acc.)")
+		#self.cmd.sort("(all) extend 1")
+		self.pymol_auto_save_pdb()
+
+	def pymol_remove_water(self):
+		self.cmd.remove('resn hoh')
+		self.pymol_auto_save_pdb()
+
+	def pymol_remove_solvent(self):
+		self.cmd.remove('solvent')
+		self.pymol_auto_save_pdb()
+
+	def pymol_remove_organic(self):
+		self.cmd.remove('organic')
+		self.pymol_auto_save_pdb()
+
+	def pymol_remove_chain(self):
+		chains = self.cmd.get_chains("(all)")
+
+		if not chains:
+			return
+
+		chain, ok = QInputDialog.getItem(self, "Remove Chain",
+			"Select a chain to remove",
+			chains, 0, False
+		)
+
+		if ok:
+			self.cmd.remove('chain {}'.format(chain))
+			self.pymol_auto_save_pdb()
 
 	def get_current_receptor(self):
 		objs = self.cmd.get_names('objects')

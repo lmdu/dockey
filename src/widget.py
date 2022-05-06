@@ -3,6 +3,7 @@ import psutil
 
 from PySide6.QtGui import *
 from PySide6.QtCore import *
+from PySide6.QtNetwork import *
 from PySide6.QtWidgets import *
 from plip.basic.remote import VisualizerData
 from plip.structure.preparation import PDBComplex
@@ -14,7 +15,9 @@ from backend import *
 __all__ = ['BrowseInput', 'CreateProjectDialog', 'AutodockConfigDialog',
 			'AutodockVinaConfigDialog', 'ExportImageDialog', 'FeedbackBrowser',
 			'PymolSettingDialog', 'DockingToolSettingDialog', 'InteractionTabWidget',
-			'JobConcurrentSettingDialog']
+			'JobConcurrentSettingDialog', 'DockeyConfigDialog', 'PDBDownloader',
+			'ZINCDownloader'
+			]
 
 class BrowseInput(QWidget):
 	def __init__(self, parent=None, is_file=True, is_save=False, _filter=""):
@@ -442,29 +445,32 @@ class InteractionTabWidget(QTabWidget):
 			self.widget(i).hideColumn(1)
 			self.widget(i).clicked.connect(self.on_interaction_changed)
 
+	def sizeHint(self):
+		return QSize(300, 100)
+
 	def create_hydrogen_table(self):
-		self.hydrogen_table = InteractionTableView(self)
+		self.hydrogen_table = InteractionTableView(self.parent)
 		self.hydrogen_model = HydrogenBondsModel()
 		self.hydrogen_table.setModel(self.hydrogen_model)
 		self.addTab(self.hydrogen_table, "Hydrogen bonds")
 		self.hydrogen_model.row_count.connect(lambda x: self.setTabVisible(0, x))
 
 	def create_halogen_table(self):
-		self.halogen_table = InteractionTableView(self)
+		self.halogen_table = InteractionTableView(self.parent)
 		self.halogen_model = HalogenBondsModel()
 		self.halogen_table.setModel(self.halogen_model)
 		self.addTab(self.halogen_table, "Halogen bonds")
 		self.halogen_model.row_count.connect(lambda x: self.setTabVisible(1, x))
 
 	def create_hydrophobic_table(self):
-		self.hydrophobic_table = InteractionTableView(self)
+		self.hydrophobic_table = InteractionTableView(self.parent)
 		self.hydrophobic_model = HydrophobicInteractionModel()
 		self.hydrophobic_table.setModel(self.hydrophobic_model)
 		self.addTab(self.hydrophobic_table, "hydrophobic interactions")
 		self.hydrophobic_model.row_count.connect(lambda x: self.setTabVisible(2, x))
 
 	def create_salt_table(self):
-		self.salt_table = InteractionTableView(self)
+		self.salt_table = InteractionTableView(self.parent)
 		self.salt_model = SaltBridgesModel()
 		self.salt_table.setModel(self.salt_model)
 		self.addTab(self.salt_table, "Salt bridges")
@@ -473,14 +479,14 @@ class InteractionTabWidget(QTabWidget):
 		self.salt_table.horizontalHeader().setStretchLastSection(True)
 
 	def create_water_table(self):
-		self.water_table = InteractionTableView(self)
+		self.water_table = InteractionTableView(self.parent)
 		self.water_model = WaterBridgesModel()
 		self.water_table.setModel(self.water_model)
 		self.addTab(self.water_table, "Water bridges")
 		self.water_model.row_count.connect(lambda x: self.setTabVisible(4, x))
 
 	def create_stacking_table(self):
-		self.stacking_table = InteractionTableView(self)
+		self.stacking_table = InteractionTableView(self.parent)
 		self.stacking_model = PiStackingModel()
 		self.stacking_table.setModel(self.stacking_model)
 		self.addTab(self.stacking_table, "π-stacking")
@@ -489,7 +495,7 @@ class InteractionTabWidget(QTabWidget):
 		self.stacking_table.horizontalHeader().setStretchLastSection(True)
 
 	def create_cation_table(self):
-		self.cation_table = InteractionTableView(self)
+		self.cation_table = InteractionTableView(self.parent)
 		self.cation_model = PiCationModel()
 		self.cation_table.setModel(self.cation_model)
 		self.addTab(self.cation_table, "π-cation")
@@ -498,7 +504,7 @@ class InteractionTabWidget(QTabWidget):
 		self.cation_table.horizontalHeader().setStretchLastSection(True)
 
 	def create_metal_table(self):
-		self.metal_table = InteractionTableView(self)
+		self.metal_table = InteractionTableView(self.parent)
 		self.metal_model = MetalComplexModel()
 		self.metal_table.setModel(self.metal_model)
 		self.addTab(self.metal_table, "Metal complexes")
@@ -522,6 +528,7 @@ class InteractionTabWidget(QTabWidget):
 	def change_pose(self, pose):
 		if pose != self.pose_id:
 			self.pose_id = pose
+			self.binding_site = None
 			sql = "SELECT complex FROM pose WHERE id=? LIMIT 1"
 			self.complex_pdb = DB.get_one(sql, (self.pose_id,))
 
@@ -529,9 +536,8 @@ class InteractionTabWidget(QTabWidget):
 
 		if self.complex_pdb:
 			self.parent.cmd.delete('all')
-			self.parent.cmd.reinitialize()
+			self.parent.cmd.initialize()
 			self.parent.cmd.read_pdbstr(self.complex_pdb, 'complex')
-			self.parent.cmd.zoom()
 
 	@Slot()
 	def on_binding_site_changed(self, site):
@@ -568,3 +574,269 @@ class InteractionTabWidget(QTabWidget):
 		for i in range(8):
 			self.widget(i).model().reset()
 
+
+class DockeyConfigDialog(QDialog):
+	def __init__(self, parent):
+		super(DockeyConfigDialog, self).__init__(parent)
+		self.parent = parent
+		self.setWindowTitle("Settings")
+		self.resize(QSize(550, 100))
+		self.input_widgets = []
+		self.settings = QSettings()
+		self.tab_widget = QTabWidget(self)
+
+		self.btn_widget = QDialogButtonBox(
+			QDialogButtonBox.Ok | QDialogButtonBox.Cancel
+		)
+
+		self.btn_widget.accepted.connect(self.write_settings)
+		self.btn_widget.rejected.connect(self.reject)
+
+		main_layout = QVBoxLayout()
+		main_layout.addWidget(self.tab_widget)
+		main_layout.addWidget(self.btn_widget)
+		self.setLayout(main_layout)
+
+		self.create_tool_tab()
+		self.create_job_tab()
+		self.read_settings()
+
+	def register_widget(self, option, widget, wgtype, default='', convert=str):
+		self.input_widgets.append(AttrDict(
+			widget = widget,
+			option = option,
+			wgtype = wgtype,
+			default = default,
+			convert = convert
+		))
+
+	def create_tool_tab(self):
+		page = QWidget(self)
+		layout = QVBoxLayout()
+		page.setLayout(layout)
+
+		self.autodock_input = BrowseInput(self)
+		self.autogrid_input = BrowseInput(self)
+		self.vina_input = BrowseInput(self)
+
+		self.register_widget('Tools/autodock_4', self.autodock_input, 'browse')
+		self.register_widget('Tools/autogrid_4', self.autogrid_input, 'browse')
+		self.register_widget('Tools/autodock_vina', self.vina_input, 'browse')
+                          
+		layout.addWidget(QLabel("Autogrid executable", self))
+		layout.addWidget(self.autogrid_input)
+		layout.addWidget(QLabel("Autodock executable", self))
+		layout.addWidget(self.autodock_input)
+		layout.addWidget(QLabel("Autodock Vina executable", self))
+		layout.addWidget(self.vina_input)
+
+		self.tab_widget.addTab(page, 'Docking Tools')
+
+	def create_job_tab(self):
+		page = QWidget(self)
+		layout = QGridLayout()
+		layout.setColumnStretch(0, 5)
+		layout.setColumnStretch(1, 1)
+		page.setLayout(layout)
+		label = QLabel("Number of concurrent running jobs", self)
+		layout.addWidget(label, 0, 0)
+		self.thread_input = QSpinBox(self)
+		self.thread_input.setRange(1, max(1, psutil.cpu_count()))
+		self.register_widget('Job/concurrent', self.thread_input, 'spinbox', 1, int)
+
+		tips = (
+			"You can set the number of jobs that can run concurrently to improve the docking speed."
+			"Limiting the number of concurrent jobs helps you reduce CPU consumption."
+			"You can set the number of concurrent jobs to any number from 1 to maximum CPU threads."
+		)
+		tips_label = QLabel(tips, self)
+		tips_label.setWordWrap(True)
+
+		layout.addWidget(self.thread_input, 0, 1)
+		layout.addWidget(tips_label, 1, 0)
+
+		self.tab_widget.addTab(page, 'Job Manager')
+
+	def read_settings(self):
+		for i in self.input_widgets:
+			val = self.settings.value(i.option, i.default, i.convert)
+
+			if i.wgtype == 'browse':
+				i.widget.set_text(val)
+			elif i.wgtype == 'linedit':
+				i.widget.setText(val)
+			elif i.wgtype == 'spinbox':
+				i.widget.setValue(val)
+
+	def write_settings(self):
+		self.change_concurrent_jobs()
+
+		for i in self.input_widgets:
+			if i.wgtype == 'browse':
+				val = i.widget.get_text()
+			elif i.wgtype == 'linedit':
+				val = i.widget.text()
+			elif i.wgtype == 'spinbox':
+				val = i.widget.value()
+			else:
+				val = None
+
+			self.settings.setValue(i.option, val)
+
+		self.accept()
+
+	def change_concurrent_jobs(self):
+		val = self.settings.value('Job/concurrent', 1, int)
+		num = self.thread_input.value()
+
+		if num == val:
+			return
+
+		self.parent.pool.setMaxThreadCount(num)
+
+class DownloaderDialog(QDialog):
+	title = ''
+	mol_id = ''
+	mol_type = 1
+	mol_fmt = 'pdb'
+
+	def __init__(self, parent=None):
+		super(DownloaderDialog, self).__init__(parent)
+		self.parent = parent
+		self.reply = None
+		self.resize(QSize(350, 10))
+		self.setWindowTitle(self.title)
+		self.layout = QFormLayout()
+		self.setLayout(self.layout)
+
+		self.manager = QNetworkAccessManager(self.parent)
+
+		self.create_widgets()
+
+		self.progress_bar = QProgressBar(self)
+		self.progress_bar.setAlignment(Qt.AlignCenter)
+		self.layout.addRow("Progress", self.progress_bar)
+
+		btn_box = QDialogButtonBox()
+		self.start_btn = btn_box.addButton("Import", QDialogButtonBox.AcceptRole)
+		self.abort_btn = btn_box.addButton("Cancel", QDialogButtonBox.RejectRole)
+		self.layout.addRow(btn_box)
+
+		self.start_btn.clicked.connect(self.on_start)
+		self.abort_btn.clicked.connect(self.on_abort)
+
+	def create_widgets(self):
+		pass
+
+	def get_url(self):
+		pass
+
+	@Slot()
+	def on_start(self):
+		url = self.get_url()
+
+		if url:
+			self.start_btn.setDisabled(True)
+			self.reply = self.manager.get(QNetworkRequest(url))
+			self.reply.downloadProgress.connect(self.on_progress)
+			self.reply.finished.connect(self.on_finished)
+			self.reply.errorOccurred.connect(self.on_error)
+
+	@Slot()
+	def on_abort(self):
+		if self.reply:
+			self.reply.abort()
+			self.progress_bar.setValue(0)
+		else:
+			self.reject()
+
+		self.start_btn.setDisabled(False)
+
+	@Slot()
+	def on_finished(self):
+		if self.reply:
+			if self.reply.error() == QNetworkReply.NoError:
+				content = str(self.reply.readAll(), encoding='utf-8')
+
+				self.save_molecular(content)
+
+			self.reply.deleteLater()
+
+		self.start_btn.setDisabled(False)
+		self.accept()
+
+	@Slot(int, int)
+	def on_progress(self, received_bytes, total_bytes):
+		self.progress_bar.setRange(0, total_bytes)
+		self.progress_bar.setValue(received_bytes)
+
+	@Slot(QNetworkReply.NetworkError)
+	def on_error(self, code):
+		self.reject()
+
+		if self.reply:
+			QMessageBox.critical(self.parent, "Error", self.reply.errorString())
+
+	def save_molecular(self, mol):
+		sql = "INSERT INTO molecular VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)"
+		mi = get_molecule_information(mol, True, self.mol_id, self.mol_fmt)
+		row = [None, mi.name, self.mol_type, mi.pdb, mi.atoms, mi.bonds,
+			mi.hvyatoms, mi.residues, mi.rotors, mi.formula, mi.energy,
+			mi.weight, mi.logp
+		]
+		DB.query(sql, row)
+		mol_type = ['', 'receptor', 'ligand'][self.mol_type]
+		self.parent.show_message("Import {} {}".format(mol_type, row[1]))
+		self.parent.mol_model.select()
+
+class PDBDownloader(DownloaderDialog):
+	title = "Import Receptor from PDB"
+
+	def create_widgets(self):
+		self.text_widget = QLineEdit(self)
+		self.layout.addRow("PDB ID:", self.text_widget)
+
+	def get_url(self):
+		base_url = "https://files.rcsb.org/download/{}.pdb"
+
+		pdb_id = self.text_widget.text().strip().lower()
+
+		if not pdb_id:
+			return None
+
+		self.mol_id = pdb_id
+
+		return QUrl(base_url.format(pdb_id))
+
+class ZINCDownloader(DownloaderDialog):
+	title = "Import Ligand from ZINC"
+	mol_type = 2
+	mol_fmt = 'sdf'
+
+	def create_widgets(self):
+		self.text_widget = QLineEdit(self)
+		self.version_widget = QComboBox(self)
+		self.version_widget.addItems(['zinc15', 'zinc20'])
+		self.layout.addRow("ZINC ID:", self.text_widget)
+		self.layout.addRow("ZINC Version:", self.version_widget)
+
+	def get_url(self):
+		zinc_id = self.text_widget.text().strip().upper()
+
+		if not zinc_id:
+			return None
+
+		if len(zinc_id) != 16:
+			zinc_id = zinc_id.strip('ZINC')
+			zinc_id = "ZINC{:0>12}".format(zinc_id)
+
+		self.mol_id = zinc_id
+
+		ver = self.version_widget.currentText()
+
+		if ver == 'zinc20':
+			base_url = "https://zinc20.docking.org/substances/{}.sdf"
+		else:
+			base_url = "https://zinc.docking.org/substances/{}.sdf"
+
+		return QUrl(base_url.format(zinc_id))

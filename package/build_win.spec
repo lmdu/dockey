@@ -13,8 +13,8 @@ a = Analysis(['../src/main.py'],
              hooksconfig={},
              runtime_hooks=[],
              excludes=['FixTk', 'tcl', 'tk', '_tkinter', 'tkinter', 'Tkinter',
-                 'sqlite3', 'pkg_resources', 'multiprocessing', 'PySide6.QtQml',
-                 'PySide6.QtNetwork', 'PySide6.QtQuick'
+                 #'sqlite3', 'pkg_resources', 'multiprocessing', 'PySide6.QtQml',
+                 #'PySide6.QtNetwork', 'PySide6.QtQuick'
              ],
              win_no_prefer_redirects=False,
              win_private_assemblies=False,

@@ -3,6 +3,8 @@ import time
 import math
 from pymol import cmd
 from openbabel import openbabel
+from urllib.error import HTTPError
+from urllib.request import urlopen
 from plip.basic import config
 from plip.structure.preparation import PDBComplex
 from plip.visualization.pymol import PyMOLVisualizer
@@ -24,6 +26,18 @@ class AttrDict(dict):
 
 	def __setattr__(self, attr, val):
 		self[attr] = val
+
+def fetch_url(url):
+	try:
+		content = urlopen(url).read().decode()
+
+		if 'sorry' in content:
+			raise HTTPError()
+
+		return content
+
+	except HTTPError:
+		return None
 
 def convert_dimension_to_coordinates(x, y, z, cx, cy, cz, spacing):
 	spacing = float(spacing)
@@ -287,14 +301,20 @@ def convert_energy_to_ki(energy):
 	ki = math.exp(energy/(R*T))
 	return round(math.log10(ki), 3)
 
-def get_molecule_information(mol_file):
-	mol_name, mol_format = os.path.splitext(os.path.basename(mol_file))
-	mol_format = mol_format.lstrip('.')
+def get_molecule_information(mol_file, from_string=False, mol_name=None, mol_format=None):
+	if not from_string:
+		mol_name, mol_format = os.path.splitext(os.path.basename(mol_file))
+		mol_format = mol_format.lstrip('.')
 
 	obc = openbabel.OBConversion()
 	obc.SetInAndOutFormats(mol_format, 'pdb')
 	mol = openbabel.OBMol()
-	obc.ReadFile(mol, mol_file)
+
+	if from_string:
+		obc.ReadString(mol, mol_file)
+	else:
+		obc.ReadFile(mol, mol_file)
+	
 	des = openbabel.OBDescriptor.FindType('logP')
 
 	return AttrDict(
@@ -372,8 +392,7 @@ def get_complex_interactions(pose_ids, poses):
 			#hydrogen bonds
 			for hb in s.hbonds_pdon + s.hbonds_ldon:
 				interactions['hydrogen_bond'].append([None, site,
-					hb.reschain, hb.resnr,
-					hb.restype.capitalize(),
+					hb.reschain, hb.resnr, hb.restype,
 					"{:.2}".format(hb.distance_ah),
 					"{:.2}".format(hb.distance_ad),
 					"{:.2}".format(hb.angle),
@@ -386,8 +405,7 @@ def get_complex_interactions(pose_ids, poses):
 			#hydrophobic interactions
 			for hc in s.hydrophobic_contacts:
 				interactions['hydrophobic_interaction'].append([None, site,
-					hc.reschain, hc.resnr,
-					hc.restype.capitalize(),
+					hc.reschain, hc.resnr, hc.restype,
 					"{:.2}".format(hc.distance),
 					hc.ligatom_orig_idx,
 					hc.bsatom_orig_idx
@@ -396,8 +414,7 @@ def get_complex_interactions(pose_ids, poses):
 			#water bridges
 			for wb in s.water_bridges:
 				interactions['water_bridge'].append([None, site,
-					wb.reschain, wb.resnr,
-					wb.restype.capitalize(),
+					wb.reschain, wb.resnr, wb.restype,
 					"{:.2}".format(wb.distance_aw),
 					"{:.2}".format(wb.distance_dw),
 					"{:.2}".format(wb.d_angle),
@@ -420,8 +437,7 @@ def get_complex_interactions(pose_ids, poses):
 					protein_atom_ids = ','.join(str(x) for x in sb.negative.atoms_orig_idx)
 
 				interactions['salt_bridge'].append([None, site,
-					sb.reschain, sb.resnr,
-					sb.restype.capitalize(),
+					sb.reschain, sb.resnr, sb.restype,
 					"{:.2}".format(sb.distance),
 					'Yes' if sb.protispos else 'No',
 					group.capitalize(),
@@ -432,8 +448,7 @@ def get_complex_interactions(pose_ids, poses):
 			#pi-stacking
 			for ps in s.pistacking:
 				interactions['pi_stacking'].append([None, site,
-					ps.reschain, ps.resnr,
-					ps.restype.capitalize(),
+					ps.reschain, ps.resnr, ps.restype,
 					"{:.2}".format(ps.distance),
 					"{:.2}".format(ps.angle),
 					"{:.2}".format(ps.offset),
@@ -454,8 +469,7 @@ def get_complex_interactions(pose_ids, poses):
 					group = pc.charge.fgroup
 
 				interactions['pi_cation'].append([None, site,
-					pc.reschain, pc.resnr,
-					pc.restype.capitalize(),
+					pc.reschain, pc.resnr, pc.restype,
 					"{:.2}".format(pc.distance),
 					"{:.2}".format(pc.offset),
 					'Yes' if pc.protcharged else 'No',
@@ -467,8 +481,7 @@ def get_complex_interactions(pose_ids, poses):
 			#halogen bonds
 			for hb in s.halogen_bonds:
 				interactions['halogen_bond'].append([None, site,
-					hb.reschain, hb.resnr,
-					hb.restype.capitalize(),
+					hb.reschain, hb.resnr, hb.restype,
 					"{:.2}".format(hb.distance),
 					"{:.2}".format(hb.don_angle),
 					"{:.2}".format(hb.acc_angle),
@@ -479,8 +492,7 @@ def get_complex_interactions(pose_ids, poses):
 			#metal complexes
 			for mc in s.metal_complexes:
 				interactions['metal_complex'].append([None, site,
-					mc.reschain, mc.resnr,
-					mc.restype.capitalize(),
+					mc.reschain, mc.resnr, mc.restype,
 					"{} [{}]".format(mc.metal_orig_idx, mc.metal_type),
 					"{} [{}]".format(mc.target_orig_idx, mc.target_type),
 					"{:.2}".format(mc.distance),
@@ -565,6 +577,13 @@ def interaction_visualize(plcomplex):
 
 	vis.selections_group()
 	vis.additional_cleanup()
+
+	#show aa labels
+	#cmd.set('label_color', 'white')
+	#cmd.set('label_outline_color', 'grey')
+	#cmd.set('float_labels', 'on')
+	#cmd.set('label_position', (0,-1.5,0))
+	cmd.label('n. CA and AllBSRes', '"%s%s%s" % (resn,resi,chain)')
 
 
 if __name__ == '__main__':

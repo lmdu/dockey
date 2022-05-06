@@ -168,10 +168,15 @@ def get_box(name="gridbox"):
 
 #pymol.cmd.extend('draw_box', draw_box)
 #pymol.cmd.extend('get_box', get_box)
-from random import randint
+#from random import randint
 
 @register_plugin
 def draw_bounding_box(selection="(all)"):
 	draw_box(cmd.get_extent(selection))
 
+@register_plugin
+def initialize():
+	val = cmd.get('internal_gui')
+	cmd.reinitialize()
+	cmd.set('internal_gui', val)
        

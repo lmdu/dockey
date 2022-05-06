@@ -19,5 +19,7 @@
 	<file>icons/success.svg</file>
 	<file>icons/zoomin.svg</file>
 	<file>icons/zoomout.svg</file>
+	<file>icons/share.svg</file>
+	<file>icons/image.svg</file>
 </qresource>
 </RCC>
