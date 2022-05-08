@@ -114,6 +114,7 @@ jobs:
       - name: Install requirements
         run: |
           brew install open-babel
+          ls -l $(brew --prefix)/lib
           ls -l /usr/local/bin
           pip3 install https://github.com/lmdu/pymol-wheel/releases/download/2.6/pymol-2.6.0a0-cp39-cp39-macosx_10_9_x86_64.whl
           pip3 install git+https://github.com/lmdu/AutoDockTools_py3
