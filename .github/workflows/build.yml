@@ -123,6 +123,10 @@ jobs:
           pip3 install pyinstaller==5.0.1
           pip3 install --no-deps plip==2.2.2
           ls -lh /usr/local/lib/python3.9/site-packages
+        env:
+          HOMEBREW_NO_INSTALL_CLEANUP: 1
+          HOMEBREW_NO_INSTALLED_DEPENDENTS_CHECK: 1
+
 
       - name: Build executable
         run: pyinstaller package/build_mac.spec
