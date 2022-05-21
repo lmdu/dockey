@@ -24,7 +24,7 @@ jobs:
           pip install psutil==5.9.0
           pip install apsw-wheels==3.36.0.post1
           pip install PySide6==6.2.4
-          pip install pyinstaller==4.9
+          pip install pyinstaller==5.1
           pip install --no-deps plip==2.2.2
 
       - name: Build executable
@@ -60,6 +60,7 @@ jobs:
 
       - name: Install requirements
         run: |
+          sudo apt install libcairo2-dev
           python3 --version
           pip --version
           pip install https://github.com/lmdu/pymol-wheel/releases/download/2.6/pymol-2.6.0a0-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
@@ -69,7 +70,7 @@ jobs:
           pip install psutil==5.9.0
           pip install apsw-wheels==3.36.0.post1
           pip install PySide6==6.2.4
-          pip install pyinstaller==5.0.1
+          pip install pyinstaller==5.1
           pip install --no-deps plip==2.2.2
 
       - name: Build executable
@@ -123,7 +124,7 @@ jobs:
           pip3 install psutil==5.9.0
           pip3 install apsw-wheels==3.36.0.post1
           pip3 install PySide6==6.2.4
-          pip3 install pyinstaller==5.0.1
+          pip3 install pyinstaller==5.1
           pip3 install --no-deps plip==2.2.2
           #ls -lh /usr/local/lib/python3.9/site-packages
 
