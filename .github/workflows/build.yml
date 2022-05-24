@@ -115,7 +115,7 @@ jobs:
       - name: Install requirements
         run: |
           pip3 install https://github.com/lmdu/pymol-wheel/releases/download/2.6/pymol-2.6.0a0-cp38-cp38-macosx_10_9_x86_64.whl
-          pip3 install https://github.com/lmdu/openbabel-wheel/releases/download/3.1.1.post4/openbabel-3.1.1.5-cp38-cp38-macosx_10_9_x86_64.whl
+          pip3 install https://github.com/lmdu/openbabel-wheel/releases/download/3.1.1.post5/openbabel-3.1.1.5-cp38-cp38-macosx_10_9_x86_64.whl
           pip3 install git+https://github.com/lmdu/AutoDockTools_py3
           pip3 install numpy==1.21.4
           pip3 install psutil==5.9.1
