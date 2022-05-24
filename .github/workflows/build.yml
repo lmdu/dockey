@@ -117,6 +117,7 @@ jobs:
           HOMEBREW_NO_INSTALL_CLEANUP: 1
         run: |
           brew install open-babel
+          ls -l /usr/local/lib/openbabel/3.1.0
           pip3 install https://github.com/lmdu/pymol-wheel/releases/download/2.6/pymol-2.6.0a0-cp39-cp39-macosx_10_9_x86_64.whl
           #pip3 install https://github.com/lmdu/openbabel-wheel/releases/download/3.1.1.post5/openbabel-3.1.1.5-cp38-cp38-macosx_10_9_x86_64.whl
           pip3 install git+https://github.com/lmdu/AutoDockTools_py3
