@@ -8,8 +8,8 @@ a = Analysis(['../src/main.py'],
              pathex=[],
              binaries=[],
              datas=[
-                ('/usr/local/lib/openbabel/3.1.0/*', 'openbabel/lib'),
-                ('/usr/local/share/openbabel/3.1.0/*', 'openbabel/data')
+                ('/usr/local/Cellar/open-babel/3.1.1_1/lib/openbabel/3.1.0/*', 'openbabel/lib'),
+                ('/usr/local/Cellar/open-babel/3.1.1_1/share/openbabel/3.1.0/*', 'openbabel/data')
              ],
              hiddenimports=[],
              hookspath=['hooks'],
