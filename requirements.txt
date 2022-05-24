@@ -1,5 +1,8 @@
-psutil == 5.9.0
-apsw == 3.36.0
-pymol == 2.6.0a0
-PySide6 == 6.2.2.1
-openbabel == 3.1.1.1
+apsw==3.36.0
+plip==2.2.2
+numpy==1.21.4
+psutil==5.9.1
+pymol==2.6.0a0
+PySide6==6.2.4
+openbabel==3.1.1.1
+pyinstaller==5.1

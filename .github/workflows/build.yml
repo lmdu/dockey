@@ -21,7 +21,7 @@ jobs:
           pip install https://github.com/lmdu/openbabel-wheel/releases/download/3.1/openbabel-3.1.1-cp38-cp38-win_amd64.whl
           pip install git+https://github.com/lmdu/AutoDockTools_py3
           pip install numpy==1.21.4
-          pip install psutil==5.9.0
+          pip install psutil==5.9.1
           pip install apsw-wheels==3.36.0.post1
           pip install PySide6==6.2.4
           pip install pyinstaller==5.1
@@ -60,14 +60,14 @@ jobs:
 
       - name: Install requirements
         run: |
-          sudo apt install libcairo2-dev
           python3 --version
           pip --version
+          sudo apt install libcairo2-dev
+          sudo apt install python3-openbabel
           pip install https://github.com/lmdu/pymol-wheel/releases/download/2.6/pymol-2.6.0a0-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
-          pip install openbabel-wheel==3.1.1.5
           pip install git+https://github.com/lmdu/AutoDockTools_py3
           pip install numpy==1.21.4
-          pip install psutil==5.9.0
+          pip install psutil==5.9.1
           pip install apsw-wheels==3.36.0.post1
           pip install PySide6==6.2.4
           pip install pyinstaller==5.1
@@ -114,19 +114,15 @@ jobs:
 
       - name: Install requirements
         run: |
-          #brew install boost
-          #brew install open-babel
-          #brew link --overwrite open-babel
           pip3 install https://github.com/lmdu/pymol-wheel/releases/download/2.6/pymol-2.6.0a0-cp38-cp38-macosx_10_9_x86_64.whl
-          pip3 install https://github.com/lmdu/openbabel-wheel/releases/download/3.1.1.post2/openbabel_wheel-3.1.1.5-cp38-cp38-macosx_10_9_x86_64.whl
+          pip3 install https://github.com/lmdu/openbabel-wheel/releases/download/3.1.1.post4/openbabel-3.1.1.5-cp38-cp38-macosx_10_9_x86_64.whl
           pip3 install git+https://github.com/lmdu/AutoDockTools_py3
           pip3 install numpy==1.21.4
-          pip3 install psutil==5.9.0
+          pip3 install psutil==5.9.1
           pip3 install apsw-wheels==3.36.0.post1
           pip3 install PySide6==6.2.4
           pip3 install pyinstaller==5.1
           pip3 install --no-deps plip==2.2.2
-          #ls -lh /usr/local/lib/python3.9/site-packages
 
       - name: Build executable
         run: pyinstaller package/build_mac.spec
