@@ -6,11 +6,8 @@ block_cipher = None
 
 a = Analysis(['../src/main.py'],
              pathex=[],
-             binaries=[],
-             datas=[
-                ('/usr/lib/openbabel/3.0.0/*', 'openbabel/lib'),
-                ('/usr/share/openbabel/3.0.0/*', 'openbabel/data')
-             ],
+             binaries=[('/usr/lib/openbabel/3.0.0/*', 'openbabel/lib')],
+             datas=[('/usr/share/openbabel/3.0.0/*', 'openbabel/data')],
              hiddenimports=[],
              hookspath=['hooks'],
              hooksconfig={},
