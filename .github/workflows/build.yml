@@ -115,7 +115,7 @@ jobs:
       - name: Install requirements
         env:
           HOMEBREW_NO_INSTALL_CLEANUP: 1
-          HOMEBREW_NO_INSTALLED_DEPENDENTS_CHECK: 1
+          #HOMEBREW_NO_INSTALLED_DEPENDENTS_CHECK: 1
         run: |
           brew install boost
           brew install open-babel
