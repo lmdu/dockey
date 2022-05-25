@@ -130,9 +130,11 @@ jobs:
           pip3 install --no-deps plip==2.2.2
 
       - name: Build executable
-        run: pyinstaller package/build_mac.spec
+        run: |
+          pyinstaller package/build_mac.spec
+          mv dist/Dockey.app/Contents/MacOS/libinchi.0.4.1.dylib dist/Dockey.app/Contents/MacOS/libinchi.0.dylib
 
-      - name: Package
+      - name: DMG Package
         run: |
           version=`awk '/^DOCKEY_VERSION/{print $NF}' src/config.py | sed 's/\"//g'`
           npm install --global create-dmg
