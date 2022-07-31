@@ -295,11 +295,21 @@ def convert_ki_to_log(ki_str):
 	ki = ki/math.pow(10, scales[unit])
 	return round(math.log10(ki), 3)
 
+def convert_ki_to_str(ki):
+	scales = [('M', 0), ('mM', 3), ('uM', 6), ('nM', 9), ('pM', 12),
+		('fM', 15), ('aM', 18), ('zM', 21), ('yM', 24)]
+
+	for unit, scale in scales:
+		ck = ki * math.pow(10, scale)
+
+		if ck >= 1:
+			return "{} {}".format(round(ck,2), unit)
+
 def convert_energy_to_ki(energy):
-	R = 0.001987207
+	R = 1.9871917
 	T = 298.15
-	ki = math.exp(energy/(R*T))
-	return round(math.log10(ki), 3)
+	ki = math.exp((energy*1000)/(R*T))
+	return ki
 
 def get_molecule_information(mol_file, from_string=False, mol_name=None, mol_format=None):
 	if not from_string:
@@ -335,7 +345,9 @@ def ligand_efficiency_assessment(pdb_str, energy, ki=0):
 	if ki:
 		logki = convert_ki_to_log(ki)
 	else:
-		logki = convert_energy_to_ki(energy)
+		ki = convert_energy_to_ki(energy)
+		logki = round(math.log10(ki), 3)
+		ki = convert_ki_to_str(ki)
 
 	if pdb_str:
 		obc = openbabel.OBConversion()
@@ -346,7 +358,10 @@ def ligand_efficiency_assessment(pdb_str, energy, ki=0):
 		mw = mol.GetMolWt()
 
 		#calculate ligand efficiency
-		le = round(energy/ha*-1, 3)
+		le = round(energy/ha * -1, 3)
+
+		#calculate size-independent ligand efficiency
+		sile = round(energy/pow(ha, 0.3) * -1, 3)
 
 		#calculate logP
 		des = openbabel.OBDescriptor.FindType('logP')
@@ -362,9 +377,9 @@ def ligand_efficiency_assessment(pdb_str, energy, ki=0):
 		#calculate ligand efficiency lipophilic price
 		lelp = round(logp/le, 3)
 
-		return (logki, le, lle, fq, lelp)
+		return (logki, le, sile, fq, lle, lelp, ki)
 	else:
-		return (logki, None, None, None, None)
+		return (logki, None, None, None, None, None, ki)
 
 def get_complex_interactions(pose_ids, poses):
 	interactions = {
@@ -525,8 +540,8 @@ def interaction_visualize(plcomplex):
 
 	vis.set_initial_representations()
 
-	cmd.load(plcomplex.sourcefile)
-	#cmd.read_pdbstr(plcomplex.sourcefiles['pdbstring'], 'complex')
+	#cmd.load(plcomplex.sourcefile)
+	cmd.read_pdbstr(plcomplex.corrected_pdb, 'complex')
 	cmd.frame(config.MODEL)
 	current_name = cmd.get_object_list(selection='(all)')[0]
 

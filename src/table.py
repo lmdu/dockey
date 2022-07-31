@@ -493,11 +493,11 @@ class PoseTableModel(DockeyTableModel):
 	def switch_table(self, tool):
 		if tool == 'autodock4':
 			self.custom_headers = ['ID', 'Job', 'Run', 'Energy', 'cRMSD', 'rRMSD',
-				'logKi', 'LE', 'LLE', 'FQ', 'LELP'
+				'logKi', 'LE', 'FQ', 'SILE', 'LLE', 'LELP'
 			]
-		elif tool == 'vina':
+		elif tool in ['vina', 'qvina']:
 			self.custom_headers = ['ID', 'Job', 'Mode', 'Affinity', 'lRMSD', 'uRMSD',
-				'logKi', ' LE', 'LLE', 'FQ', 'LELP'
+				'logKi', ' LE', 'FQ', 'SILE', 'LLE', 'LELP'
 			]
 
 	def set_job(self, job_id):
@@ -835,7 +835,7 @@ class PoseTableView(QTableView):
 		if tool == 'autodock4':
 			titles = ['Run', 'Free energy of binding', 'Cluster RMSD', 'Reference RMSD']
 
-		elif tool == 'vina':
+		elif tool in ['vina', 'qvina']:
 			titles = ['Mode', 'Binding affinity', 'RMSD l.b.', 'RMSD u.b.']
 
 		info = (
@@ -844,10 +844,12 @@ class PoseTableView(QTableView):
 			"<tr><td>{}: </td><td>{}</td></tr>"
 			"<tr><td>{}: </td><td>{}</td></tr>"
 			"<tr><td>{}: </td><td>{}</td></tr>"
+			"<tr><td>Ki: </td><td>{}</td></tr>"
 			"<tr><td>logKi: </td><td>{}</td></tr>"
 			"<tr><td>Ligand efficiency (LE): </d><td>{}</td></tr>"
-			"<tr><td>Lipophilic ligand efficiency (LLE): </td><td>{}</td></tr>"
+			"<tr><td>Size-independent ligand efficiency (SILE): </td><td>{}</td></tr>"
 			"<tr><td>Fit Quality (FQ): </td><td>{}</td></tr>"
+			"<tr><td>Lipophilic ligand efficiency (LLE): </td><td>{}</td></tr>"
 			"<tr><td>Ligand efficiency lipophilic price (LELP): </td><td>{}</td></tr>"
 			"</table>"
 		)
@@ -861,10 +863,12 @@ class PoseTableView(QTableView):
 			pose.rmsd1,
 			titles[3],
 			pose.rmsd2,
+			pose.ki,
 			pose.logki,
 			pose.le,
-			pose.lle,
+			pose.sile,
 			pose.fq,
+			pose.lle,
 			pose.lelp
 		))
 		dlg.exec()

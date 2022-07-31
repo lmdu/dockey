@@ -8,7 +8,9 @@ from PySide6.QtWidgets import *
 from utils import *
 from backend import *
 
-__all__ = ['AutogridParameter', 'AutodockParameterWizard', 'AutodockVinaParameterWizard']
+__all__ = ['AutogridParameter', 'AutodockParameterWizard', 'AutodockVinaParameterWizard',
+	'QuickVinaParameterWizard'
+]
 
 class AutogridParameter:
 	comments = {
@@ -1244,6 +1246,210 @@ class AutodockVinaParameterWizard(QWizard):
 		), self)
 		self.finish_layout.addWidget(info_wdg)
 
+class QuickVinaParameter(Parameter):
+	def __init__(self):
+		self.receptor = self.make_param(
+			type = str,
+			default = '',
+			value = '',
+			comment = 'rigid part of the receptor',
+			required = False,
+			user = False
+		)
+		self.flex = self.make_param(
+			type = str,
+			default = '',
+			value = '',
+			comment = 'flexible side chains, if any',
+			required = False,
+			user = False
+		)
+		self.ligand = self.make_param(
+			type = str,
+			default = '',
+			value = '',
+			comment = 'ligand',
+			required = True,
+			user = False
+		)
+		self.center_x = self.make_param(
+			type = float,
+			default = 0,
+			value = 0,
+			comment = 'X coordinate of the center',
+			required = True,
+			user = False
+		)
+		self.center_y = self.make_param(
+			type = float,
+			default = 0,
+			value = 0,
+			comment = 'Y coordinate of the center',
+			required = True,
+			user = False
+		)
+		self.center_z = self.make_param(
+			type = float,
+			default = 0,
+			value = 0,
+			comment = 'Z coordinate of the center',
+			required = True,
+			user = False
+		)
+		self.size_x = self.make_param(
+			type = float,
+			default = 0,
+			value = 0,
+			comment = 'size in the X dimension',
+			required = True,
+			user = False
+		)
+		self.size_y = self.make_param(
+			type = float,
+			default = 0,
+			value = 0,
+			comment = 'size in the Y dimension',
+			required = True,
+			user = False
+		)
+		self.size_z = self.make_param(
+			type = float,
+			default = 0,
+			value = 0,
+			comment = 'size in the Z dimension',
+			required = True,
+			user = False
+		)
+		self.out = self.make_param(
+			type = str,
+			default = '',
+			value = '',
+			comment = 'output models',
+			required = True,
+			user = False
+		)
+		self.cpu = self.make_param(
+			type = int,
+			default = 1,
+			value = 1,
+			range = [1, psutil.cpu_count()],
+			comment = 'The number of CPUs to use',
+			required = True,
+			user = True
+		)
+		self.seed = self.make_param(
+			type = int,
+			default = 0,
+			value = 0,
+			range = [0, 1000000000],
+			comment = 'Explicit random seed',
+			required = False,
+			user = True
+		)
+		self.exhaustiveness = self.make_param(
+			type = int,
+			default = 8,
+			value = 8,
+			range = [1, 100],
+			comment = 'Exhaustiveness of the global search',
+			required = False,
+			user = True
+		)
+		self.num_modes = self.make_param(
+			type = int,
+			default = 9,
+			value = 9,
+			range = [0, 100],
+			comment = 'Maximum number of binding modes to generate',
+			required = False,
+			user = True
+		)
+		self.energy_range = self.make_param(
+			type = float,
+			default = 3.0,
+			value = 3.0,
+			range = [0, 100],
+			comment = 'Maximum energy difference between the best and worst mode',
+			required = False,
+			user = True
+		)
 
+	def get_sorted_items(self):
+		return sorted(self.items(), key=lambda x: x[1].order)
 
+	def make_config_file(self, config_file):
+		items =  self.get_sorted_items()
+
+		with open(config_file, 'w') as fw:
+			for p, m in items:
+				if m.required or m.default != m.value:
+					fw.write("{} = {}\n".format(p, m.value))
+
+class QuickVinaParameterWizard(QWizard):
+	params = QuickVinaParameter()
+
+	def __init__(self, parent=None):
+		super(QuickVinaParameterWizard, self).__init__(parent)
+		self.setWindowTitle("Run QuickVina-W")
+		self.setWizardStyle(QWizard.ClassicStyle)
+
+		self.create_parameter_page()
+		self.create_finish_page()
+
+	def update_parameter(self, key, val):
+		self.params[key]['value'] = val
+
+	def create_parameter_page(self):
+		self.parameter_page = QWizardPage(self)
+		self.parameter_page.setTitle("Parameter settings for QuickVina-W")
+		self.addPage(self.parameter_page)
+		self.parameter_layout = QFormLayout()
+		self.parameter_page.setLayout(self.parameter_layout)
+		self.create_parameter_widgets()
+
+	def create_parameter_widgets(self):
+		for p, m in self.params.get_sorted_items():
+			if not m.user:
+				continue
+
+			if m.type is int:
+				editor = QSpinBox(self)
+
+				if 'range' in m:
+					_min, _max = m.range
+					editor.setRange(_min, _max)
+
+				editor.setValue(m.value)
+				editor.valueChanged.connect(lambda x, p=p: self.update_parameter(p, x))
+				self.parameter_layout.addRow(m.comment, editor)
+
+			elif m.type is float:
+				editor = QDoubleSpinBox(self)
+
+				if 'range' in m:
+					_min, _max = m.range
+					editor.setRange(_min, _max)
+
+				editor.setValue(m.value)
+				editor.valueChanged.connect(lambda x, p=p: self.update_parameter(p, x))
+				self.parameter_layout.addRow(m.comment, editor)
+
+	def create_finish_page(self):
+		self.finish_page = QWizardPage(self)
+		self.finish_page.setTitle("Start QuickVina-W")
+		self.addPage(self.finish_page)
+		self.finish_layout = QVBoxLayout()
+		self.finish_page.setLayout(self.finish_layout)
+		rnum = DB.get_one("SELECT COUNT(1) FROM molecular WHERE type=1 LIMIT 1")
+		lnum = DB.get_one("SELECT COUNT(1) FROM molecular WHERE type=2 LIMIT 1")
+		info_wdg = QLabel((
+			"<p>Everything is ready, please confirm the docking jobs<p>"
+			"<p>The number of receptors: <b>{}</b></p>"
+			"<p>The number of ligands: <b>{}</b></p>"
+			"<p>The number of jobs will be generated: <b>{}</b></p>"
+			"<p>Click <b>Finish</b> button to submit and start docking jobs</p>".format(
+				rnum, lnum, rnum*lnum
+			)
+		), self)
+		self.finish_layout.addWidget(info_wdg)
 

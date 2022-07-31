@@ -12,7 +12,7 @@ from utils import *
 from backend import *
 from prepare import *
 
-__all__ = ['AutodockWorker', 'AutodockVinaWorker']
+__all__ = ['AutodockWorker', 'AutodockVinaWorker', 'QuickVinaWorker']
 
 class WorkerSignals(QObject):
 	#finished = Signal()
@@ -27,6 +27,11 @@ class BaseWorker(QRunnable):
 		self.params = params
 		self.signals = WorkerSignals()
 		self.settings = QSettings()
+
+		if os.name == 'nt':
+			self.creationflags = 0x08000000
+		else:
+			self.creationflags = 0
 
 	def get_job(self, _id):
 		sql = (
@@ -55,7 +60,7 @@ class BaseWorker(QRunnable):
 		})
 
 	def save_pose(self, poses):
-		sql = "INSERT INTO pose VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)"
+		sql = "INSERT INTO pose VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
 		DB.insert_rows(sql, poses)
 		sql = "SELECT id FROM pose WHERE jid=?"
 		return DB.get_column(sql, (self.job.id,))
@@ -244,7 +249,7 @@ class AutodockWorker(BaseWorker):
 			stderr = subprocess.PIPE,
 			cwd = self.work_dir,
 			encoding = 'utf8',
-			creationflags = 0x08000000
+			creationflags = self.creationflags
 		)
 
 		read_start = 0
@@ -284,7 +289,7 @@ class AutodockWorker(BaseWorker):
 			stderr = subprocess.PIPE,
 			cwd = self.work_dir,
 			encoding = 'utf8',
-			creationflags = 0x08000000
+			creationflags = self.creationflags
 		)
 
 		read_start = 0
@@ -411,7 +416,7 @@ class AutodockVinaWorker(BaseWorker):
 				stderr = subprocess.PIPE,
 				cwd = self.work_dir,
 				encoding = 'utf8',
-				creationflags = 0x08000000
+				creationflags = self.creationflags
 			)
 
 			read_start = 0
@@ -470,7 +475,7 @@ class AutodockVinaWorker(BaseWorker):
 			stderr = subprocess.PIPE,
 			cwd = self.work_dir,
 			encoding = 'utf8',
-			creationflags = 0x08000000
+			creationflags = self.creationflags
 		)
 
 		star = 0
@@ -548,3 +553,138 @@ class AutodockVinaWorker(BaseWorker):
 		pids = self.save_pose(rows)
 		self.save_interaction(pids, rows)
 
+class QuickVinaWorker(BaseWorker):
+	def __init__(self, job, params):
+		super(QuickVinaWorker, self).__init__(job, params)
+
+	def get_commands(self):
+		vina = self.settings.value('Tools/quick_vina_w')
+		return vina
+
+	def pipline(self):
+		#convert receptor and ligand to pdbqt format
+		rpdb = os.path.join(self.work_dir, "{}.pdb".format(self.job.rname))
+		rpdbqt = os.path.join(self.work_dir, "{}.pdbqt".format(self.job.rname))
+
+		with open(rpdb, 'w') as fw:
+			fw.write(self.job.rpdb)
+
+		self.prepare_receptor(rpdb, rpdbqt)
+
+		lpdb = os.path.join(self.work_dir, "{}.pdb".format(self.job.lname))
+		lpdbqt = os.path.join(self.work_dir, "{}.pdbqt".format(self.job.lname))
+
+		with open(lpdb, 'w') as fw:
+			fw.write(self.job.lpdb)
+
+		self.prepare_ligand(lpdb, lpdbqt)
+
+		#get commands
+		vina = self.get_commands()
+		self.params.receptor.value = os.path.basename(rpdbqt)
+
+		#set autodock vina parameters and make config file
+		config_file = os.path.join(self.work_dir, "config.txt".format(self.job.rname))
+		out_file = os.path.join(self.work_dir, "out.pdbqt")
+		log_file = os.path.join(self.work_dir, "out.log")
+
+		self.params.ligand.value = os.path.basename(lpdbqt)
+		self.params.center_x.value = self.job.cx
+		self.params.center_y.value = self.job.cy
+		self.params.center_z.value = self.job.cz
+		self.params.size_x.value = self.job.x
+		self.params.size_y.value = self.job.y
+		self.params.size_z.value = self.job.z
+		self.params.out.value = os.path.basename(out_file)
+		self.params.make_config_file(config_file)
+
+		self.save_log('config_file', config_file)
+
+		#run quick vina
+		self.update_message("Running quick vina")
+		proc = psutil.Popen([vina, '--config', config_file],
+			stdin = subprocess.PIPE,
+			stdout = subprocess.PIPE,
+			stderr = subprocess.PIPE,
+			cwd = self.work_dir,
+			encoding = 'utf8',
+			creationflags = self.creationflags
+		)
+
+		star = 0
+		log_fw = open(log_file, 'w')
+
+		while proc.poll() is None:
+			chars = proc.stdout.read(5)
+
+			for char in chars:
+				if char == '*':
+					star += 1
+					
+			p = round(star/51*90, 2)
+			self.update_progress(p)
+
+			if chars:
+				log_fw.write(chars)
+			else:
+				QThread.msleep(500)
+
+		log_fw.write(proc.stdout.read())
+		log_fw.close()
+
+		if proc.returncode != 0:
+			raise Exception(proc.stderr.read())
+
+		self.save_log('log_file', log_file)
+		self.save_log('out_file', out_file)
+
+		self.update_message("Analyzing docking results")
+		rows = []
+		with open(log_file) as fh:
+			for line in fh:
+				if line.startswith('-----+'):
+					break
+
+			for line in fh:
+				if line.startswith('Writing output'):
+					break
+
+				cols = line.strip().split()
+				run = int(cols[0])
+				energy = float(cols[1])
+				rmsd1 = float(cols[2])
+				rmsd2 = float(cols[3])
+
+				rows.append([None, self.job.id, run, energy, rmsd1, rmsd2])
+
+		modes = {}
+		with open(out_file) as fh:
+			for line in fh:
+				if line.startswith('MODEL'):
+					lines = [line]
+					idx = int(line.strip().split()[1]) - 1
+
+				elif line.startswith('ENDMDL'):
+					lines.append(line)
+					mode = convert_pdbqt_to_pdb(''.join(lines))
+					modes[idx] = mode
+				else:
+					lines.append(line)
+
+		receptor = convert_pdbqt_to_pdb(rpdbqt, as_string=False)
+
+		for i, row in enumerate(rows):
+			mode = modes.get(i, '')
+
+			if mode:
+				comp = generate_complex_pdb(receptor, mode)
+			else:
+				comp = ''
+
+			lea = ligand_efficiency_assessment(mode, row[3])
+			rows[i].extend(lea)
+			rows[i].append(mode)
+			rows[i].append(comp)
+
+		pids = self.save_pose(rows)
+		self.save_interaction(pids, rows)

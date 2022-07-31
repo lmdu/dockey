@@ -16,7 +16,7 @@ __all__ = ['BrowseInput', 'CreateProjectDialog', 'AutodockConfigDialog',
 			'AutodockVinaConfigDialog', 'ExportImageDialog', 'FeedbackBrowser',
 			'PymolSettingDialog', 'DockingToolSettingDialog', 'InteractionTabWidget',
 			'JobConcurrentSettingDialog', 'DockeyConfigDialog', 'PDBDownloader',
-			'ZINCDownloader'
+			'ZINCDownloader', 'QuickVinaConfigDialog'
 			]
 
 class BrowseInput(QWidget):
@@ -269,6 +269,12 @@ class AutodockConfigDialog(ProgramConfigDialog):
 		('Tools/autodock_4', 'Autodock executable'),
 		('Tools/autogrid_4', 'Autogrid executable'),
 		#('Tools/mgltools', 'MGLTools directory')
+	]
+
+class QuickVinaConfigDialog(ProgramConfigDialog):
+	title = "QuickVina Config"
+	progs = [
+		('Tools/quick_vina_w', 'QuickVina-W executable')
 	]
 
 class AutodockVinaConfigDialog(ProgramConfigDialog):

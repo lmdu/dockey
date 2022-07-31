@@ -615,6 +615,12 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		)
 		self.project_ready.connect(self.run_vina_act.setEnabled)
 
+		self.run_qvina_act = QAction("QuickVina-W", self,
+			disabled = True,
+			triggered = self.run_quick_vina_w
+		)
+		self.project_ready.connect(self.run_qvina_act.setEnabled)
+
 		#help actions
 		self.about_act = QAction("&About", self,
 			triggered = self.open_about
@@ -694,6 +700,7 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		self.run_menu = self.menuBar().addMenu("&Run")
 		self.run_menu.addAction(self.run_autodock_act)
 		self.run_menu.addAction(self.run_vina_act)
+		self.run_menu.addAction(self.run_qvina_act)
 
 		self.pymol_menu = self.menuBar().addMenu("&PyMOL")
 
@@ -1155,6 +1162,9 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		self.pose_model.clear()
 		self.interaction_tab.clear()
 
+		#clear logs
+		DB.query("DELETE FROM logs")
+
 		return True
 
 	def run_autodock(self):
@@ -1206,6 +1216,31 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 			self.pool.start(worker)
 
 		DB.set_option('tool', 'vina')
+
+	def run_quick_vina_w(self):
+		if not self.check_mols():
+			return
+
+		if not QuickVinaConfigDialog.check_executable(self):
+			return
+
+		if not self.check_jobs():
+			return
+
+		dlg = QuickVinaParameterWizard(self)
+		if not dlg.exec():
+			return
+
+		params = dlg.params
+
+		self.generate_job_list()
+
+		for job in self.get_jobs():
+			worker = QuickVinaWorker(job, params)
+			worker.signals.refresh.connect(self.job_model.update_row)
+			self.pool.start(worker)
+
+		DB.set_option('tool', 'qvina')
 
 	def open_about(self):
 		QMessageBox.about(self, "About dockey", DOCKEY_ABOUT)

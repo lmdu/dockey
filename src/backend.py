@@ -48,9 +48,11 @@ DB_TABLES = {
 		('rmsd2', 'REAL'),
 		('logki', 'REAL'),
 		('le', 'REAL'),
-		('lle', 'REAL'),
+		('sile', 'REAL'),
 		('fq', 'REAL'),
+		('lle', 'REAL'),
 		('lelp', 'REAL'),
+		('ki', 'TEXT'),
 		('mode', 'TEXT'),
 		('complex', 'TEXT')
 	],
