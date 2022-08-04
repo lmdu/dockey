@@ -37,13 +37,13 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		self.create_molecular_viewer()
 		self.create_gridbox_adjuster()
 		self.create_job_table()
-		self.create_pose_table()
+		self.create_pose_tab()
 		self.create_interaction_tables()
 		self.create_pymol_feedback()
 
 		self.create_molecular_model()
 		self.create_job_model()
-		self.create_pose_model()
+		#self.create_pose_model()
 
 		self.create_actions()
 		self.create_menus()
@@ -329,64 +329,42 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 	@Slot()
 	def on_job_changed(self, index):
 		job_id = index.row() + 1
-		sql = "SELECT status,message FROM jobs WHERE id=? LIMIT 1"
-		status, message = DB.get_row(sql, (job_id,))
+		sql = (
+			"SELECT m1.name,m2.name,j.status,j.message FROM jobs AS j "
+			"LEFT JOIN molecular AS m1 ON m1.id=j.lid "
+			"LEFT JOIN molecular AS m2 ON m2.id=j.rid "
+			"WHERE j.id=? LIMIT 1"
+		)
+		ligand, receptor, status, message = DB.get_row(sql, (job_id,))
+		title = "{} vs {}".format(ligand, receptor)
 
 		if status == 1:
-			self.pose_dock.setWidget(self.pose_table)
-			self.pose_error.hide()
-			self.pose_model.set_job(job_id)
-			self.pose_table.show()
+			self.pose_tab.show_job_pose(title, job_id)
 
 		elif status == 3:
-			self.pose_error.setPlainText(message)
-			self.pose_dock.setWidget(self.pose_error)
-			self.pose_table.hide()
-			self.pose_error.show()	
+			self.pose_tab.show_job_error(title, message)
 
-	def create_pose_table(self):
-		self.pose_table = PoseTableView(self)
-		self.pose_table.verticalHeader().hide()
-		self.pose_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-		self.pose_table.setSelectionBehavior(QAbstractItemView.SelectRows)
-		self.pose_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
-		self.pose_table.clicked.connect(self.on_pose_changed)
-		self.pose_error = DockeyTextBrowser(self)
+	def create_pose_tab(self):
+		self.pose_tab = PoseTabWidget(self)
+		self.pose_tab.pose_table.clicked.connect(self.on_task_pose_changed)
+		self.pose_tab.best_table.clicked.connect(self.on_best_pose_changed)
 
 		self.pose_dock = QDockWidget("Poses", self)
-		self.pose_table.hide()
-		self.pose_dock.setWidget(self.pose_error)
+		self.pose_dock.setWidget(self.pose_tab)
 		self.pose_dock.setAllowedAreas(Qt.TopDockWidgetArea | Qt.BottomDockWidgetArea)
 		self.addDockWidget(Qt.BottomDockWidgetArea, self.pose_dock, Qt.Vertical)
 		self.pose_dock.setVisible(True)
 
 	@Slot()
-	def on_pose_changed(self, index):
-		new_index = self.pose_model.index(index.row(), 0)
+	def on_task_pose_changed(self, index):
+		new_index = self.pose_tab.pose_model.index(index.row(), 0)
 		pid = new_index.data(Qt.DisplayRole)
-		'''
-		sql = "SELECT jid, mode FROM {} WHERE id=? LIMIT 1".format(
-			self.pose_model.table
-		)
-		jid, pose = DB.get_row(sql, (pid,))
+		self.interaction_tab.change_pose(pid)
 
-		sql = (
-			"SELECT m1.name,m2.name,m1.pdb FROM jobs AS j "
-			"LEFT JOIN molecular AS m1 ON m1.id=j.rid "
-			"LEFT JOIN molecular AS m2 ON m2.id=j.lid "
-			"WHERE j.id=? LIMIT 1"
-		)
-
-		receptor, ligand, rpdb = DB.get_row(sql, (jid,))
-
-		self.cmd.delete('all')
-		self.cmd.initialize()
-		self.cmd.read_pdbstr(rpdb, receptor)
-		self.cmd.read_pdbstr(pose, ligand)
-		#self.cmd.orient()
-		self.cmd.zoom()
-		'''
-		#display interactions
+	@Slot()
+	def on_best_pose_changed(self, index):
+		new_index = self.pose_tab.best_model.index(index.row(), 0)
+		pid = new_index.data(Qt.DisplayRole)
 		self.interaction_tab.change_pose(pid)
 
 	def create_molecular_model(self):
@@ -410,11 +388,11 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		header.setSectionResizeMode(3, QHeaderView.ResizeToContents)
 		header.setSectionResizeMode(4, QHeaderView.ResizeToContents)
 	
-	def create_pose_model(self):
-		self.pose_model = PoseTableModel()
-		self.pose_table.setModel(self.pose_model)
-		self.pose_table.hideColumn(0)
-		self.pose_table.hideColumn(1)
+	#def create_pose_model(self):
+	#	self.pose_model = PoseTableModel()
+	#	self.pose_table.setModel(self.pose_model)
+	#	self.pose_table.hideColumn(0)
+	#	self.pose_table.hideColumn(1)
 
 	def create_actions(self):
 		self.new_project_act = QAction(QIcon(':/icons/new.svg'), "&New Project", self,
@@ -477,7 +455,8 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		)
 
 		self.exit_act = QAction("&Exit", self,
-			triggered = self.close,
+			#triggered = self.close,
+			triggered = lambda : print(GridBoxSettingPanel.params.spacing),
 			shortcut = QKeySequence.Quit
 		)
 
@@ -754,6 +733,7 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 
 		self.mol_model.select()
 		self.job_model.select()
+		self.pose_tab.select()
 		self.project_ready.emit(True)
 
 	def dragEnterEvent(self, event):
@@ -1091,20 +1071,20 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		ligands = DB.get_column("SELECT id FROM molecular WHERE type=2")
 
 		# check grid box of receptors
-		grids = DB.get_column("SELECT rid FROM grid")
+		#grids = DB.get_column("SELECT rid FROM grid")
 
 		# receptors with no grid box
-		rng = set(receptors) - set(grids)
+		#rng = set(receptors) - set(grids)
 
-		if rng:
-			sql = "SELECT name FROM molecular WHERE id IN ({})".format(
-				','.join(map(str,rng))
-			)
-			rs = DB.get_column(sql)
-			QMessageBox.critical(self, 'Error',
-				"No grid box was set for receptor {}".format(','.join(rs))
-			)
-			return False
+		#if rng:
+		#	sql = "SELECT name FROM molecular WHERE id IN ({})".format(
+		#		','.join(map(str,rng))
+		#	)
+		#	rs = DB.get_column(sql)
+		#	QMessageBox.critical(self, 'Error',
+		#		"No grid box was set for receptor {}".format(','.join(rs))
+		#	)
+		#	return False
 
 		rows = []
 		for r in receptors:
@@ -1159,7 +1139,7 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 				return False
 
 		self.job_model.clear()
-		self.pose_model.clear()
+		self.pose_tab.clear()
 		self.interaction_tab.clear()
 
 		#clear logs

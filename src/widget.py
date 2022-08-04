@@ -16,7 +16,7 @@ __all__ = ['BrowseInput', 'CreateProjectDialog', 'AutodockConfigDialog',
 			'AutodockVinaConfigDialog', 'ExportImageDialog', 'FeedbackBrowser',
 			'PymolSettingDialog', 'DockingToolSettingDialog', 'InteractionTabWidget',
 			'JobConcurrentSettingDialog', 'DockeyConfigDialog', 'PDBDownloader',
-			'ZINCDownloader', 'QuickVinaConfigDialog'
+			'ZINCDownloader', 'QuickVinaConfigDialog', 'PoseTabWidget'
 			]
 
 class BrowseInput(QWidget):
@@ -149,15 +149,15 @@ class DockingToolSettingDialog(QDialog):
 		self.ad4 = self.settings.value('Tools/autodock_4', '')
 		self.ag4 = self.settings.value('Tools/autogrid_4', '')
 		self.vina = self.settings.value('Tools/autodock_vina', '')
-		#self.mglt = self.settings.value('Tools/mgltools', '')
+		self.qvina = self.settings.value('Tools/quick_vina_w', '')
 		self.autodock_input = BrowseInput(self)
 		self.autodock_input.set_text(self.ad4)
 		self.autogrid_input = BrowseInput(self)
 		self.autogrid_input.set_text(self.ag4)
 		self.vina_input = BrowseInput(self)
 		self.vina_input.set_text(self.vina)
-		#self.mgltools_input = BrowseInput(self, False)
-		#self.mgltools_input.set_text(self.mglt)
+		self.qvina_input = BrowseInput(self)
+		self.qvina_input.set_text(self.qvina)
 
 		self.layout = QVBoxLayout()
 		self.layout.addWidget(QLabel("Autodock4 executable", self))
@@ -166,8 +166,8 @@ class DockingToolSettingDialog(QDialog):
 		self.layout.addWidget(self.autogrid_input)
 		self.layout.addWidget(QLabel("Autodock vina executable", self))
 		self.layout.addWidget(self.vina_input)
-		#self.layout.addWidget(QLabel("MGLTools directory", self))
-		#self.layout.addWidget(self.mgltools_input)
+		self.layout.addWidget(QLabel("QuickVina-W executable", self))
+		self.layout.addWidget(self.qvina_input)
 
 		btn_box = QDialogButtonBox(QDialogButtonBox.Save | QDialogButtonBox.Cancel)
 		btn_box.accepted.connect(self.save_settings)
@@ -175,14 +175,13 @@ class DockingToolSettingDialog(QDialog):
 		self.layout.addWidget(btn_box)
 		self.setLayout(self.layout)
 
-
 	@Slot()
 	def save_settings(self):
 		self.settings = QSettings()
 		ad4 = self.autodock_input.get_text()
 		ag4 = self.autogrid_input.get_text()
 		vina = self.vina_input.get_text()
-		#mglt = self.mgltools_input.get_text()
+		qvina = self.qvina_input.get_text()
 
 		if ad4 != self.ad4:
 			self.settings.setValue('Tools/autodock_4', ad4)
@@ -193,8 +192,8 @@ class DockingToolSettingDialog(QDialog):
 		if vina != self.vina:
 			self.settings.setValue('Tools/autodock_vina', vina)
 
-		#if mglt != self.mglt:
-		#	self.settings.setValue('Tools/mgltools', mglt)
+		if qvina != self.qvina:
+			self.settings.setValue('Tools/quick_vina_w', qvina)
 
 		self.accept()
 
@@ -426,6 +425,68 @@ class JobConcurrentSettingDialog(QDialog):
 		self.parent.pool.setMaxThreadCount(num)
 		self.settings.setValue('Job/concurrent', num)
 
+class PoseTabWidget(QTabWidget):
+	def __init__(self, parent=None):
+		super(PoseTabWidget, self).__init__(parent)
+		self.parent = parent
+		self.setTabBarAutoHide(True)
+
+		self.create_best_table()
+		self.create_pose_table()
+		self.create_error_text()
+
+	def create_best_table(self):
+		self.best_table = BestTableView(self.parent)
+		self.best_model = BestTableModel()
+		self.best_table.setModel(self.best_model)
+		self.best_table.hideColumn(0)
+		self.best_table.hideColumn(1)
+		self.best_table.verticalHeader().hide()
+		self.best_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+		self.best_table.setSelectionBehavior(QAbstractItemView.SelectRows)
+		self.best_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
+		self.addTab(self.best_table, "Best poses")
+
+	def create_pose_table(self):
+		self.pose_table = PoseTableView(self.parent)
+		self.pose_model = PoseTableModel()
+		self.pose_table.setModel(self.pose_model)
+		self.pose_table.hideColumn(0)
+		self.pose_table.hideColumn(1)
+		self.pose_table.verticalHeader().hide()
+		self.pose_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+		self.pose_table.setSelectionBehavior(QAbstractItemView.SelectRows)
+		self.pose_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
+		self.addTab(self.pose_table, "Task poses")
+		self.setTabVisible(1, False)
+
+	def create_error_text(self):
+		self.pose_error = DockeyTextBrowser(self)
+		self.addTab(self.pose_error, "Error")
+		self.setTabVisible(2, False)
+
+	def show_job_pose(self, title, job_id):
+		self.pose_model.set_job(job_id)
+		self.setTabText(1, title)
+		self.setTabVisible(2, False)
+		self.setTabVisible(1, True)
+		self.setCurrentIndex(1)
+
+	def show_job_error(self, title, message):
+		self.pose_error.setPlainText(message)
+		self.setTabText(2, title)
+		self.setTabVisible(1, False)
+		self.setTabVisible(2, True)
+		self.setCurrentIndex(2)
+
+	def select(self):
+		self.best_model.select()
+
+	def clear(self):
+		self.pose_model.clear()
+		self.best_model.clear()
+		self.pose_error.clear()
+
 class InteractionTabWidget(QTabWidget):
 	def __init__(self, parent=None):
 		super(InteractionTabWidget, self).__init__(parent)
@@ -624,10 +685,12 @@ class DockeyConfigDialog(QDialog):
 		self.autodock_input = BrowseInput(self)
 		self.autogrid_input = BrowseInput(self)
 		self.vina_input = BrowseInput(self)
+		self.qvina_input = BrowseInput(self)
 
 		self.register_widget('Tools/autodock_4', self.autodock_input, 'browse')
 		self.register_widget('Tools/autogrid_4', self.autogrid_input, 'browse')
 		self.register_widget('Tools/autodock_vina', self.vina_input, 'browse')
+		self.register_widget('Tools/quick_vina_w', self.qvina_input, 'browse')
                           
 		layout.addWidget(QLabel("Autogrid executable", self))
 		layout.addWidget(self.autogrid_input)
@@ -635,6 +698,8 @@ class DockeyConfigDialog(QDialog):
 		layout.addWidget(self.autodock_input)
 		layout.addWidget(QLabel("Autodock Vina executable", self))
 		layout.addWidget(self.vina_input)
+		layout.addWidget(QLabel("QuickVina-W executable", self))
+		layout.addWidget(self.qvina_input)
 
 		self.tab_widget.addTab(page, 'Docking Tools')
 

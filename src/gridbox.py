@@ -115,12 +115,13 @@ class ColorButton(QPushButton):
 
 class GridBoxSettingPanel(QWidget):
 	updated = Signal()
+	params = GridBoxParamter()
 
 	def __init__(self, parent=None):
 		super(GridBoxSettingPanel, self).__init__(parent)
 		self.parent = parent
 
-		self.params = GridBoxParamter()
+		#self.params = GridBoxParamter()
 
 		self.layout = QFormLayout()
 		self.setLayout(self.layout)
@@ -225,7 +226,7 @@ class GridBoxSettingPanel(QWidget):
 		#spacing controler
 		self.spacing = QDoubleSpinBox(self)
 		self.spacing.setSingleStep(0.005)
-		self.spacing.setRange(0, 1)
+		self.spacing.setRange(0.01, 1)
 		self.spacing.setDecimals(3)
 		self.spacing.setValue(self.params.spacing)
 		self.spacing.valueChanged.connect(lambda x: self.update_value('spacing', x))
@@ -234,15 +235,15 @@ class GridBoxSettingPanel(QWidget):
 
 		self.size_x = QSpinBox(self)
 		self.size_x.setSingleStep(2)
-		self.size_x.setRange(0, 100000)
+		self.size_x.setRange(0, 126)
 		self.size_x.valueChanged.connect(lambda x: self.update_value('x', x))
 		self.size_y = QSpinBox(self)
 		self.size_y.setSingleStep(2)
-		self.size_y.setRange(0, 100000)
+		self.size_y.setRange(0, 126)
 		self.size_y.valueChanged.connect(lambda x: self.update_value('y', x))
 		self.size_z = QSpinBox(self)
 		self.size_z.setSingleStep(2)
-		self.size_z.setRange(0, 100000)
+		self.size_z.setRange(0, 126)
 		self.size_z.valueChanged.connect(lambda x: self.update_value('z', x))
 
 		self.layout.addRow(QLabel("Points in each dimension", self))

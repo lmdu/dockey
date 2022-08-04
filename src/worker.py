@@ -9,6 +9,7 @@ from PySide6.QtCore import *
 
 from param import *
 from utils import *
+from gridbox import *
 from backend import *
 from prepare import *
 
@@ -40,7 +41,16 @@ class BaseWorker(QRunnable):
 			"LEFT JOIN molecular AS m2 ON m2.id=j.lid WHERE j.id=?"
 		)
 		job = DB.get_row(sql, (_id,))
-		grid = DB.get_row("SELECT * FROM grid WHERE rid=?", (job[1],))
+		grid = DB.get_row("SELECT * FROM grid WHERE rid=? LIMIT 1", (job[1],))
+
+		if not grid:
+			grid = [0, job[1]]
+			spacing = GridBoxSettingPanel.params.spacing
+			sql = "SELECT pdb FROM molecular WHERE id=? LIMIT 1"
+			pdb_str = DB.get_one(sql, (job[1],))
+			dims = get_dimension_from_pdb(pdb_str, spacing)
+			grid.extend(dims)
+			grid.append(spacing)
 
 		return AttrDict({
 			'id': job[0],
@@ -62,6 +72,10 @@ class BaseWorker(QRunnable):
 	def save_pose(self, poses):
 		sql = "INSERT INTO pose VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
 		DB.insert_rows(sql, poses)
+		sql = "SELECT id, min(energy) FROM pose WHERE jid=?"
+		pid = DB.get_one(sql, (self.job.id,))
+		sql = "INSERT INTO best VALUES (?,?)"
+		DB.query(sql, (None, pid))
 		sql = "SELECT id FROM pose WHERE jid=?"
 		return DB.get_column(sql, (self.job.id,))
 

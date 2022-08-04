@@ -14,7 +14,7 @@ __all__ = ['AttrDict', 'draw_gridbox', 'convert_dimension_to_coordinates',
 	'get_molecule_center_from_pdbqt', 'time_format', 'convert_pdbqt_to_pdb',
 	'ligand_efficiency_assessment', 'get_molecule_information', 'convert_ki_to_log',
 	'time_elapse', 'generate_complex_pdb', 'get_complex_interactions',
-	'interaction_visualize'
+	'interaction_visualize', 'get_dimension_from_pdb'
 ]
 
 class AttrDict(dict):
@@ -74,11 +74,37 @@ def convert_coordinates_to_dimension(points, spacing):
 	if z % 2 != 0:
 		z -= 1
 
-	cx = xmin + x_size/2
-	cy = ymin + y_size/2
-	cz = zmin + z_size/2
+	cx = round(xmin + x_size/2, 3)
+	cy = round(ymin + y_size/2, 3)
+	cz = round(zmin + z_size/2, 3)
+
+	x = 126 if x > 126 else x
+	y = 126 if y > 126 else y
+	z = 126 if z > 126 else z
 
 	return (x, y, z, cx, cy, cz)
+
+def get_dimension_from_pdb(pdb_str, spacing):
+	obc = openbabel.OBConversion()
+	obc.SetInFormat('pdb')
+	mol = openbabel.OBMol()
+	obc.ReadString(mol, pdb_str)
+	atoms = openbabel.OBMolAtomIter(mol)
+	x_coords = []
+	y_coords = []
+	z_coords = []
+
+	for atom in atoms:
+		x_coords.append(atom.x())
+		y_coords.append(atom.y())
+		z_coords.append(atom.z())
+
+	points = [
+		(min(x_coords), min(y_coords), min(z_coords)),
+		(max(x_coords), max(y_coords), max(z_coords))
+	]
+
+	return convert_coordinates_to_dimension(points, spacing)
 
 def draw_gridbox(cmd, data):
 	cmd.draw_box(
@@ -604,5 +630,9 @@ def interaction_visualize(plcomplex):
 if __name__ == '__main__':
 	import sys
 	infile = sys.argv[1]
-	outfile = infile.replace('pdb', 'pdbqt')
-	convert_other_to_pdbqt(infile, 'pdb', outfile)
+	with open(infile) as fh:
+		pdb_str = fh.read()
+	
+	res = get_dimension_from_pdb(pdb_str, 0.375)
+
+	print(res)

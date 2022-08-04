@@ -10,7 +10,8 @@ __all__ = ['DockeyListView', 'JobTableView', 'PoseTableView',
 	'JobsTableModel', 'JobsTableDelegate', 'PoseTableModel',
 	'HydrogenBondsModel', 'HydrophobicInteractionModel', 'HalogenBondsModel',
 	'SaltBridgesModel', 'WaterBridgesModel', 'PiStackingModel', 'PiCationModel',
-	'MetalComplexModel', 'BindingSiteModel', 'InteractionTableView'
+	'MetalComplexModel', 'BindingSiteModel', 'InteractionTableView',
+	'BestTableView', 'BestTableModel'
 ]
 
 class MoleculeDetailDialog(QDialog):
@@ -336,6 +337,7 @@ class DockeyTableModel(QAbstractTableModel):
 		self.read_count = 0
 		self.total_count = 0
 		self.displayed = []
+		self.custom_headers = []
 		self.endResetModel()
 
 	def clear(self):
@@ -500,11 +502,63 @@ class PoseTableModel(DockeyTableModel):
 				'logKi', ' LE', 'FQ', 'SILE', 'LLE', 'LELP'
 			]
 
+	def select(self):
+		self.read_count = 0
+		self.cache_row = [-1, None]
+
+		self.beginResetModel()
+		self.total_count = DB.get_one(self.count_sql)
+		self.displayed = DB.get_column(self.read_sql)
+		self.read_count = len(self.displayed)
+		self.switch_table(DB.get_option('tool'))
+		self.endResetModel()
+
+		self.row_count.emit(self.total_count)
+
 	def set_job(self, job_id):
-		tool = DB.get_option('tool')
-		self.switch_table(tool)
 		self.job = job_id
 		self.select()
+
+class BestTableModel(PoseTableModel):
+	table = 'best'
+
+	@property
+	def count_sql(self):
+		return "SELECT COUNT(1) FROM {} LIMIT 1".format(self.table)
+
+	@property
+	def get_sql(self):
+		return (
+			"SELECT b.pid,p.jid,m1.name,m2.name,p.energy,p.rmsd1,"
+			"p.rmsd2,p.logki, p.le,p.sile,p.fq,p.lle,p.lelp,p.ki,"
+			"p.mode,p.complex FROM best AS b "
+			"LEFT JOIN pose AS p ON p.id=b.pid "
+			"LEFT JOIN jobs AS j ON j.id=p.jid "
+			"LEFT JOIN molecular AS m1 ON m1.id=j.rid "
+			"LEFT JOIN molecular AS m2 ON m2.id=j.lid "
+			"WHERE b.id=?"
+		)
+
+	@property
+	def read_sql(self):
+		remainder = self.total_count - self.read_count
+		fetch_count = min(self._reads, remainder)
+
+		return "SELECT id FROM {} LIMIT {},{}".format(
+			self.table,
+			self.read_count,
+			fetch_count
+		)
+
+	def switch_table(self, tool):
+		if tool == 'autodock4':
+			self.custom_headers = ['ID', 'Job', 'Receptor', 'Ligand', 'Energy',
+				'cRMSD', 'rRMSD','logKi', 'LE', 'FQ', 'SILE', 'LLE', 'LELP'
+			]
+		elif tool in ['vina', 'qvina']:
+			self.custom_headers = ['ID', 'Job', 'Receptor', 'Ligand', 'Affinity',
+				'lRMSD', 'uRMSD', 'logKi', ' LE', 'FQ', 'SILE', 'LLE', 'LELP'
+			]
 
 class BindingSiteModel(DockeyTableModel):
 	table = 'binding_site'
@@ -792,6 +846,163 @@ class PoseTableView(QTableView):
 
 		with open(pdb, 'w') as fw:
 			for row in DB.query(sql, (jid,)):
+				if row[0]:
+					fw.write(row[0])
+					fw.write('\n')
+
+		self.parent.show_message("Save all poses to {}".format(pdb))
+
+	def save_pose(self):
+		pdb, _ = QFileDialog.getSaveFileName(self.parent, filter="PDB file (*.pdb)")
+
+		if not pdb:
+			return
+
+		pid, _ = self.get_pose_ids()
+		sql = "SELECT mode FROM pose WHERE id=? LIMIT 1"
+		pose = DB.get_one(sql, (pid,))
+
+		with open(pdb, 'w') as fw:
+			fw.write(pose)
+
+		self.parent.show_message("Save pose to {}".format(pdb))
+
+	def save_complex(self):
+		pdb_file, _ = QFileDialog.getSaveFileName(self.parent, filter="PDB file (*.pdb)")
+
+		if not pdb_file:
+			return
+
+		pid, jid = self.get_pose_ids()
+		sql = "SELECT complex FROM pose WHERE id=? LIMIT 1"
+		content = DB.get_one(sql, (pid,))
+
+		with open(pdb_file, 'w') as fw:
+			fw.write(content)
+
+	def view_details(self):
+		pid, _ = self.get_pose_ids()
+		sql = "SELECT * FROM pose WHERE id=? LIMIT 1"
+		pose = DB.get_dict(sql, (pid,))
+
+		tool = DB.get_option('tool')
+		if tool == 'autodock4':
+			titles = ['Run', 'Free energy of binding', 'Cluster RMSD', 'Reference RMSD']
+
+		elif tool in ['vina', 'qvina']:
+			titles = ['Mode', 'Binding affinity', 'RMSD l.b.', 'RMSD u.b.']
+
+		info = (
+			"<table cellspacing='10'>"
+			"<tr><td>{}: </td><td>{}</td></tr>"
+			"<tr><td>{}: </td><td>{}</td></tr>"
+			"<tr><td>{}: </td><td>{}</td></tr>"
+			"<tr><td>{}: </td><td>{}</td></tr>"
+			"<tr><td>Ki: </td><td>{}</td></tr>"
+			"<tr><td>logKi: </td><td>{}</td></tr>"
+			"<tr><td>Ligand efficiency (LE): </d><td>{}</td></tr>"
+			"<tr><td>Size-independent ligand efficiency (SILE): </td><td>{}</td></tr>"
+			"<tr><td>Fit Quality (FQ): </td><td>{}</td></tr>"
+			"<tr><td>Lipophilic ligand efficiency (LLE): </td><td>{}</td></tr>"
+			"<tr><td>Ligand efficiency lipophilic price (LELP): </td><td>{}</td></tr>"
+			"</table>"
+		)
+
+		dlg = MoleculeDetailDialog(self.parent, info.format(
+			titles[0],
+			pose.run,
+			titles[1],
+			pose.energy,
+			titles[2],
+			pose.rmsd1,
+			titles[3],
+			pose.rmsd2,
+			pose.ki,
+			pose.logki,
+			pose.le,
+			pose.sile,
+			pose.fq,
+			pose.lle,
+			pose.lelp
+		))
+		dlg.exec()
+
+class BestTableView(PoseTableView):
+	@Slot()
+	def on_custom_menu(self, pos):
+		self.current_index = self.indexAt(pos)
+		
+		save_pose_act = QAction("Save Selected Pose", self,
+			triggered = self.save_pose
+		)
+		save_pose_act.setDisabled(not self.current_index.isValid())
+		save_all_act = QAction("Save All Poses", self,
+			triggered = self.save_all
+		)
+
+		save_complex_act = QAction("Save Receptor Ligand Complex", self,
+			triggered = self.save_complex
+		)
+		save_complex_act.setDisabled(not self.current_index.isValid())
+
+		export_act = QAction("Export Table", self,
+			triggered = self.export_table
+		)
+
+		view_act = QAction("View Details", self,
+			triggered = self.view_details
+		)
+		view_act.setDisabled(not self.current_index.isValid())
+
+		menu = QMenu(self)
+		
+		menu.addAction(save_pose_act)
+		menu.addAction(save_all_act)
+		menu.addAction(save_complex_act)
+		menu.addSeparator()
+		menu.addAction(export_act)
+		menu.addSeparator()
+		menu.addAction(view_act)
+		menu.popup(self.viewport().mapToGlobal(pos))
+
+	def get_pose_ids(self):
+		if not self.current_index.isValid():
+			return None, None
+
+		row = self.current_index.row()
+		index = self.current_index.model().createIndex(row, 0)
+		pid = index.data(role=Qt.DisplayRole)
+		index = self.current_index.model().createIndex(row, 1)
+		jid = index.data(role=Qt.DisplayRole)
+		return pid, jid
+
+	def export_table(self):
+		out, _ = QFileDialog.getSaveFileName(self.parent, filter="CSV file (*.csv)")
+
+		if not out:
+			return
+
+		headers = self.model().custom_headers
+		sql = self.model().get_sql.split('WHERE')[0]
+
+		with open(out, 'w') as fw:
+			fw.write("{}\n".format(','.join(headers[2:])))
+
+			for row in DB.query(sql):
+				fw.write("{}\n".format(','.join(map(str,row[2:13]))))
+
+		self.parent.show_message("Export table to {}".format(out))
+
+	def save_all(self):
+		pdb, _ = QFileDialog.getSaveFileName(self.parent, filter="PDB file (*.pdb)")
+
+		if not pdb:
+			return
+
+		sql = "SELECT mode FROM pose,best WHERE pose.id=best.pid"
+
+		with open(pdb, 'w') as fw:
+			for row in DB.query(sql):
 				if row[0]:
 					fw.write(row[0])
 					fw.write('\n')

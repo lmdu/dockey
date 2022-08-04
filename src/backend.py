@@ -56,6 +56,10 @@ DB_TABLES = {
 		('mode', 'TEXT'),
 		('complex', 'TEXT')
 	],
+	'best': [
+		('id', 'INTEGER PRIMARY KEY'),
+		('pid', 'INTEGER')
+	],
 	'logs': [
 		('id', 'INTEGER PRIMARY KEY'),
 		('jid', 'INTEGER'),
