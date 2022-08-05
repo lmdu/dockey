@@ -1098,15 +1098,22 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 
 		return len(rows)
 
-	def submit_jobs(self):
-		for job in DB.query("SELECT id FROM jobs"):
-			if self.dock_engine == 'autodock':
-				worker = AutodockWorker(job, self.dock_params)
-			elif self.dock_engine == 'vina':
-				worker = AutodockVinaWorker(job, self.dock_params)
+	def submit_jobs(self, engine=None, params=None):
+		self.generate_job_list()
+
+		for job in self.get_jobs():
+			if engine == 'autodock':
+				worker = AutodockWorker(job, params)
+			elif engine == 'vina':
+				worker = AutodockVinaWorker(job, params)
+			elif engine == 'qvina':
+				worker = QuickVinaWorker(job, params)
 
 			worker.signals.refresh.connect(self.job_model.update_row)
+			worker.signals.finished.connect(self.pose_tab.select)
 			self.pool.start(worker)
+
+		DB.set_option('tool', engine)
 
 	def check_mols(self):
 		receptors = DB.get_one("SELECT 1 FROM molecular WHERE type=1 LIMIT 1")
@@ -1145,6 +1152,9 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		#clear logs
 		DB.query("DELETE FROM logs")
 
+		#delete tool option
+		DB.set_option('tool', '')
+
 		return True
 
 	def run_autodock(self):
@@ -1163,14 +1173,7 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 
 		params = dlg.params
 
-		self.generate_job_list()
-
-		for job in self.get_jobs():
-			worker = AutodockWorker(job, params)
-			worker.signals.refresh.connect(self.job_model.update_row)
-			self.pool.start(worker)
-
-		DB.set_option('tool', 'autodock4')
+		self.submit_jobs('autodock', params)
 
 	def run_autodock_vina(self):
 		if not self.check_mols():
@@ -1188,14 +1191,7 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 
 		params = dlg.params
 
-		self.generate_job_list()
-
-		for job in self.get_jobs():
-			worker = AutodockVinaWorker(job, params)
-			worker.signals.refresh.connect(self.job_model.update_row)
-			self.pool.start(worker)
-
-		DB.set_option('tool', 'vina')
+		self.submit_jobs('vina', params)
 
 	def run_quick_vina_w(self):
 		if not self.check_mols():
@@ -1213,14 +1209,7 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 
 		params = dlg.params
 
-		self.generate_job_list()
-
-		for job in self.get_jobs():
-			worker = QuickVinaWorker(job, params)
-			worker.signals.refresh.connect(self.job_model.update_row)
-			self.pool.start(worker)
-
-		DB.set_option('tool', 'qvina')
+		self.submit_jobs('qvina', params)
 
 	def open_about(self):
 		QMessageBox.about(self, "About dockey", DOCKEY_ABOUT)

@@ -13,7 +13,7 @@ def register_plugin(func):
 
 @register_plugin
 def draw_box(points=([0,0,0],[5,5,5]), show_face=True, bg_x=(1.0,0.0,0.0), bg_y=(0.0,1.0,0.0),
-			 bg_z=(0.0,0.0,1.0), show_edge=True, use_line=True, use_cylinder=True, radius=0.2,
+			 bg_z=(0.0,0.0,1.0), show_edge=True, use_line=True, use_cylinder=False, radius=0.2,
 			 edge_width=2, edge_color=(1.0,1.0,1.0), opacity=50.0):
 
 	([xmin, ymin, zmin], [xmax, ymax, zmax]) = points
@@ -36,8 +36,8 @@ def draw_box(points=([0,0,0],[5,5,5]), show_face=True, bg_x=(1.0,0.0,0.0), bg_y=
 	if show_face:
 		obj.extend([
 			ALPHA, opacity,
-			COLOR, bg_x[0], bg_x[1], bg_x[2],
 			BEGIN, TRIANGLE_STRIP,
+			COLOR, bg_x[0], bg_x[1], bg_x[2],
 			VERTEX, xmin, ymin, zmin, #1
 			VERTEX, xmin, ymin, zmax, #2
 			VERTEX, xmin, ymax, zmin, #3
@@ -148,7 +148,7 @@ def draw_box(points=([0,0,0],[5,5,5]), show_face=True, bg_x=(1.0,0.0,0.0), bg_y=
 			CYLINDER, xmin, ymin, zmin, xmin, ymax, zmin, radius, c[0], c[1], c[2], c[0], c[1], c[2],
 			CYLINDER, xmax, ymin, zmin, xmax, ymax, zmin, radius, c[0], c[1], c[2], c[0], c[1], c[2],
 			CYLINDER, xmin, ymin, zmax, xmin, ymax, zmax, radius, c[0], c[1], c[2], c[0], c[1], c[2],
-			CYLINDER, xmax, ymin, zmax, xmax, ymax, zmax, radius, c[0], c[1], c[2], c[0], c[1], c[2],
+			CYLINDER, xmax, ymin, zmax, xmax, ymax, zmax, radius, c[0], c[1], c[2], c[0], c[1], c[2]
 		])
 
 	#auto_zoom = cmd.get('auto_zoom')

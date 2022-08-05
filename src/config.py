@@ -111,6 +111,15 @@ DOCKEY_ABOUT = """
 			</a>
 		</td>
 	</tr>
+	<tr>
+		<td>QuickVina-W</td>
+		<td>v1.1</td>
+		<td>
+			<a href="https://qvina.github.io/">
+				https://qvina.github.io
+			</a>
+		</td>
+	</tr>
 </table>
 """.format(
 	version = DOCKEY_VERSION,

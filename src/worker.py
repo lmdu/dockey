@@ -16,7 +16,7 @@ from prepare import *
 __all__ = ['AutodockWorker', 'AutodockVinaWorker', 'QuickVinaWorker']
 
 class WorkerSignals(QObject):
-	#finished = Signal()
+	finished = Signal()
 	#error = Signal(str)
 	#progress = Signal(int)
 	refresh = Signal(int)
@@ -151,6 +151,7 @@ class BaseWorker(QRunnable):
 		sql = "UPDATE jobs SET progress=?,finished=? WHERE id=?"
 		DB.query(sql, (100, finished, self.job.id))
 		self.signals.refresh.emit(self.job.id)
+		self.signals.finished.emit()
 
 	def update_error(self, error):
 		sql = "UPDATE jobs SET status=?,message=? WHERE id=?"

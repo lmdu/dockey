@@ -337,7 +337,6 @@ class DockeyTableModel(QAbstractTableModel):
 		self.read_count = 0
 		self.total_count = 0
 		self.displayed = []
-		self.custom_headers = []
 		self.endResetModel()
 
 	def clear(self):
@@ -492,8 +491,8 @@ class PoseTableModel(DockeyTableModel):
 
 	#	return super(PoseTableModel, self).data(index, role)
 
-	def switch_table(self, tool):
-		if tool == 'autodock4':
+	def switch_table(self, tool=None):
+		if tool == 'autodock':
 			self.custom_headers = ['ID', 'Job', 'Run', 'Energy', 'cRMSD', 'rRMSD',
 				'logKi', 'LE', 'FQ', 'SILE', 'LLE', 'LELP'
 			]
@@ -501,6 +500,8 @@ class PoseTableModel(DockeyTableModel):
 			self.custom_headers = ['ID', 'Job', 'Mode', 'Affinity', 'lRMSD', 'uRMSD',
 				'logKi', ' LE', 'FQ', 'SILE', 'LLE', 'LELP'
 			]
+		else:
+			self.custom_headers = ['ID', 'Job']
 
 	def select(self):
 		self.read_count = 0
@@ -511,6 +512,7 @@ class PoseTableModel(DockeyTableModel):
 		self.displayed = DB.get_column(self.read_sql)
 		self.read_count = len(self.displayed)
 		self.switch_table(DB.get_option('tool'))
+		self.column_count = len(self.custom_headers)
 		self.endResetModel()
 
 		self.row_count.emit(self.total_count)
@@ -518,6 +520,11 @@ class PoseTableModel(DockeyTableModel):
 	def set_job(self, job_id):
 		self.job = job_id
 		self.select()
+
+	def clear(self):
+		DB.query("DELETE FROM {}".format(self.table))
+		self.switch_table()
+		self.reset()
 
 class BestTableModel(PoseTableModel):
 	table = 'best'
@@ -550,8 +557,8 @@ class BestTableModel(PoseTableModel):
 			fetch_count
 		)
 
-	def switch_table(self, tool):
-		if tool == 'autodock4':
+	def switch_table(self, tool=None):
+		if tool == 'autodock':
 			self.custom_headers = ['ID', 'Job', 'Receptor', 'Ligand', 'Energy',
 				'cRMSD', 'rRMSD','logKi', 'LE', 'FQ', 'SILE', 'LLE', 'LELP'
 			]
@@ -559,6 +566,8 @@ class BestTableModel(PoseTableModel):
 			self.custom_headers = ['ID', 'Job', 'Receptor', 'Ligand', 'Affinity',
 				'lRMSD', 'uRMSD', 'logKi', ' LE', 'FQ', 'SILE', 'LLE', 'LELP'
 			]
+		else:
+			self.custom_headers = ['ID', 'Job']
 
 class BindingSiteModel(DockeyTableModel):
 	table = 'binding_site'
@@ -886,7 +895,7 @@ class PoseTableView(QTableView):
 		pose = DB.get_dict(sql, (pid,))
 
 		tool = DB.get_option('tool')
-		if tool == 'autodock4':
+		if tool == 'autodock':
 			titles = ['Run', 'Free energy of binding', 'Cluster RMSD', 'Reference RMSD']
 
 		elif tool in ['vina', 'qvina']:
@@ -1043,7 +1052,7 @@ class BestTableView(PoseTableView):
 		pose = DB.get_dict(sql, (pid,))
 
 		tool = DB.get_option('tool')
-		if tool == 'autodock4':
+		if tool == 'autodock':
 			titles = ['Run', 'Free energy of binding', 'Cluster RMSD', 'Reference RMSD']
 
 		elif tool in ['vina', 'qvina']:
