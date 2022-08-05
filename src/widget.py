@@ -605,6 +605,9 @@ class InteractionTabWidget(QTabWidget):
 			self.parent.cmd.delete('all')
 			self.parent.cmd.initialize()
 			self.parent.cmd.read_pdbstr(self.complex_pdb, 'complex')
+			self.parent.cmd.color('cyan', 'organic')
+			self.parent.cmd.color('red', 'elem O and organic')
+			self.parent.cmd.color('blue', 'elem N and organic')
 
 	@Slot()
 	def on_binding_site_changed(self, site):
