@@ -608,6 +608,7 @@ class InteractionTabWidget(QTabWidget):
 			self.parent.cmd.color('cyan', 'organic')
 			self.parent.cmd.color('red', 'elem O and organic')
 			self.parent.cmd.color('blue', 'elem N and organic')
+			self.parent.cmd.color('yellow', 'elem S and organic')
 
 	@Slot()
 	def on_binding_site_changed(self, site):

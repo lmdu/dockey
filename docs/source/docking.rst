@@ -1,0 +1,140 @@
+Molecular Docking
+=================
+
+Search space
+------------
+
+Before running molecular docking, you can specify search space for receptor by adjusting grid box size and position. **Otherwise, the whole space of receptor will be used as default search space**.
+
+#. You can go to **Grid** menu -> **Draw Bounding Box** to draw a grid box enveloping the whole receptor.
+
+#. You can also go to **Grid** menu -> **Draw Custom Box** to draw a grid box whose size and position can be adjusted through gridbox panel.
+
+.. rst-class:: wy-text-center
+
+	|grid|
+
+In gridbox panel, you can change the face color and border width of box. The value of spacing, number of points in each dimension (x, y, z), centre coordinates (x, y, z) can be increased and decreased with mouse wheel while hovering over or focusing on input field. 
+
+You are allowed to observe the box size and position in PyMOL view.
+
+.. note::
+
+	The value of points in each dimension must be even number.
+
+Perform docking
+---------------
+
+Currently, Dockey supports three docking engines: AutoDock4, AutoDock Vina and QuickVina-W. You can only select one of them to perform docking. When docking finished, if you select another engine to dock, the previous docked results will be automatically deleted.
+
+Run AutoDock4
+~~~~~~~~~~~~~
+
+Go to **Run** menu -> **AutoDock** to start AutoDock4 docking. If Dockey has completed docking jobs, you will be prompted with a dialog box asking whether or not to delete the previous jobs and docking results, and genreate new docking jobs.
+
+.. rst-class:: wy-text-center
+
+	|taskdlg|
+
+There are four steps to start AutoDock4. You can click ``<Back`` or ``Next>`` button in each page to switch step. At last, you can click ``Finish`` button to generate job queue and start docking jobs.
+
+**Step 1**, select a search algorithm: Genetic Algorithm (GA), Lamarckian GA, Simulated Annealing or Local Search. 
+
+.. rst-class:: wy-text-center
+
+	|ad1|
+
+.. note::
+
+	Lamarckian GA is most widely used search algorithm.
+
+**Step 2**, set parameters for selected algorithm.
+
+.. rst-class:: wy-text-center
+
+	|ad2|
+
+**Step 3**, set other docking parameters.
+
+.. rst-class:: wy-text-center
+
+	|ad3|
+
+**Step 4**, confirm docking jobs, you will get the number of docking jobs.
+
+.. rst-class:: wy-text-center
+
+	|ad4|
+
+.. note::
+
+	The meanings of above parameters can be found in `AutoDock4 manual <https://autodock.scripps.edu/wp-content/uploads/sites/56/2021/10/AutoDock4.2.6_UserGuide.pdf>`_. For simplicity, you can use the default value of parameters.
+
+Run AutoDock Vina
+~~~~~~~~~~~~~~~~~
+
+AudoDock Vina is more simple than AutoDock4, only two steps need to start Vina.
+
+**Step 1**, set docking parameters for AutoDock Vina.
+
+.. rst-class:: wy-text-center
+
+	|vina1|
+
+**Step 2**, comfirm docking jobs.
+
+.. rst-class:: wy-text-center
+
+	|vina2|
+
+Run QuickVina-W
+~~~~~~~~~~~~~~~
+
+Similar to AutoDock Vina, QuickVina-W also needs two steps.
+
+**Step 1**, set docking parameters for QuickVina-W.
+
+.. rst-class:: wy-text-center
+
+	|qvinaw1|
+
+**Step 2**, comfirm docking jobs.
+
+.. rst-class:: wy-text-center
+
+	|qvinaw2|
+
+Docking Jobs
+------------
+
+After setting finished for one of docking engines, the each ligand will be docked to each receptor, the generated job queue can be viewed in job table.
+
+.. rst-class:: wy-text-center
+
+	|jobtb|
+
+In job table, you can view the status and progress of each docking job. The status includes pending, running, success and failure.
+
+
+.. |grid| image:: _static/grid.png
+	:width: 500
+.. |taskdlg| image:: _static/taskdlg.png
+	:width: 500
+.. |ad1| image:: _static/ad1.png
+	:width: 500
+.. |ad2| image:: _static/ad2.png
+	:width: 500
+.. |ad3| image:: _static/ad3.png
+	:width: 500
+.. |ad4| image:: _static/ad4.png
+	:width: 500
+.. |vina1| image:: _static/vina1.png
+	:width: 500
+.. |vina2| image:: _static/vina2.png
+	:width: 500
+.. |qvinaw1| image:: _static/qvinaw1.png
+	:width: 500
+.. |qvinaw2| image:: _static/qvinaw2.png
+	:width: 500
+.. |jobtb| image:: _static/jobtb.png
+	:width: 400

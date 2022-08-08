@@ -259,7 +259,7 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		#self.mol_viewer.header().hide()
 		self.mol_viewer = DockeyListView(self)
 		self.mol_viewer.clicked.connect(self.on_molecular_changed)
-		self.mol_dock = QDockWidget("Moleculars", self)
+		self.mol_dock = QDockWidget("Molecules", self)
 		self.mol_dock.setAllowedAreas(Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea)
 		self.mol_dock.setWidget(self.mol_viewer)
 		self.addDockWidget(Qt.LeftDockWidgetArea, self.mol_dock)
