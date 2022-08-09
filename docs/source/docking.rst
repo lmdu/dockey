@@ -1,6 +1,17 @@
 Molecular Docking
 =================
 
+Docking engines
+---------------
+
+Firstly, you should specify the location of docking engines to ensure that the Dockey can invoke the docking engines.
+
+Go to **Edit** menu -> **Settings** -> **Docking Tools** tab to open the docking engine setting dialog in where you can select the path of docking engines.
+
+.. rst-class:: wy-text-center
+
+	|docker|
+
 Search space
 ------------
 
@@ -115,9 +126,33 @@ After setting finished for one of docking engines, the each ligand will be docke
 
 In job table, you can view the status and progress of each docking job. The status includes pending, running, success and failure.
 
+You are allowed to view the start time and end time of job by using **View Details** in job table right-click menu.
+
+.. rst-class:: wy-text-center
+
+	|jobdt|
+
+You are also allowed to view the log files, config files and output files generated during job running.
+
+.. rst-class:: wy-text-center
+
+	|joblog|
+
+Parallel docking
+----------------
+
+The Dockey allows more than one job to run concurrently. You can go to **Edit** menu -> **Settings** -> **Job Manager** tab to set the number of jobs that can run concurrently.
+
+.. rst-class:: wy-text-center
+
+	|jobmg|
+
+.. note::
+
+	The more concurrent running jobs will consume more computing resources including CPUs and Memory. Generally, the number of parallel jobs is less than the maximum number of CPUs.
 
 .. |grid| image:: _static/grid.png
-	:width: 500
+	:width: 600
 .. |taskdlg| image:: _static/taskdlg.png
 	:width: 500
 .. |ad1| image:: _static/ad1.png
@@ -138,3 +173,11 @@ In job table, you can view the status and progress of each docking job. The stat
 	:width: 500
 .. |jobtb| image:: _static/jobtb.png
 	:width: 400
+.. |jobdt| image:: _static/jobdt.png
+	:width: 400
+.. |joblog| image:: _static/joblog.png
+	:width: 600
+.. |docker| image:: _static/docker.png
+	:width: 500
+.. |jobmg| image:: _static/jobmg.png
+	:width: 500

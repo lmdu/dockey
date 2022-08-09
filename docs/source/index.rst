@@ -28,6 +28,8 @@ Molecular docking and virtual screening
    overview
    prepare
    docking
+   pose
+   interaction
 
 .. |logo| image:: _static/logo.svg
    :width: 150
