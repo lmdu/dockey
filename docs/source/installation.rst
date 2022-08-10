@@ -153,6 +153,9 @@ After installation, you should set the permissions following:
 	sudo xattr -r -d com.apple.quarantine /Applications/Dockey.app
 
 
-.. |windows| image:: _static/windows.svg
-.. |linux| image:: _static/ubuntu.svg
-.. |macos| image:: _static/apple.svg
+.. |windows| image:: _static/windows.png
+	:width: 24
+.. |linux| image:: _static/ubuntu.png
+	:width: 24
+.. |macos| image:: _static/apple.png
+	:width: 24

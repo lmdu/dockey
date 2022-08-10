@@ -28,7 +28,7 @@
    interaction
    visualization
 
-.. |logo| image:: _static/logo.svg
+.. |logo| image:: _static/logo.png
    :width: 150
 
 Indices and tables

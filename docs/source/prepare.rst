@@ -76,7 +76,7 @@ First, click one receptor in molecular list to view in PyMOL view, and then:
 
 		|delchain|
 
-.. |new| image:: _static/new.svg
+.. |new| image:: _static/new.png
 	:width: 22
 .. |pdb| image:: _static/pdb.png
 	:width: 400

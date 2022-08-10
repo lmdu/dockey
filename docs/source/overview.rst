@@ -46,23 +46,23 @@ Overview
 	* Go to **View** menu -> **Show Interaction Table** to show or hide this table
 
 .. |overview| image:: _static/overview.png
-.. |new| image:: _static/new.svg
+.. |new| image:: _static/new.png
 	:width: 28
-.. |open| image:: _static/open.svg
+.. |open| image:: _static/open.png
 	:width: 28
-.. |mol| image:: _static/molecular.svg
+.. |mol| image:: _static/molecular.png
 	:width: 28
-.. |job| image:: _static/job.svg
+.. |job| image:: _static/job.png
 	:width: 28
-.. |pose| image:: _static/pose.svg
+.. |pose| image:: _static/pose.png
 	:width: 28
-.. |share| image:: _static/share.svg
+.. |share| image:: _static/share.png
 	:width: 28
-.. |box| image:: _static/box.svg
+.. |box| image:: _static/box.png
 	:width: 28
-.. |grid| image:: _static/bounding.svg
+.. |grid| image:: _static/bounding.png
 	:width: 28
-.. |save| image:: _static/image.svg
+.. |save| image:: _static/image.png
 	:width: 28
-.. |cmd| image:: _static/cmd.svg
+.. |cmd| image:: _static/cmd.png
 	:width: 28
