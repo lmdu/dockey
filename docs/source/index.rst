@@ -7,7 +7,7 @@
 
 	|logo|
 
-	Dockey 
+	Dockey
 	======
 
 	Molecular docking and virtual screening
