@@ -5,19 +5,15 @@
 
 .. rst-class:: wy-text-center
 
-|logo|
+	|logo|
 
-.. rst-class:: wy-text-center
+	Dockey 
+	======
 
-Dockey 
-======
+	Molecular docking and virtual screening
+	---------------------------------------
 
-Molecular docking and virtual screening
----------------------------------------
-
-**Du et al. Dockey: a modern integrated tool for molecular docking and virtual screening.**
-
-.. rst-class:: wy-text-left
+	**Du et al. Dockey: a modern integrated tool for molecular docking and virtual screening.**
 
 .. toctree::
    :maxdepth: 2
