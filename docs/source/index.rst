@@ -30,6 +30,7 @@ Molecular docking and virtual screening
    docking
    pose
    interaction
+   visualization
 
 .. |logo| image:: _static/logo.svg
    :width: 150

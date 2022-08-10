@@ -62,6 +62,19 @@ You can use **View Details** to obtain detailed information of molecule includin
 
 	|molinfo|
 
+Receptor Preprocessing
+----------------------
+
+First, click one receptor in molecular list to view in PyMOL view, and then:
+
+#. Go to **Edit** menu -> **Remove Water** to delete water from receptor.
+#. Go to **Edit** menu -> **Remove Solvent** to delete solvent from receptor.
+#. Go to **Edit** menu -> **Remove Organic** to delete ligand from complex.
+#. Go to **Edit** menu -> **Remove Chain** to select a chain to delete.
+
+	.. rst-class:: wy-text-center
+
+		|delchain|
 
 .. |new| image:: _static/new.svg
 	:width: 22
@@ -75,3 +88,5 @@ You can use **View Details** to obtain detailed information of molecule includin
 	:width: 400
 .. |molinfo| image:: _static/molinfo.png
 	:width: 400
+.. |delchain| image:: _static/delchain.png
+	:width: 300

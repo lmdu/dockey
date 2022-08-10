@@ -74,6 +74,9 @@ You can click one pose in best pose table or job pose table to view the 3D struc
 
 	|poseview|
 
+#. Go to **File** menu -> **Export As Image** to save the 3D structure in PyMOL view to PNG file.
+#. Go to **File** menu -> **Export As File** to save the content of PyMOL view to pdb file.
+
 .. |bestpose| image:: _static/bestpose.png
 .. |jobpose| image:: _static/jobpose.png
 .. |posemenu| image:: _static/posemenu.png
