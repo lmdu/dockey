@@ -24,6 +24,11 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 
 	def __init__(self):
 		super(DockeyMainWindow, self).__init__()
+		self.job_query = None
+		self.job_params = None
+		self.job_engine = None
+		self.job_mutex = QMutex()
+
 		self.pymol_actions = {}
 		self.pool = QThreadPool(self)
 		#self.pool.setMaxThreadCount(3)
@@ -439,6 +444,12 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		)
 		self.project_ready.connect(self.import_ligand_act.setEnabled)
 
+		self.import_ligand_dir_act = QAction("&Import Ligands from Directory", self,
+			disabled = True,
+			triggered = self.import_ligands_from_dir
+		)
+		self.project_ready.connect(self.import_ligand_dir_act.setEnabled)
+
 		self.import_zinc_act = QAction("&Import Ligand from ZINC", self,
 			disabled = True,
 			triggered = self.import_ligand_from_zinc
@@ -516,9 +527,12 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 			triggered = self.concurrent_job_number
 		)
 
-		self.setting_act = QAction("Settings", self,
-			triggered = self.open_settings_dialog,
-			shortcut = QKeySequence.Preferences
+		self.setting_act = QAction("Molecular Docking Settings", self,
+			triggered = self.open_settings_dialog
+		)
+
+		self.prepare_act = QAction("Molecular Preparation Settings", self,
+			triggered = self.open_prepare_dialog
 		)
 
 		#view actions
@@ -627,6 +641,7 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		self.file_menu.addAction(self.import_receptor_act)
 		self.file_menu.addAction(self.import_pdb_act)
 		self.file_menu.addAction(self.import_ligand_act)
+		self.file_menu.addAction(self.import_ligand_dir_act)
 		self.file_menu.addAction(self.import_zinc_act)
 		self.file_menu.addSeparator()
 		self.file_menu.addAction(self.export_image_act)
@@ -653,6 +668,7 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		#self.edit_menu.addAction(self.dock_tool_act)
 		#self.edit_menu.addAction(self.job_num_act)
 		self.edit_menu.addAction(self.setting_act)
+		self.edit_menu.addAction(self.prepare_act)
 
 		self.view_menu = self.menuBar().addMenu("&View")
 		#self.view_menu.addAction(self.open_project_dir_act)
@@ -770,6 +786,10 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		dlg = DockeyConfigDialog(self)
 		dlg.exec()
 
+	def open_prepare_dialog(self):
+		dlg = MolecularPrepareDialog(self)
+		dlg.exec()
+
 	def new_project(self):
 		if DB.active():
 			ret = QMessageBox.warning(self, "Warning",
@@ -882,7 +902,14 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		if not receptors:
 			return
 
-		self.import_moleculars(receptors, 1)
+		importor = ImportMoleculeFromFile(receptors, 1)
+		importor.signals.message.connect(self.show_message)
+		importor.signals.failure.connect(self.show_error_message)
+		importor.signals.success.connect(self.mol_model.select)
+		pool = QThreadPool.globalInstance()
+		pool.start(importor)
+
+		#self.import_moleculars(receptors, 1)
 
 	def import_receptor_from_pdb(self):
 		#pdb_url = PDBDownloader.get_url(self)
@@ -904,7 +931,26 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		if not ligands:
 			return
 
-		self.import_moleculars(ligands, 2)
+		#self.import_moleculars(ligands, 2)
+		importor = ImportMoleculeFromFile(ligands, 2)
+		importor.signals.message.connect(self.show_message)
+		importor.signals.failure.connect(self.show_error_message)
+		importor.signals.success.connect(self.mol_model.select)
+		pool = QThreadPool.globalInstance()
+		pool.start(importor)
+
+	def import_ligands_from_dir(self):
+		folder = QFileDialog.getExistingDirectory(self)
+
+		if not folder:
+			return
+
+		importor = ImportMoleculeFromDir(folder, 2)
+		importor.signals.message.connect(self.show_message)
+		importor.signals.failure.connect(self.show_error_message)
+		importor.signals.success.connect(self.mol_model.select)
+		pool = QThreadPool.globalInstance()
+		pool.start(importor)
 
 	def import_ligand_from_zinc(self):
 		#zinc_url = ZincDownloader.get_url(self)
@@ -1062,29 +1108,10 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		self.box_adjuster.params.reset()
 		DB.query("DELETE FROM grid WHERE id=?", (r.id,))
 
-	def get_jobs(self):
-		for row in DB.query("SELECT id FROM jobs"):
-			yield row[0]
-
 	def generate_job_list(self):
+		'''
 		receptors = DB.get_column("SELECT id FROM molecular WHERE type=1")
 		ligands = DB.get_column("SELECT id FROM molecular WHERE type=2")
-
-		# check grid box of receptors
-		#grids = DB.get_column("SELECT rid FROM grid")
-
-		# receptors with no grid box
-		#rng = set(receptors) - set(grids)
-
-		#if rng:
-		#	sql = "SELECT name FROM molecular WHERE id IN ({})".format(
-		#		','.join(map(str,rng))
-		#	)
-		#	rs = DB.get_column(sql)
-		#	QMessageBox.critical(self, 'Error',
-		#		"No grid box was set for receptor {}".format(','.join(rs))
-		#	)
-		#	return False
 
 		rows = []
 		for r in receptors:
@@ -1097,23 +1124,56 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		self.job_model.select()
 
 		return len(rows)
+		'''
+		DB.set_option('tool', self.job_engine)
+		#sql = "SELECT 1 FROM jobs LIMIT 1"
+		#if DB.get_exists(sql):
+		#	sql = "UPDATE jobs SET status=?,progress=?,started=?,finished=?,message=?"
+		#	DB.query(sql, (4, 0, 0, 0, None))
+		#	self.job_model.select()
+		#	self.start_jobs()
+		#else:		
+		thread = JobListGenerator()
+		thread.signals.message.connect(self.show_message)
+		thread.signals.success.connect(self.job_model.select)
+		thread.signals.success.connect(self.start_jobs)
+		pool = QThreadPool.globalInstance()
+		pool.start(thread)
 
-	def submit_jobs(self, engine=None, params=None):
-		self.generate_job_list()
+	def start_jobs(self):
+		self.job_query = DB.query("SELECT id FROM jobs")
+		settings = QSettings()
+		num = settings.value('Job/concurrent', 1, int) * 2
 
-		for job in self.get_jobs():
-			if engine == 'autodock':
-				worker = AutodockWorker(job, params)
-			elif engine == 'vina':
-				worker = AutodockVinaWorker(job, params)
-			elif engine == 'qvina':
-				worker = QuickVinaWorker(job, params)
+		for i in range(num):
+			self.submit_job()
 
-			worker.signals.refresh.connect(self.job_model.update_row)
-			worker.signals.finished.connect(self.pose_tab.select)
-			self.pool.start(worker)
+	def submit_job(self):
+		self.job_mutex.lock()
+		job = self.job_query.fetchone()
+		self.job_mutex.unlock()
 
-		DB.set_option('tool', engine)
+		if not job:
+			return
+
+		job = job[0]
+
+		if self.job_engine == 'autodock':
+			worker = AutodockWorker(job, self.job_params)
+		elif self.job_engine == 'vina':
+			worker = AutodockVinaWorker(job, self.job_params)
+		elif self.job_engine == 'qvina':
+			worker = QuickVinaWorker(job, self.job_params)
+
+		worker.signals.refresh.connect(self.job_model.update_row)
+		worker.signals.finished.connect(self.pose_tab.select)
+		worker.signals.finished.connect(self.submit_job)
+
+		sql = "UPDATE jobs SET status=? WHERE id=?"
+		DB.query(sql, (0, job))
+		self.job_model.update_row(job)
+
+		self.pool.start(worker)
 
 	def check_mols(self):
 		receptors = DB.get_one("SELECT 1 FROM molecular WHERE type=1 LIMIT 1")
@@ -1138,7 +1198,7 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 
 		if jobs:
 			ret = QMessageBox.warning(self, "Warning",
-				"Are you sure you want to delete the previous jobs and submit new jobs?",
+				"Are you sure you want to delete the previous jobs and analysis results?",
 				QMessageBox.Yes | QMessageBox.No
 			)
 
@@ -1171,9 +1231,11 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		if not dlg.exec():
 			return
 
-		params = dlg.params
+		self.job_params = dlg.params
+		self.job_engine = 'autodock'
+		self.generate_job_list()
 
-		self.submit_jobs('autodock', params)
+		#self.submit_jobs('autodock', params)
 
 	def run_autodock_vina(self):
 		if not self.check_mols():
@@ -1189,9 +1251,10 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		if not dlg.exec():
 			return
 
-		params = dlg.params
-
-		self.submit_jobs('vina', params)
+		self.job_params = dlg.params
+		self.job_engine = 'vina'
+		self.generate_job_list()
+		#self.submit_jobs('vina', params)
 
 	def run_quick_vina_w(self):
 		if not self.check_mols():
@@ -1207,9 +1270,10 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		if not dlg.exec():
 			return
 
-		params = dlg.params
-
-		self.submit_jobs('qvina', params)
+		self.job_params = dlg.params
+		self.job_engine = 'qvina'
+		self.generate_job_list()
+		#self.submit_jobs('qvina', params)
 
 	def open_about(self):
 		QMessageBox.about(self, "About dockey", DOCKEY_ABOUT)

@@ -16,7 +16,8 @@ __all__ = ['BrowseInput', 'CreateProjectDialog', 'AutodockConfigDialog',
 			'AutodockVinaConfigDialog', 'ExportImageDialog', 'FeedbackBrowser',
 			'PymolSettingDialog', 'DockingToolSettingDialog', 'InteractionTabWidget',
 			'JobConcurrentSettingDialog', 'DockeyConfigDialog', 'PDBDownloader',
-			'ZINCDownloader', 'QuickVinaConfigDialog', 'PoseTabWidget'
+			'ZINCDownloader', 'QuickVinaConfigDialog', 'PoseTabWidget',
+			'MolecularPrepareDialog'
 			]
 
 class BrowseInput(QWidget):
@@ -408,12 +409,13 @@ class JobConcurrentSettingDialog(QDialog):
 	def __init__(self, parent=None):
 		super(JobConcurrentSettingDialog, self).__init__(parent)
 		self.parent = parent
-		self.settings = QSettings()
 		self.setWindowTitle("Concurrent Job Setting")
+		self.settings = QSettings()
+		self.job_num = self.settings.value('Job/concurrent', 1, int)
 		self.layout = QVBoxLayout()
 		self.label = QLabel("Number of concurrent running jobs", self)
 		self.number = QSpinBox(self)
-		self.number.setValue(self.settings.value('Job/concurrent', 1, int))
+		self.number.setValue(self.job_num)
 		self.number.setRange(1, max(1, psutil.cpu_count()-2))
 		self.number.valueChanged.connect(self.on_job_number_changed)
 		self.layout.addWidget(self.label)
@@ -422,7 +424,6 @@ class JobConcurrentSettingDialog(QDialog):
 
 	@Slot()
 	def on_job_number_changed(self, num):
-		self.parent.pool.setMaxThreadCount(num)
 		self.settings.setValue('Job/concurrent', num)
 
 class PoseTabWidget(QTabWidget):
@@ -645,7 +646,6 @@ class InteractionTabWidget(QTabWidget):
 		for i in range(8):
 			self.widget(i).model().reset()
 
-
 class DockeyConfigDialog(QDialog):
 	def __init__(self, parent):
 		super(DockeyConfigDialog, self).__init__(parent)
@@ -764,10 +764,212 @@ class DockeyConfigDialog(QDialog):
 		val = self.settings.value('Job/concurrent', 1, int)
 		num = self.thread_input.value()
 
-		if num == val:
+		if num <= val:
 			return
 
 		self.parent.pool.setMaxThreadCount(num)
+		active = self.parent.pool.activeThreadCount()
+		wait = val * 2 - active
+		new = num - wait + 1
+
+		if new < 0:
+			new = 1
+
+		for i in range(new):
+			self.parent.submit_job()
+
+class MolecularPrepareDialog(QDialog):
+	def __init__(self, parent=None):
+		super(MolecularPrepareDialog, self).__init__(parent)
+		self.setWindowTitle("Molecular preparation")
+		self.settings = QSettings()
+		self.tab_widget = QTabWidget(self)
+		main_layout = QVBoxLayout()
+		main_layout.addWidget(self.tab_widget)
+		self.setLayout(main_layout)
+
+		self.create_receptor_tab()
+		self.create_ligand_tab()
+
+	def create_receptor_tab(self):
+		page = QWidget(self)
+		layout = QVBoxLayout()
+		page.setLayout(layout)
+		self.tab_widget.addTab(page, 'Receptor')
+
+		b_h_radio = QRadioButton('Build bonds and add hydrogens', self)
+		b_radio = QRadioButton('Build a single bond from each atom with no bonds to its closest neighbor', self)
+		h_radio = QRadioButton('Add hydrogens', self)
+		c_h_radio = QRadioButton('Add hydrogens only if there are none already', self)
+		non_radio = QRadioButton('Do not make any repairs', self)
+
+		repair_group = QButtonGroup(self)
+		repair_group.addButton(b_h_radio)
+		repair_group.addButton(b_radio)
+		repair_group.addButton(h_radio)
+		repair_group.addButton(c_h_radio)
+		repair_group.addButton(non_radio)
+
+		layout.addWidget(QLabel("<b>Types of repairs to make:</b>", self))
+		repair_layout = QGridLayout()
+		repair_layout.addWidget(non_radio, 0, 0)
+		repair_layout.addWidget(b_h_radio, 0, 1)
+		repair_layout.addWidget(h_radio, 1, 0)
+		repair_layout.addWidget(c_h_radio, 1, 1)
+		repair_layout.addWidget(b_radio, 2, 0, 1, 2)
+		layout.addLayout(repair_layout)
+		
+
+		n_c_radio = QRadioButton("Preserve all input charges, do not add new charges", self)
+		a_g_radio = QRadioButton("Add gasteiger charges", self)
+
+		charge_group = QButtonGroup(self)
+		charge_group.addButton(a_g_radio)
+		charge_group.addButton(n_c_radio)
+
+		charge_layout = QHBoxLayout()
+		charge_layout.addWidget(a_g_radio)
+		charge_layout.addWidget(n_c_radio)
+		layout.addWidget(QLabel("<b>Charges:</b>", self))
+		layout.addLayout(charge_layout)
+
+		c_a_input = QLineEdit(self)
+		atom_layout = QHBoxLayout()
+		atom_layout.addWidget(QLabel("Preserve input charges on specific atom types:", self))
+		atom_layout.addWidget(c_a_input)
+		layout.addLayout(atom_layout)
+		note_label = QLabel("<font color='gray'>Multiple atoms can be separated by space, e.g. Zn Fe</font>", self)
+		note_label.setAlignment(Qt.AlignRight)
+		layout.addWidget(note_label)
+
+		nphs_check = QCheckBox("Merge charges and remove non-polar hydrogens")
+		lps_check = QCheckBox("Merge charges and remove lone pairs")
+		water_check = QCheckBox("Remove water residues")
+		nonstd_check = QCheckBox("Remove chains composed entirely of residues of types other than the standard 20 amino acids")
+		delalt_check = QCheckBox("Remove XX@B atoms and rename XX@A atoms->XX")
+
+		layout.addWidget(QLabel("<b>Clean types:</b>", self))
+		layout.addWidget(nphs_check)
+		layout.addWidget(lps_check)
+		layout.addWidget(water_check)
+		layout.addWidget(nonstd_check)
+		layout.addWidget(delalt_check)
+
+		layout.addWidget(QLabel("<b>Residues:</b>", self))
+		e_check = QCheckBox("Delete every non-standard residue from any chain", self)
+		layout.addWidget(e_check)
+		layout.addWidget(QLabel("<font color='gray'>Any residue whose name is not in below list will be deleted from any chain</font>", self))
+		layout.addWidget(QLabel("<font color='gray'><small>[CYS,ILE,SER,VAL,GLN,LYS,ASN,PRO,THR,PHE,ALA,HIS,GLY,ASP,LEU,ARG,TRP,GLU,TYR,MET,HID,HSP,HIE,HIP,CYX,CSS]<small></font>", self))
+
+	def create_ligand_tab(self):
+		page = QWidget(self)
+		main_layout = QVBoxLayout()
+		page.setLayout(main_layout)
+		self.tab_widget.addTab(page, "Ligand")
+		tool_select = QComboBox(self)
+		tool_select.addItems(["prepare_ligand4", "meeko"])
+		stack_widget = QStackedWidget(self)
+		tool_select.currentIndexChanged.connect(stack_widget.setCurrentIndex)
+
+		tool_layout = QHBoxLayout()
+		tool_layout.addWidget(QLabel("Select a ligand preparation tool:"))
+		tool_layout.addWidget(tool_select)
+
+		main_layout.addLayout(tool_layout)
+		main_layout.addWidget(QLabel("<font color='gray'>prepare_ligand4 recommended for AutoDock4 and meeko recommended for AutoDock Vina</font>", self))
+		main_layout.addWidget(stack_widget)
+
+		#prepare_ligand4.py settings
+		prelig_page = QWidget(self)
+		prelig_layout = QVBoxLayout()
+		prelig_page.setLayout(prelig_layout)
+		stack_widget.addWidget(prelig_page)
+
+		b_h_radio = QRadioButton('Build bonds and add hydrogens', self)
+		b_radio = QRadioButton('Build a single bond from each atom with no bonds to its closest neighbor', self)
+		h_radio = QRadioButton('Add hydrogens', self)
+		c_h_radio = QRadioButton('Add hydrogens only if there are none already', self)
+		non_radio = QRadioButton('Do not make any repairs', self)
+
+		repair_group = QButtonGroup(self)
+		repair_group.addButton(b_h_radio)
+		repair_group.addButton(b_radio)
+		repair_group.addButton(h_radio)
+		repair_group.addButton(c_h_radio)
+		repair_group.addButton(non_radio)
+
+		prelig_layout.addWidget(QLabel("<b>Types of repairs to make:</b>", self))
+		repair_layout = QGridLayout()
+		repair_layout.addWidget(non_radio, 0, 0)
+		repair_layout.addWidget(b_h_radio, 0, 1)
+		repair_layout.addWidget(h_radio, 1, 0)
+		repair_layout.addWidget(c_h_radio, 1, 1)
+		repair_layout.addWidget(b_radio, 2, 0, 1, 2)
+		prelig_layout.addLayout(repair_layout)
+		
+
+		n_c_radio = QRadioButton("Preserve all input charges, do not add new charges", self)
+		a_g_radio = QRadioButton("Add gasteiger charges", self)
+
+		charge_group = QButtonGroup(self)
+		charge_group.addButton(a_g_radio)
+		charge_group.addButton(n_c_radio)
+
+		charge_layout = QHBoxLayout()
+		charge_layout.addWidget(a_g_radio)
+		charge_layout.addWidget(n_c_radio)
+		prelig_layout.addWidget(QLabel("<b>Charges:</b>", self))
+		prelig_layout.addLayout(charge_layout)
+
+		c_a_input = QLineEdit(self)
+		atom_layout = QHBoxLayout()
+		atom_layout.addWidget(QLabel("Preserve input charges on specific atom types:", self))
+		atom_layout.addWidget(c_a_input)
+		prelig_layout.addLayout(atom_layout)
+		note_label = QLabel("<font color='gray'>Multiple atoms can be separated by space, e.g. Zn Fe</font>", self)
+		note_label.setAlignment(Qt.AlignRight)
+		prelig_layout.addWidget(note_label)
+
+		nphs_check = QCheckBox("Merge charges and remove non-polar hydrogens")
+		lps_check = QCheckBox("Merge charges and remove lone pairs")
+
+		prelig_layout.addWidget(QLabel("<b>Clean types:</b>", self))
+		prelig_layout.addWidget(nphs_check)
+		prelig_layout.addWidget(lps_check)
+
+		bb_check = QCheckBox("backbone", self)
+		am_check = QCheckBox("amide", self)
+		gd_check = QCheckBox("guaninium", self)
+
+		allow_layout = QHBoxLayout()
+		allow_layout.addWidget(QLabel("Types of bonds to allow to rotate:", self))
+		allow_layout.addWidget(bb_check)
+		allow_layout.addWidget(am_check)
+		allow_layout.addWidget(gd_check)
+		prelig_layout.addWidget(QLabel("<b>Bounds:</b>", self))
+		prelig_layout.addLayout(allow_layout)
+
+		f_check = QCheckBox("Check for and use largest nonbonded fragment", self)
+		z_check = QCheckBox("Inactivate all active torsions", self)
+		g_check = QCheckBox("Attach all nonbonded fragments", self)
+		s_check = QCheckBox("Attach all nonbonded singletons", self)
+		bound_layout = QGridLayout()
+		bound_layout.addWidget(f_check, 0, 0)
+		bound_layout.addWidget(z_check, 0, 1)
+		bound_layout.addWidget(g_check, 1, 0)
+		bound_layout.addWidget(s_check, 1, 1)
+		prelig_layout.addLayout(bound_layout)
+
+		#meeko settings
+		meeko_page = QWidget(self)
+		meeko_layout = QVBoxLayout()
+		meeko_page.setLayout(meeko_layout)
+		stack_widget.addWidget(meeko_page)
+
+
+		
+
+
 
 class DownloaderDialog(QDialog):
 	title = ''

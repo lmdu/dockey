@@ -367,19 +367,22 @@ class JobsTableModel(DockeyTableModel):
 		0: 'Pending',
 		1: 'Success',
 		2: 'Running',
-		3: 'Error'
+		3: 'Failure',
+		4: 'Queuing'
 	}
 	status_colors = {
 		0: QColor(255, 193, 7),
 		1: QColor(25, 135, 84),
 		2: QColor(13, 110, 253),
-		3: QColor(220, 53, 69)
+		3: QColor(220, 53, 69),
+		4: QColor(188, 188, 188)
 	}
 	status_icons = {
 		0: QIcon(':/icons/pend.svg'),
 		1: QIcon(':/icons/success.svg'),
 		2: QIcon(':/icons/run.svg'),
-		3: QIcon(':/icons/error.svg')
+		3: QIcon(':/icons/error.svg'),
+		4: QIcon(':/icons/queue.svg')
 	}
 
 	@property

@@ -13,7 +13,123 @@ from gridbox import *
 from backend import *
 from prepare import *
 
-__all__ = ['AutodockWorker', 'AutodockVinaWorker', 'QuickVinaWorker']
+__all__ = ['AutodockWorker', 'AutodockVinaWorker', 'QuickVinaWorker',
+	'ImportMoleculeFromFile', 'ImportMoleculeFromDir', 'JobListGenerator',
+]
+
+class ImportSignals(QObject):
+	success = Signal()
+	failure = Signal(str)
+	message = Signal(str)
+
+class ImportMoleculeFromFile(QRunnable):
+	def __init__(self, mol_files, mol_type=0):
+		super(ImportMoleculeFromFile, self).__init__()
+		self.signals = ImportSignals()
+		self.mol_files = mol_files
+		self.mol_type = mol_type
+
+	def run(self):
+		mols = []
+
+		for mol_file in self.mol_files:
+			m = get_molecule_information(mol_file)
+
+			if 'error' in m:
+				self.signals.failure.emit("{}: {}".format(mol_file, m.error))
+				return
+
+			mols.append([None, m.name, self.mol_type, m.pdb, m.atoms,
+				m.bonds, m.hvyatoms, m.residues, m.rotors, m.formula,
+				m.energy, m.weight, m.logp
+			])
+
+			#self.signals.message.emit("Importing {}".format(mol_file))
+
+		sql = "INSERT INTO molecular VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)"
+		DB.insert_rows(sql, mols)
+
+		mol_type = ['', 'receptor(s)', 'ligand(s)'][self.mol_type]
+
+		self.signals.message.emit("Imported {} {}".format(len(mols), mol_type))
+		self.signals.success.emit()
+
+class ImportMoleculeFromDir(QRunnable):
+	def __init__(self, mol_dir, mol_type=0):
+		super(ImportMoleculeFromDir, self).__init__()
+		self.signals = ImportSignals()
+		self.mol_dir = mol_dir
+		self.mol_type = mol_type
+		self.mol_count = 0
+		self.mol_list = []
+
+	def write(self):
+		mol_type = ['', 'receptors', 'ligands'][self.mol_type]
+		sql = "INSERT INTO molecular VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)"
+		if mol_list:
+			self.mol_count += len(self.mol_list)
+			DB.insert_rows(sql, self.mol_list)
+			self.mol_list = []
+			self.signals.message.emit("Imported {} {}".format(self.mol_count, mol_type))
+
+	def run(self):
+		mol_files = QDirIterator(self.mol_dir, QDir.Files)
+		mols = []
+		
+		total_count = 0
+		while mol_files.hasNext():
+			mol_file = mol_files.next()
+
+			m = get_molecule_information(mol_file)
+
+			if 'error' in m:
+				self.signals.failure.emit("{}: {}".format(mol_file, m.error))
+				return
+
+			self.mol_lsit.append([None, m.name, self.mol_type, m.pdb, m.atoms,
+				m.bonds, m.hvyatoms, m.residues, m.rotors, m.formula,
+				m.energy, m.weight, m.logp
+			])
+
+			if len(mols) == 100:
+				self.write()
+
+		self.write()
+		self.signals.success.emit()
+
+class JobSignals(QObject):
+	message = Signal(str)
+	success = Signal()
+
+class JobListGenerator(QRunnable):
+	def __init__(self):
+		super(JobListGenerator, self).__init__()
+		self.signals = JobSignals()
+		self.job_list = []
+		self.job_count = 0
+
+	def write(self):
+		if self.job_list:
+			self.job_count += len(self.job_list)
+			DB.insert_rows("INSERT INTO jobs VALUES (?,?,?,?,?,?,?,?)", self.job_list)
+			self.job_list = []
+			self.signals.message.emit("Generate {} jobs".format(self.job_count))
+
+	def run(self):
+		rsql = "SELECT id FROM molecular WHERE type=1"
+		lsql = "SELECT id FROM molecular WHERE type=2"
+
+		jobs = []
+		total_count = 0
+		for r in DB.query(rsql):
+			for l in DB.query(lsql):
+				self.job_list.append((None, r[0], l[0], 4, 0, 0, 0, None))
+
+				if len(jobs) == 100:
+					self.write()
+
+		self.write()
+		self.signals.success.emit()
 
 class WorkerSignals(QObject):
 	finished = Signal()

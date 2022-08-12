@@ -21,5 +21,6 @@
 	<file>icons/zoomout.svg</file>
 	<file>icons/share.svg</file>
 	<file>icons/image.svg</file>
+	<file>icons/queue.svg</file>
 </qresource>
 </RCC>
