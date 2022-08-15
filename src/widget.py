@@ -793,6 +793,7 @@ class MolecularPrepareDialog(QDialog):
 
 		btn_widget.accepted.connect(self.write_settings)
 		btn_widget.rejected.connect(self.reject)
+		btn_widget.button(QDialogButtonBox.RestoreDefaults).clicked.connect(self.reset_settings)
 		main_layout.addWidget(btn_widget)
 		self.setLayout(main_layout)
 
@@ -824,11 +825,11 @@ class MolecularPrepareDialog(QDialog):
 		c_h_radio = QRadioButton('Add hydrogens only if there are none already', self)
 		non_radio = QRadioButton('Do not make any repairs', self)
 
-		self.register_widget(b_h_radio, 'radio', 'Receptor/repair', 'bonds_hydrogens', str)
-		self.register_widget(b_radio, 'radio', 'Receptor/repair', 'bonds', str)
-		self.register_widget(h_radio, 'radio', 'Receptor/repair', 'hydrogens', str)
-		self.register_widget(c_h_radio, 'radio', 'Receptor/repair', 'checkhydrogens', str)
-		self.register_widget(non_radio, 'radio', 'Receptor/repair', 'None', str)
+		self.register_widget(b_h_radio, 'radio', 'Receptor/repairs', 'bonds_hydrogens', str)
+		self.register_widget(b_radio, 'radio', 'Receptor/repairs', 'bonds', str)
+		self.register_widget(h_radio, 'radio', 'Receptor/repairs', 'hydrogens', str)
+		self.register_widget(c_h_radio, 'radio', 'Receptor/repairs', 'checkhydrogens', str)
+		self.register_widget(non_radio, 'radio', 'Receptor/repairs', 'None', str)
 
 		repair_group = QButtonGroup(self)
 		repair_group.addButton(b_h_radio)
@@ -849,8 +850,8 @@ class MolecularPrepareDialog(QDialog):
 		n_c_radio = QRadioButton("Preserve all input charges, do not add new charges", self)
 		a_g_radio = QRadioButton("Add gasteiger charges", self)
 
-		self.register_widget(n_c_radio, 'radio', 'Receptor/charges', False, bool)
-		self.register_widget(a_g_radio, 'radio', 'Receptor/charges', True, bool)
+		self.register_widget(n_c_radio, 'radio', 'Receptor/charges_to_add', None, None)
+		self.register_widget(a_g_radio, 'radio', 'Receptor/charges_to_add', 'gasteiger', str)
 
 		charge_group = QButtonGroup(self)
 		charge_group.addButton(a_g_radio)
@@ -863,13 +864,13 @@ class MolecularPrepareDialog(QDialog):
 		layout.addLayout(charge_layout)
 
 		c_a_input = QLineEdit(self)
-		self.register_widget(c_a_input, 'edit', 'Receptor/specific', [], list)
+		self.register_widget(c_a_input, 'edit', 'Receptor/preserve_charge_types', '', str)
 
 		atom_layout = QHBoxLayout()
 		atom_layout.addWidget(QLabel("Preserve input charges on specific atom types:", self))
 		atom_layout.addWidget(c_a_input)
 		layout.addLayout(atom_layout)
-		note_label = QLabel("<font color='gray'>Multiple atoms can be separated by comma, e.g. Zn, Fe</font>", self)
+		note_label = QLabel("<font color='gray'>Multiple atoms can be separated by comma, e.g. Zn,Fe</font>", self)
 		note_label.setAlignment(Qt.AlignRight)
 		layout.addWidget(note_label)
 
@@ -879,11 +880,11 @@ class MolecularPrepareDialog(QDialog):
 		nonstd_check = QCheckBox("Remove chains composed entirely of residues of types other than the standard 20 amino acids")
 		delalt_check = QCheckBox("Remove XX@B atoms and rename XX@A atoms->XX")
 
-		self.register_widget(nphs_check, 'check', 'Receptor/cleanup', 'nphs', list)
-		self.register_widget(lps_check, 'check', 'Receptor/cleanup', 'lps', list)
-		self.register_widget(water_check, 'check', 'Receptor/cleanup', 'waters', list)
-		self.register_widget(nonstd_check, 'check', 'Receptor/cleanup', 'nonstdres', list)
-		self.register_widget(delalt_check, 'check', 'Receptor/cleanup', 'deleteAltB', list)
+		self.register_widget(nphs_check, 'check', 'Receptor/cleanup', 'nphs', str)
+		self.register_widget(lps_check, 'check', 'Receptor/cleanup', 'lps', str)
+		self.register_widget(water_check, 'check', 'Receptor/cleanup', 'waters', str)
+		self.register_widget(nonstd_check, 'check', 'Receptor/cleanup', 'nonstdres', str)
+		self.register_widget(delalt_check, 'check', 'Receptor/cleanup', 'deleteAltB', str)
 
 		layout.addWidget(QLabel("<b>Clean types:</b>", self))
 		layout.addWidget(nphs_check)
@@ -897,7 +898,7 @@ class MolecularPrepareDialog(QDialog):
 		layout.addWidget(e_check)
 		layout.addWidget(QLabel("<font color='gray'>Any residue whose name is not in below list will be deleted from any chain</font>", self))
 		layout.addWidget(QLabel("<font color='gray'><small>[CYS,ILE,SER,VAL,GLN,LYS,ASN,PRO,THR,PHE,ALA,HIS,GLY,ASP,LEU,ARG,TRP,GLU,TYR,MET,HID,HSP,HIE,HIP,CYX,CSS]<small></font>", self))
-		self.register_widget(e_check, 'check', 'Receptor/residues', True, bool)
+		self.register_widget(e_check, 'check', 'Receptor/delete_single_nonstd_residues', False, bool)
 
 	def create_ligand_tab(self):
 		page = QWidget(self)
@@ -931,11 +932,11 @@ class MolecularPrepareDialog(QDialog):
 		c_h_radio = QRadioButton('Add hydrogens only if there are none already', self)
 		non_radio = QRadioButton('Do not make any repairs', self)
 
-		self.register_widget(b_h_radio, 'radio', 'Ligand/repair', 'bonds_hydrogens', list)
-		self.register_widget(b_radio, 'radio', 'Ligand/repair', 'bonds', list)
-		self.register_widget(h_radio, 'radio', 'Ligand/repair', 'hydrogens', list)
-		self.register_widget(c_h_radio, 'radio', 'Ligand/repair', 'checkhydrogens', list)
-		self.register_widget(non_radio, 'radio', 'Ligand/repair', 'None', list)
+		self.register_widget(b_h_radio, 'radio', 'Ligand/repairs', 'bonds_hydrogens', str)
+		self.register_widget(b_radio, 'radio', 'Ligand/repairs', 'bonds', str)
+		self.register_widget(h_radio, 'radio', 'Ligand/repairs', 'hydrogens', str)
+		self.register_widget(c_h_radio, 'radio', 'Ligand/repairs', 'checkhydrogens', str)
+		self.register_widget(non_radio, 'radio', 'Ligand/repairs', None, None)
 
 		repair_group = QButtonGroup(self)
 		repair_group.addButton(b_h_radio)
@@ -956,8 +957,8 @@ class MolecularPrepareDialog(QDialog):
 		n_c_radio = QRadioButton("Preserve all input charges, do not add new charges", self)
 		a_g_radio = QRadioButton("Add gasteiger charges", self)
 
-		self.register_widget(n_c_radio, 'radio', 'Ligand/charges', False, bool)
-		self.register_widget(a_g_radio, 'radio', 'Ligand/charges', True, bool)
+		self.register_widget(n_c_radio, 'radio', 'Ligand/charges_to_add', None, None)
+		self.register_widget(a_g_radio, 'radio', 'Ligand/charges_to_add', 'gasteiger', str)
 
 		charge_group = QButtonGroup(self)
 		charge_group.addButton(a_g_radio)
@@ -971,7 +972,7 @@ class MolecularPrepareDialog(QDialog):
 
 		c_a_input = QLineEdit(self)
 
-		self.register_widget(c_a_input, 'edit', 'Ligand/specific', [], list)
+		self.register_widget(c_a_input, 'edit', 'Ligand/preserve_charge_types', '', str)
 
 		atom_layout = QHBoxLayout()
 		atom_layout.addWidget(QLabel("Preserve input charges on specific atom types:", self))
@@ -984,8 +985,8 @@ class MolecularPrepareDialog(QDialog):
 		nphs_check = QCheckBox("Merge charges and remove non-polar hydrogens")
 		lps_check = QCheckBox("Merge charges and remove lone pairs")
 
-		self.register_widget(nphs_check, 'check', 'Ligand/cleanup', 'nphs', list)
-		self.register_widget(lps_check, 'check', 'Ligand/cleanup', 'lps', list)
+		self.register_widget(nphs_check, 'check', 'Ligand/cleanup', 'nphs', str)
+		self.register_widget(lps_check, 'check', 'Ligand/cleanup', 'lps', str)
 	
 		prelig_layout.addWidget(QLabel("<b>Clean types:</b>", self))
 		prelig_layout.addWidget(nphs_check)
@@ -995,9 +996,9 @@ class MolecularPrepareDialog(QDialog):
 		am_check = QCheckBox("amide", self)
 		gd_check = QCheckBox("guaninium", self)
 
-		self.register_widget(bb_check, 'check', 'Ligand/rotate', 'backbone', list)
-		self.register_widget(am_check, 'check', 'Ligand/rotate', 'amide', list)
-		self.register_widget(gd_check, 'check', 'Ligand/rotate', 'guaninium', list)
+		self.register_widget(bb_check, 'check', 'Ligand/allowed_bonds', 'backbone', str)
+		self.register_widget(am_check, 'check', 'Ligand/allowed_bonds', 'amide', str)
+		self.register_widget(gd_check, 'check', 'Ligand/allowed_bonds', 'guaninium', str)
 
 		allow_layout = QHBoxLayout()
 		allow_layout.addWidget(QLabel("Types of bonds to allow to rotate:", self))
@@ -1012,10 +1013,10 @@ class MolecularPrepareDialog(QDialog):
 		g_check = QCheckBox("Attach all nonbonded fragments", self)
 		s_check = QCheckBox("Attach all nonbonded singletons", self)
 
-		self.register_widget(f_check, 'check', 'Ligand/fragment', False, bool)
-		self.register_widget(z_check, 'check', 'Ligand/torsions', False, bool)
-		self.register_widget(g_check, 'check', 'Ligand/fragments', False, bool)
-		self.register_widget(s_check, 'check', 'Ligand/singletons', False, bool)
+		self.register_widget(f_check, 'check', 'Ligand/check_for_fragments', False, bool)
+		self.register_widget(z_check, 'check', 'Ligand/inactivate_all_torsions', False, bool)
+		self.register_widget(g_check, 'check', 'Ligand/attach_nonbonded_fragments', False, bool)
+		self.register_widget(s_check, 'check', 'Ligand/attach_singletons', False, bool)
 
 		bound_layout = QGridLayout()
 		bound_layout.addWidget(f_check, 0, 0)
@@ -1088,10 +1089,10 @@ class MolecularPrepareDialog(QDialog):
 	def read_settings(self):
 		for i in self.input_widgets:
 			if i.wgtype == 'radio':
-				if 'repair' in i.option:
+				if 'repairs' in i.option:
 					val = self.settings.value(i.option, 'None')
 				else:
-					val = self.settings.value(i.option, i.default, i.convert)
+					val = self.settings.value(i.option, i.default)
 
 				i.widget.setChecked(val == i.default)
 
@@ -1128,8 +1129,57 @@ class MolecularPrepareDialog(QDialog):
 				i.widget.setCurrentIndex(index)
 
 	def write_settings(self):
-		pass
+		for i in self.input_widgets:
+			if i.wgtype == 'radio':
+				if 'repair' in i.option:
+					if i.widget.isChecked():
+						self.settings.setValue(i.option, i.default)
 
+				else:
+					self.settings.setValue(i.option, i.widget.isChecked())
+
+			elif i.wgtype == 'check':
+				if 'cleanup' in i.option:
+					val = self.settings.value(i.option, '')
+
+					if i.widget.isChecked() and i.default not in val:
+						if val:
+							self.settings.setValue(i.option, '{}_{}'.format(val, i.default))
+						else:
+							self.settings.setValue(i.option, i.default)
+
+				elif i.option == 'Ligand/rotate':
+					val = self.settings.value(i.option, '')
+					if i.widget.isChecked() and i.default not in val:
+						if val:
+							self.settings.setValue(i.option, '{}_{}'.format(val, i.default))
+						else:
+							self.settings.setValue(i.option, i.default)
+
+				else:
+					self.settings.setValue(i.option, i.widget.isChecked())
+
+			elif i.wgtype == 'edit':
+				val = i.widget.text()
+
+				if i.convert == list:
+					val = list(map(lambda x: x.strip(), val.split(',')))
+
+				self.settings.setValue(i.option, val)
+
+			elif i.wgtype == 'spin':
+				val = i.widget.value()
+				self.settings.setValue(i.option, val)
+
+			elif i.wgtype == 'select':
+				val = i.widget.currentText()
+				self.settings.setValue(i.option, val)
+
+	def reset_settings(self):
+		self.settings.remove('Receptor')
+		self.settings.remove('Ligand')
+		self.settings.remove('Meeko')
+		self.read_settings()
 
 class DownloaderDialog(QDialog):
 	title = ''

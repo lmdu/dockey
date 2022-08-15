@@ -1,10 +1,13 @@
 #Modified from MGLTools v1.5.7 prepare_ligand4.py and prepare_receptor4.py
 import MolKit.molecule
 import MolKit.protein
+
+from rdkit import Chem
 from MolKit import Read
+from PySide6.QtCore import QSettings
+from meeko import MoleculePreparation
 from AutoDockTools.MoleculePreparation import AD4LigandPreparation
 from AutoDockTools.MoleculePreparation import AD4ReceptorPreparation
-
 
 __all__ = ['prepare_autodock_ligand', 'prepare_autodock_receptor']
 
