@@ -332,7 +332,7 @@ class BaseWorker(QRunnable):
 		#script = os.path.join(folder, 'prepare_ligand4.py')
 		#args = [script, '-l', infile, '-o', outfile, '-A', 'bonds_hydrogens']
 		#self.execute(py27, args, os.path.dirname(infile))
-		prepare_autodock_ligand(infile, outfile)
+		prepare_ligand(infile, outfile)
 
 class AutodockWorker(BaseWorker):
 	def __init__(self, job, params):

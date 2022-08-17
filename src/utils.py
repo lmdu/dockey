@@ -14,7 +14,7 @@ __all__ = ['AttrDict', 'draw_gridbox', 'convert_dimension_to_coordinates',
 	'get_molecule_center_from_pdbqt', 'time_format', 'convert_pdbqt_to_pdb',
 	'ligand_efficiency_assessment', 'get_molecule_information', 'convert_ki_to_log',
 	'time_elapse', 'generate_complex_pdb', 'get_complex_interactions',
-	'interaction_visualize', 'get_dimension_from_pdb'
+	'interaction_visualize', 'get_dimension_from_pdb', 'load_molecule_from_file'
 ]
 
 class AttrDict(dict):
@@ -250,6 +250,13 @@ def convert_other_to_pdbqt(infile, informat, outfile):
 	obc.AddOption('p')
 
 	obc.WriteFile(mol, outfile)
+
+def load_molecule_from_file(mol_file, mol_format):
+	obc = openbabel.OBConversion()
+	obc.SetInFormat(mol_format)
+	mol = openbabel.OBMol()
+	obc.ReadFile(mol, mol_file)
+	return mol
 
 def get_atom_types_from_pdbqt(pdbqt_file):
 	atom_types = set()

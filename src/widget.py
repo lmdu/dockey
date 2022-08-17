@@ -1,4 +1,5 @@
 import os
+import json
 import psutil
 
 from PySide6.QtGui import *
@@ -850,7 +851,7 @@ class MolecularPrepareDialog(QDialog):
 		n_c_radio = QRadioButton("Preserve all input charges, do not add new charges", self)
 		a_g_radio = QRadioButton("Add gasteiger charges", self)
 
-		self.register_widget(n_c_radio, 'radio', 'Receptor/charges_to_add', None, None)
+		self.register_widget(n_c_radio, 'radio', 'Receptor/charges_to_add', None, str)
 		self.register_widget(a_g_radio, 'radio', 'Receptor/charges_to_add', 'gasteiger', str)
 
 		charge_group = QButtonGroup(self)
@@ -863,6 +864,7 @@ class MolecularPrepareDialog(QDialog):
 		layout.addWidget(QLabel("<b>Charges:</b>", self))
 		layout.addLayout(charge_layout)
 
+		"""
 		c_a_input = QLineEdit(self)
 		self.register_widget(c_a_input, 'edit', 'Receptor/preserve_charge_types', '', str)
 
@@ -873,6 +875,7 @@ class MolecularPrepareDialog(QDialog):
 		note_label = QLabel("<font color='gray'>Multiple atoms can be separated by comma, e.g. Zn,Fe</font>", self)
 		note_label.setAlignment(Qt.AlignRight)
 		layout.addWidget(note_label)
+		"""
 
 		nphs_check = QCheckBox("Merge charges and remove non-polar hydrogens")
 		lps_check = QCheckBox("Merge charges and remove lone pairs")
@@ -899,6 +902,11 @@ class MolecularPrepareDialog(QDialog):
 		layout.addWidget(QLabel("<font color='gray'>Any residue whose name is not in below list will be deleted from any chain</font>", self))
 		layout.addWidget(QLabel("<font color='gray'><small>[CYS,ILE,SER,VAL,GLN,LYS,ASN,PRO,THR,PHE,ALA,HIS,GLY,ASP,LEU,ARG,TRP,GLU,TYR,MET,HID,HSP,HIE,HIP,CYX,CSS]<small></font>", self))
 		self.register_widget(e_check, 'check', 'Receptor/delete_single_nonstd_residues', False, bool)
+
+		layout.addWidget(QLabel("<b>Atoms:</b>", self))
+		w_check = QCheckBox("assign each receptor atom a unique name: newname is original name plus its index(1-based)", self)
+		layout.addWidget(w_check)
+		self.register_widget(w_check, 'check', 'Receptor/unique_atom_names', False, bool)
 
 	def create_ligand_tab(self):
 		page = QWidget(self)
@@ -936,7 +944,7 @@ class MolecularPrepareDialog(QDialog):
 		self.register_widget(b_radio, 'radio', 'Ligand/repairs', 'bonds', str)
 		self.register_widget(h_radio, 'radio', 'Ligand/repairs', 'hydrogens', str)
 		self.register_widget(c_h_radio, 'radio', 'Ligand/repairs', 'checkhydrogens', str)
-		self.register_widget(non_radio, 'radio', 'Ligand/repairs', None, None)
+		self.register_widget(non_radio, 'radio', 'Ligand/repairs', 'None', str)
 
 		repair_group = QButtonGroup(self)
 		repair_group.addButton(b_h_radio)
@@ -957,7 +965,7 @@ class MolecularPrepareDialog(QDialog):
 		n_c_radio = QRadioButton("Preserve all input charges, do not add new charges", self)
 		a_g_radio = QRadioButton("Add gasteiger charges", self)
 
-		self.register_widget(n_c_radio, 'radio', 'Ligand/charges_to_add', None, None)
+		self.register_widget(n_c_radio, 'radio', 'Ligand/charges_to_add', None, str)
 		self.register_widget(a_g_radio, 'radio', 'Ligand/charges_to_add', 'gasteiger', str)
 
 		charge_group = QButtonGroup(self)
@@ -970,6 +978,7 @@ class MolecularPrepareDialog(QDialog):
 		prelig_layout.addWidget(QLabel("<b>Charges:</b>", self))
 		prelig_layout.addLayout(charge_layout)
 
+		"""
 		c_a_input = QLineEdit(self)
 
 		self.register_widget(c_a_input, 'edit', 'Ligand/preserve_charge_types', '', str)
@@ -978,9 +987,10 @@ class MolecularPrepareDialog(QDialog):
 		atom_layout.addWidget(QLabel("Preserve input charges on specific atom types:", self))
 		atom_layout.addWidget(c_a_input)
 		prelig_layout.addLayout(atom_layout)
-		note_label = QLabel("<font color='gray'>Multiple atoms can be separated by comma, e.g. Zn, Fe</font>", self)
+		note_label = QLabel("<font color='gray'>Multiple atoms can be separated by comma, e.g. Zn,Fe</font>", self)
 		note_label.setAlignment(Qt.AlignRight)
 		prelig_layout.addWidget(note_label)
+		"""
 
 		nphs_check = QCheckBox("Merge charges and remove non-polar hydrogens")
 		lps_check = QCheckBox("Merge charges and remove lone pairs")
@@ -1059,14 +1069,15 @@ class MolecularPrepareDialog(QDialog):
 		meeko_layout.addWidget(rms_check)
 
 		rbs_input = QLineEdit(self)
+		rbs_input.setPlaceholderText('Multiple values can be separated by comma')
 		rbs_layout = QHBoxLayout()
 		rbs_layout.addWidget(QLabel("SMARTS patterns to rigidify bonds:", self))
 		rbs_layout.addWidget(rbs_input)
 		meeko_layout.addLayout(rbs_layout)
 		rbi_input = QLineEdit(self)
+		rbi_input.setPlaceholderText("Multiple values can be separated by comma, e.g. 1 2, 3 4. Corresponding to SMARTS patterns")
 		meeko_layout.addWidget(QLabel("Indices of two atoms (in the SMARTS) that define a bond (start at 1)", self))
 		meeko_layout.addWidget(rbi_input)
-		meeko_layout.addWidget(QLabel("<font color='gray'>Multiple values can be separated by comma</font>", self))
 		ats_input = QLineEdit(self)
 		ats_layout = QHBoxLayout()
 		ats_layout.addWidget(QLabel("SMARTS based atom typing (JSON format):", self))
@@ -1081,8 +1092,8 @@ class MolecularPrepareDialog(QDialog):
 		dbp_layout.addWidget(QLabel("<font color='gray'><small>penalty > 100 prevents breaking double bonds</small></font>"))
 		meeko_layout.addLayout(dbp_layout)
 
-		self.register_widget(rbs_input, 'edit', 'Ligand/rigidify_bonds_smarts', [], list)
-		self.register_widget(rbi_input, 'edit', 'Ligand/rigidify_bonds_indices', [], list)
+		self.register_widget(rbs_input, 'edit', 'Ligand/rigidify_bonds_smarts', '', str)
+		self.register_widget(rbi_input, 'edit', 'Ligand/rigidify_bonds_indices', '', str)
 		self.register_widget(ats_input, 'edit', 'Ligand/atom_type_smarts', '', str)
 		self.register_widget(dbp_spin, 'spin', 'Ligand/double_bond_penalty', 50, int)
 
@@ -1091,8 +1102,15 @@ class MolecularPrepareDialog(QDialog):
 			if i.wgtype == 'radio':
 				if 'repairs' in i.option:
 					val = self.settings.value(i.option, 'None')
+
+				elif 'charges_to_add' in i.option:
+					val = self.settings.value(i.option, 'gasteiger')
+
+					if val == 'None':
+						val = None
+
 				else:
-					val = self.settings.value(i.option, i.default)
+					val = self.settings.value(i.option, i.default, i.convert)
 
 				i.widget.setChecked(val == i.default)
 
@@ -1100,23 +1118,22 @@ class MolecularPrepareDialog(QDialog):
 				if 'cleanup' in i.option:
 					val = self.settings.value(i.option, 'nphs_lps_waters_nonstdres')
 					val = i.default in val
-				elif i.option == 'Ligand/rotate':
+
+				elif i.option == 'Ligand/allowed_bonds':
 					val = self.settings.value(i.option, 'backbone')
 					val = i.default in val
+
 				else:
 					val = self.settings.value(i.option, i.default, i.convert)
 
 				if val:
 					i.widget.setCheckState(Qt.Checked)
+
 				else:
 					i.widget.setCheckState(Qt.Unchecked)
 
 			elif i.wgtype == 'edit':
 				val = self.settings.value(i.option, i.default)
-				
-				if i.convert == list:
-					val = ','.join(val)
-
 				i.widget.setText(val)
 
 			elif i.wgtype == 'spin':
@@ -1131,40 +1148,30 @@ class MolecularPrepareDialog(QDialog):
 	def write_settings(self):
 		for i in self.input_widgets:
 			if i.wgtype == 'radio':
-				if 'repair' in i.option:
-					if i.widget.isChecked():
-						self.settings.setValue(i.option, i.default)
-
-				else:
-					self.settings.setValue(i.option, i.widget.isChecked())
+				if i.widget.isChecked():
+					self.settings.setValue(i.option, i.default)
 
 			elif i.wgtype == 'check':
-				if 'cleanup' in i.option:
-					val = self.settings.value(i.option, '')
+				if 'cleanup' in i.option or 'allowed_bonds' in i.option:
+					vals = self.settings.value(i.option, '')
 
-					if i.widget.isChecked() and i.default not in val:
-						if val:
-							self.settings.setValue(i.option, '{}_{}'.format(val, i.default))
-						else:
-							self.settings.setValue(i.option, i.default)
+					if vals:
+						vals = vals.split('_')
+					else:
+						vals = []
 
-				elif i.option == 'Ligand/rotate':
-					val = self.settings.value(i.option, '')
-					if i.widget.isChecked() and i.default not in val:
-						if val:
-							self.settings.setValue(i.option, '{}_{}'.format(val, i.default))
-						else:
-							self.settings.setValue(i.option, i.default)
+					if i.widget.isChecked() and i.default not in vals:
+						vals.append(i.default)
+					elif not i.widget.isChecked() and i.default in vals:
+						vals.remove(i.default)
+
+					self.settings.setValue(i.option, '_'.join(vals))
 
 				else:
 					self.settings.setValue(i.option, i.widget.isChecked())
 
 			elif i.wgtype == 'edit':
 				val = i.widget.text()
-
-				if i.convert == list:
-					val = list(map(lambda x: x.strip(), val.split(',')))
-
 				self.settings.setValue(i.option, val)
 
 			elif i.wgtype == 'spin':
