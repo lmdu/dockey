@@ -28,8 +28,8 @@ jobs:
 
       - name: Package
         run: |
-          $lines = Get-Content src/config.py
-          $version = $lines[10].Split('"')[1]
+          $line = Select-String -Path src\config.py -Pattern 'DOCKEY_VERSION =' | Out-String
+          $version = $line.Split('"')[1]
           iscc /DMyAppVersion=$version package/build_win_installer.iss
 
       - uses: actions/upload-artifact@v2
