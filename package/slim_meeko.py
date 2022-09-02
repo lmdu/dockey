@@ -1,7 +1,5 @@
-import meeko
+import psutil
 
-with open(meeko.__file__, 'w') as fw:
+meeko_file = psutil.__file__.replace('psutil', 'meeko')
+with open(meeko_file, 'w') as fw:
 	fw.write('')
-
-with open(meeko.__file__) as fh:
-	print(fh.read())
