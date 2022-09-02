@@ -14,7 +14,8 @@ __all__ = ['AttrDict', 'draw_gridbox', 'convert_dimension_to_coordinates',
 	'get_molecule_center_from_pdbqt', 'time_format', 'convert_pdbqt_to_pdb',
 	'ligand_efficiency_assessment', 'get_molecule_information', 'convert_ki_to_log',
 	'time_elapse', 'generate_complex_pdb', 'get_complex_interactions',
-	'interaction_visualize', 'get_dimension_from_pdb', 'load_molecule_from_file'
+	'interaction_visualize', 'get_dimension_from_pdb', 'load_molecule_from_file',
+	'convert_string_to_pdb', 'memory_format'
 ]
 
 class AttrDict(dict):
@@ -22,10 +23,18 @@ class AttrDict(dict):
 		try:
 			return self[attr]
 		except KeyError:
-			raise Exception("no attribute")
+			raise AttributeError(attr)
 
 	def __setattr__(self, attr, val):
 		self[attr] = val
+
+	def deep_copy(self):
+		new = self.__class__()
+
+		for k, v in self.items():
+			new[k] = v
+
+		return new
 
 def fetch_url(url):
 	try:
@@ -211,6 +220,13 @@ def convert_pdbqt_to_pdb(pdbqt, as_string=True):
 
 	return obc.WriteString(mol)
 
+def convert_string_to_pdb(mol_str, mol_fmt):
+	obc = openbabel.OBConversion()
+	obc.SetInAndOutFormats(mol_fmt, 'pdb')
+	mol = openbabel.OBMol()
+	obc.ReadString(mol, mol_str)
+	return obc.WriteString(mol)
+
 def convert_other_to_pdbqt(infile, informat, outfile):
 	obc = openbabel.OBConversion()
 	obc.SetInAndOutFormats(informat, "pdbqt")
@@ -297,9 +313,17 @@ def time_format(seconds):
 	if seconds:
 		t = time.localtime(seconds)
 		return time.strftime("%Y-%m-%d %H:%M:%S", t)
+	else:
+		return 'N/A'
 
 def time_elapse(start, stop):
+	if not stop:
+		return 'N/A'
+
 	seconds = stop - start
+
+	if not seconds:
+		return '0s'
 
 	h = int(seconds // 3600)
 	m = int(seconds % 3600 // 60)
@@ -316,6 +340,15 @@ def time_elapse(start, stop):
 		ts.append("{}s".format(s))
 
 	return ' '.join(ts)
+
+def memory_format(size):
+	for unit in ['B', 'KB', 'MB', 'GB', 'TB']:
+		if size < 1024:
+			break
+
+		size /= 1024
+
+	return "{:.2f}{}".format(size, unit)
 
 def convert_ki_to_log(ki_str):
 	ki, unit = ki_str.split()
@@ -347,21 +380,40 @@ def convert_energy_to_ki(energy):
 def get_molecule_information(mol_file, from_string=False, mol_name=None, mol_format=None):
 	if not from_string:
 		mol_name, mol_format = os.path.splitext(os.path.basename(mol_file))
-		mol_format = mol_format.lstrip('.')
+		mol_format = mol_format.lstrip('.').lower()
+
+	if mol_format in ['pdb', 'mol', 'mol2', 'sdf']:
+		out_format = mol_format
+
+		if from_string:
+			mol_content = mol_file
+		else:
+			with open(mol_file, encoding='utf-8') as fh:
+				mol_content = fh.read()
+
+	else:
+		out_format = 'pdb'
+		mol_content = None
+
 
 	obc = openbabel.OBConversion()
-	obc.SetInAndOutFormats(mol_format, 'pdb')
+	obc.SetInAndOutFormats(mol_format, out_format)
 	mol = openbabel.OBMol()
 
 	if from_string:
 		obc.ReadString(mol, mol_file)
 	else:
 		obc.ReadFile(mol, mol_file)
+
+	if mol_content is None:
+		mol_content = obc.WriteString(mol)
 	
-	des = openbabel.OBDescriptor.FindType('logP')
+	descriptor = openbabel.OBDescriptor.FindType('logP')
+	log_p = descriptor.Predict(mol)
 
 	return AttrDict(
 		name = mol_name,
+		format = out_format,
 		atoms = mol.NumAtoms(),
 		bonds = mol.NumBonds(),
 		hvyatoms = mol.NumHvyAtoms(),
@@ -370,8 +422,8 @@ def get_molecule_information(mol_file, from_string=False, mol_name=None, mol_for
 		formula = mol.GetFormula(),
 		energy = mol.GetEnergy(),
 		weight = mol.GetMolWt(),
-		logp = des.Predict(mol),
-		pdb = obc.WriteString(mol)
+		logp = log_p,
+		content = mol_content
 	)
 
 def ligand_efficiency_assessment(pdb_str, energy, ki=0):
@@ -414,7 +466,7 @@ def ligand_efficiency_assessment(pdb_str, energy, ki=0):
 	else:
 		return (logki, None, None, None, None, None, ki)
 
-def get_complex_interactions(pose_ids, poses):
+def get_complex_interactions(poses):
 	interactions = {
 		'binding_site': [],
 		'hydrogen_bond': [],
@@ -422,20 +474,26 @@ def get_complex_interactions(pose_ids, poses):
 		'water_bridge': [],
 		'salt_bridge': [],
 		'pi_stacking': [],
-		'pi_cation': []
+		'pi_cation': [],
+		'halogen_bond': [],
+		'metal_complex': []
 	}
 
 	for i, pose in enumerate(poses):
-		pose[0] = pose_ids[i]
+		compound = pose[-1]
+
+		if not compound:
+			continue
+
 		mol = PDBComplex()
-		mol.load_pdb(pose[-1], as_string=True)
+		mol.load_pdb(compound, as_string=True)
 		mol.analyze()
 
 		for site in mol.interaction_sets:
-			interactions['binding_site'].append([None, pose[0], site])
+			interactions['binding_site'].append([None, i, site])
 			s = mol.interaction_sets[site]
 
-			site = "{}:{}".format(pose[0], site)
+			site = "{}:{}".format(i, site)
 
 			#hydrogen bonds
 			for hb in s.hbonds_pdon + s.hbonds_ldon:

@@ -1,9 +1,11 @@
 import os
 import sys
+import copy
 import psutil
 
 from PySide6.QtCore import *
 from PySide6.QtWidgets import *
+from collections import OrderedDict
 
 from utils import *
 from backend import *
@@ -71,9 +73,7 @@ class AutogridParameter:
 
 		return self.gpf_file
 
-class Parameter(dict):
-	num = 0
-
+class Parameter(OrderedDict):
 	def __setattr__(self, attr, val):
 		self[attr] = val
 
@@ -81,28 +81,20 @@ class Parameter(dict):
 		try:
 			return self[attr]
 		except KeyError:
-			return getattr(self, attr)
+			raise AttributeError(attr)
 
-	def make_param(self, **kwargs):
-		p = AttrDict(kwargs)
-		p['order'] = self.order
-		return p
+	def deep_copy(self):
+		new = self.__class__()
+		for k, v in self.items():
+			new[k] = v.deep_copy()
 
-	@property
-	def order(self):
-		return self.get_order()
-
-	@classmethod
-	def get_order(cls):
-		cls.num += 1
-		return cls.num
-
+		return new
 
 class AutodockParameter(Parameter):
 	algorithm = 0
 
 	def __init__(self):
-		self.autodock_parameter_version = self.make_param(
+		self.autodock_parameter_version = AttrDict(
 			type = str,
 			default = '4.2',
 			value = '4.2',
@@ -111,7 +103,7 @@ class AutodockParameter(Parameter):
 			required = True,
 			user = False
 		)
-		self.outlev = self.make_param(
+		self.outlev = AttrDict(
 			type = int,
 			default = 1,
 			value = 1,
@@ -120,7 +112,7 @@ class AutodockParameter(Parameter):
 			required = True,
 			user = False
 		)
-		self.parameter_file = self.make_param(
+		self.parameter_file = AttrDict(
 			type = str,
 			default = '',
 			value = '',
@@ -129,7 +121,7 @@ class AutodockParameter(Parameter):
 			required = False,
 			user = True
 		)
-		self.intelec = self.make_param(
+		self.intelec = AttrDict(
 			type = bool,
 			default = True,
 			value = True,
@@ -138,7 +130,7 @@ class AutodockParameter(Parameter):
 			required = True,
 			user = False
 		)
-		self.intnbp_r_eps = self.make_param(
+		self.intnbp_r_eps = AttrDict(
 			type = [float,float,int,int,str,str],
 			default = [],
 			value = [],
@@ -147,7 +139,7 @@ class AutodockParameter(Parameter):
 			required = False,
 			user = False
 		)
-		self.torsdof = self.make_param(
+		self.torsdof = AttrDict(
 			type = int,
 			default = 0,
 			value = 0,
@@ -156,7 +148,7 @@ class AutodockParameter(Parameter):
 			required = False,
 			user = False
 		)
-		self.seed = self.make_param(
+		self.seed = AttrDict(
 			type = [str, str],
 			default = ['pid', 'time'],
 			value = ['pid', 'time'],
@@ -165,7 +157,7 @@ class AutodockParameter(Parameter):
 			required = True,
 			user = True
 		)
-		self.ligand_types = self.make_param(
+		self.ligand_types = AttrDict(
 			type = list,
 			default = [],
 			value = [],
@@ -174,7 +166,7 @@ class AutodockParameter(Parameter):
 			required = True,
 			user = False
 		)
-		self.fld = self.make_param(
+		self.fld = AttrDict(
 			type = str,
 			default = '',
 			value = '',
@@ -183,7 +175,7 @@ class AutodockParameter(Parameter):
 			required = True,
 			user = False
 		)
-		self.map = self.make_param(
+		self.map = AttrDict(
 			type = iter,
 			default = [],
 			value = [],
@@ -192,7 +184,7 @@ class AutodockParameter(Parameter):
 			required = True,
 			user = False
 		)
-		self.elecmap = self.make_param(
+		self.elecmap = AttrDict(
 			type = str,
 			default = '',
 			value = '',
@@ -201,7 +193,7 @@ class AutodockParameter(Parameter):
 			required = True,
 			user = False
 		)
-		self.desolvmap = self.make_param(
+		self.desolvmap = AttrDict(
 			type = str,
 			default = '',
 			value = '',
@@ -210,7 +202,7 @@ class AutodockParameter(Parameter):
 			required = True,
 			user = False
 		)
-		self.move = self.make_param(
+		self.move = AttrDict(
 			type = str,
 			default = '',
 			value = '',
@@ -219,7 +211,7 @@ class AutodockParameter(Parameter):
 			required = True,
 			user = False
 		)
-		self.flexres = self.make_param(
+		self.flexres = AttrDict(
 			type = str,
 			default = '',
 			value = '',
@@ -228,7 +220,7 @@ class AutodockParameter(Parameter):
 			required = False,
 			user = True,
 		)
-		self.about = self.make_param(
+		self.about = AttrDict(
 			type = list,
 			default = [],
 			value = [],
@@ -237,7 +229,7 @@ class AutodockParameter(Parameter):
 			required = False,
 			user = False
 		)
-		self.tran0 = self.make_param(
+		self.tran0 = AttrDict(
 			type = list,
 			default = ['random'],
 			value = ['random'],
@@ -246,7 +238,7 @@ class AutodockParameter(Parameter):
 			required = True,
 			user = False
 		)
-		self.quaternion0 = self.make_param(
+		self.quaternion0 = AttrDict(
 			type = list,
 			default = ['random'],
 			value = ['random'],
@@ -255,7 +247,7 @@ class AutodockParameter(Parameter):
 			required = True,
 			user = False
 		)
-		self.dihe0 = self.make_param(
+		self.dihe0 = AttrDict(
 			type = list,
 			default = ['random'],
 			value = ['random'],
@@ -264,7 +256,7 @@ class AutodockParameter(Parameter):
 			required = True,
 			user = False
 		)
-		self.tstep = self.make_param(
+		self.tstep = AttrDict(
 			type = float,
 			default = 0.2,
 			value = 0.2,
@@ -274,7 +266,7 @@ class AutodockParameter(Parameter):
 			required = True,
 			user = True
 		)
-		self.qstep = self.make_param(
+		self.qstep = AttrDict(
 			type = float,
 			default = 5.0,
 			value = 5.0,
@@ -284,7 +276,7 @@ class AutodockParameter(Parameter):
 			required = True,
 			user = True
 		)
-		self.dstep = self.make_param(
+		self.dstep = AttrDict(
 			type = float,
 			default = 5.0,
 			value = 5.0,
@@ -294,7 +286,7 @@ class AutodockParameter(Parameter):
 			required = True,
 			user = True
 		)
-		self.rmstol = self.make_param(
+		self.rmstol = AttrDict(
 			type = float,
 			default = 2.0,
 			value = 2.0,
@@ -304,7 +296,7 @@ class AutodockParameter(Parameter):
 			required = True,
 			user = True
 		)
-		self.epdb = self.make_param(
+		self.epdb = AttrDict(
 			type = bool,
 			default = False,
 			value = False,
@@ -313,7 +305,7 @@ class AutodockParameter(Parameter):
 			required = True,
 			user = True
 		)
-		self.e0max = self.make_param(
+		self.e0max = AttrDict(
 			type = [float, int],
 			default = [0.0, 10000],
 			value = [0.0, 10000],
@@ -323,7 +315,7 @@ class AutodockParameter(Parameter):
 			required = True,
 			user = True
 		)
-		self.rt0 = self.make_param(
+		self.rt0 = AttrDict(
 			type = float,
 			default = 616.0,
 			value = 616.0,
@@ -333,7 +325,7 @@ class AutodockParameter(Parameter):
 			required = True,
 			user = True
 		)
-		self.linear_schedule = self.make_param(
+		self.linear_schedule = AttrDict(
 			type = bool,
 			default = False,
 			value = True,
@@ -342,7 +334,7 @@ class AutodockParameter(Parameter):
 			required = False,
 			user = True
 		)
-		self.geometric_schedule = self.make_param(
+		self.geometric_schedule = AttrDict(
 			type = bool,
 			default = False,
 			value = False,
@@ -351,7 +343,7 @@ class AutodockParameter(Parameter):
 			required = False,
 			user = True
 		)
-		self.rtrf = self.make_param(
+		self.rtrf = AttrDict(
 			type = float,
 			default = 0.95,
 			value = 0.95,
@@ -361,7 +353,7 @@ class AutodockParameter(Parameter):
 			required = False,
 			user = True
 		)
-		self.runs = self.make_param(
+		self.runs = AttrDict(
 			type = int,
 			default = 10,
 			value = 10,
@@ -371,7 +363,7 @@ class AutodockParameter(Parameter):
 			required = True,
 			user = True
 		)
-		self.cycles = self.make_param(
+		self.cycles = AttrDict(
 			type = int,
 			default = 50,
 			value = 50,
@@ -381,7 +373,7 @@ class AutodockParameter(Parameter):
 			required = True,
 			user = True
 		)
-		self.accs = self.make_param(
+		self.accs = AttrDict(
 			type = int,
 			default = 25000,
 			value = 25000,
@@ -391,7 +383,7 @@ class AutodockParameter(Parameter):
 			required = True,
 			user = True
 		)
-		self.rejs = self.make_param(
+		self.rejs = AttrDict(
 			type = int,
 			default = 25000,
 			value = 25000,
@@ -401,7 +393,7 @@ class AutodockParameter(Parameter):
 			required = True,
 			user = True
 		)
-		self.select = self.make_param(
+		self.select = AttrDict(
 			type = str,
 			default = 'm',
 			value = 'm',
@@ -411,7 +403,7 @@ class AutodockParameter(Parameter):
 			requred = True,
 			user = True
 		)
-		self.trnrf = self.make_param(
+		self.trnrf = AttrDict(
 			type = float,
 			default = 1.0,
 			value = 1.0,
@@ -421,7 +413,7 @@ class AutodockParameter(Parameter):
 			required = True,
 			user = True
 		)
-		self.quarf = self.make_param(
+		self.quarf = AttrDict(
 			type = float,
 			default = 1.0,
 			value = 1.0,
@@ -431,7 +423,7 @@ class AutodockParameter(Parameter):
 			required = True,
 			user = True
 		)
-		self.dihrf = self.make_param(
+		self.dihrf = AttrDict(
 			type = float,
 			default = 1.0,
 			value = 1.0,
@@ -441,7 +433,7 @@ class AutodockParameter(Parameter):
 			required = True,
 			user = True
 		)
-		self.ga_pop_size = self.make_param(
+		self.ga_pop_size = AttrDict(
 			type = int,
 			default = 150,
 			value = 150,
@@ -451,7 +443,7 @@ class AutodockParameter(Parameter):
 			required = True,
 			user = True
 		)
-		self.ga_num_evals = self.make_param(
+		self.ga_num_evals = AttrDict(
 			type = int,
 			default = 2500000,
 			value = 2500000,
@@ -461,7 +453,7 @@ class AutodockParameter(Parameter):
 			required = True,
 			user = True
 		)
-		self.ga_num_generations = self.make_param(
+		self.ga_num_generations = AttrDict(
 			type = int,
 			default = 27000,
 			value = 27000,
@@ -471,7 +463,7 @@ class AutodockParameter(Parameter):
 			required = True,
 			user = True
 		)
-		self.ga_elitism = self.make_param(
+		self.ga_elitism = AttrDict(
 			type = int,
 			default = 1,
 			value = 1,
@@ -481,7 +473,7 @@ class AutodockParameter(Parameter):
 			required = True,
 			user = True
 		)
-		self.ga_mutation_rate = self.make_param(
+		self.ga_mutation_rate = AttrDict(
 			type = float,
 			default = 0.02,
 			value = 0.02,
@@ -491,7 +483,7 @@ class AutodockParameter(Parameter):
 			required = True,
 			user = True
 		)
-		self.ga_crossover_rate = self.make_param(
+		self.ga_crossover_rate = AttrDict(
 			type = float,
 			default = 0.8,
 			value = 0.8,
@@ -501,7 +493,7 @@ class AutodockParameter(Parameter):
 			required = True,
 			user = True
 		)
-		self.ga_window_size = self.make_param(
+		self.ga_window_size = AttrDict(
 			type = int,
 			default = 10,
 			value = 10,
@@ -511,7 +503,7 @@ class AutodockParameter(Parameter):
 			required = True,
 			user = True
 		)
-		self.ga_cauchy_alpha = self.make_param(
+		self.ga_cauchy_alpha = AttrDict(
 			type = float,
 			default = 0.0,
 			value = 0.0,
@@ -520,7 +512,7 @@ class AutodockParameter(Parameter):
 			required = True,
 			user = False
 		)
-		self.ga_cauchy_beta = self.make_param(
+		self.ga_cauchy_beta = AttrDict(
 			type = float,
 			default = 1.0,
 			value = 1.0,
@@ -529,7 +521,7 @@ class AutodockParameter(Parameter):
 			required = True,
 			user = False
 		)	
-		self.set_ga = self.make_param(
+		self.set_ga = AttrDict(
 			type = bool,
 			default = True,
 			value = True,
@@ -538,7 +530,7 @@ class AutodockParameter(Parameter):
 			required = True,
 			user = False
 		)
-		self.set_ga = self.make_param(
+		self.set_ga = AttrDict(
 			type = bool,
 			default = True,
 			value = True,
@@ -547,7 +539,7 @@ class AutodockParameter(Parameter):
 			required = True,
 			user = False
 		)
-		self.sw_max_its = self.make_param(
+		self.sw_max_its = AttrDict(
 			type = int,
 			default = 300,
 			value = 300,
@@ -557,7 +549,7 @@ class AutodockParameter(Parameter):
 			required = True,
 			user = True
 		)
-		self.sw_max_succ = self.make_param(
+		self.sw_max_succ = AttrDict(
 			type = int,
 			default = 4,
 			value = 4,
@@ -567,7 +559,7 @@ class AutodockParameter(Parameter):
 			required = True,
 			user = True
 		)
-		self.sw_max_fail = self.make_param(
+		self.sw_max_fail = AttrDict(
 			type = int,
 			default = 4,
 			value = 4,
@@ -577,7 +569,7 @@ class AutodockParameter(Parameter):
 			required = True,
 			user = True
 		)
-		self.sw_rho = self.make_param(
+		self.sw_rho = AttrDict(
 			type = float,
 			default = 1.0,
 			value = 1.0,
@@ -587,7 +579,7 @@ class AutodockParameter(Parameter):
 			required = True,
 			user = True
 		)
-		self.sw_lb_rho = self.make_param(
+		self.sw_lb_rho = AttrDict(
 			type = float,
 			default = 0.01,
 			value = 0.01,
@@ -597,7 +589,7 @@ class AutodockParameter(Parameter):
 			required = True,
 			user = True
 		)
-		self.ls_search_freq = self.make_param(
+		self.ls_search_freq = AttrDict(
 			type = float,
 			default = 0.06,
 			value = 0.06,
@@ -607,7 +599,7 @@ class AutodockParameter(Parameter):
 			required = True,
 			user = True
 		)
-		self.set_sw1 = self.make_param(
+		self.set_sw1 = AttrDict(
 			type = bool,
 			default = False,
 			value = False,
@@ -616,7 +608,7 @@ class AutodockParameter(Parameter):
 			required = True,
 			user = True
 		)
-		self.set_psw1 = self.make_param(
+		self.set_psw1 = AttrDict(
 			type = bool,
 			default = True,
 			value = True,
@@ -625,7 +617,7 @@ class AutodockParameter(Parameter):
 			required = True,
 			user = True
 		)
-		self.unbound_model = self.make_param(
+		self.unbound_model = AttrDict(
 			type = str,
 			default = 'bound',
 			value = 'bound',
@@ -634,7 +626,7 @@ class AutodockParameter(Parameter):
 			required = True,
 			user = False
 		)
-		self.simanneal = self.make_param(
+		self.simanneal = AttrDict(
 			type = bool,
 			default = True,
 			value = True,
@@ -643,7 +635,7 @@ class AutodockParameter(Parameter):
 			required = True,
 			user = False
 		)
-		self.do_local_only = self.make_param(
+		self.do_local_only = AttrDict(
 			type = int,
 			default = 50,
 			value = 50,
@@ -652,7 +644,7 @@ class AutodockParameter(Parameter):
 			required = True,
 			user = False
 		)
-		self.do_global_only = self.make_param(
+		self.do_global_only = AttrDict(
 			type = int,
 			default = 50,
 			value = 50,
@@ -661,7 +653,7 @@ class AutodockParameter(Parameter):
 			required = True,
 			user = False
 		)
-		self.ga_run = self.make_param(
+		self.ga_run = AttrDict(
 			type = int,
 			default = 10,
 			value = 10,
@@ -671,7 +663,7 @@ class AutodockParameter(Parameter):
 			required = True,
 			user = True
 		)
-		self.analysis = self.make_param(
+		self.analysis = AttrDict(
 			type = bool,
 			default = True,
 			value = True,
@@ -706,20 +698,20 @@ class AutodockParameter(Parameter):
 		return count
 
 	def get_scope_items(self, algorithm='LGA'):
-		params = {}
-		for p in self:
-			if self[p].user and algorithm in self[p].scope:
-				params[p] = self[p]
+		params = []
+		for p in self.items():
+			if p[1].user and algorithm in p[1].scope:
+				params.append(p)
 
-		return sorted(params.items(), key=lambda x: x[1].order)
+		return params
 
 	def get_ordered_items(self, algorithm='LGA'):
-		params = {}
-		for p in self:
-			if self[p].user and (self[p].scope == 'global' or algorithm in self[p].scope):
-				params[p] = self[p]
+		params = []
+		for p in self.items():
+			if p[1].user and (p[1].scope == 'global' or algorithm in p[1].scope):
+				params.append(p)
 
-		return sorted(params.items(), key=lambda x: x[1].order)
+		return params
 
 	def make_dpf_file(self, receptor_file, ligand_file):
 		ligand_types = get_atom_types_from_pdbqt(ligand_file)
@@ -737,11 +729,10 @@ class AutodockParameter(Parameter):
 
 		algorithm = ['LGA', 'GA', 'SA', 'LS'][self.algorithm]
 		
-		params = {}
-		for p in self:
-			if self[p].scope == 'global' or algorithm in self[p].scope:
-				params[p] = self[p]
-		params = sorted(params.items(), key=lambda x: x[1].order)
+		params = []
+		for p in self.items():
+			if p[1].scope == 'global' or algorithm in p[1].scope:
+				params.append(p)
 
 		rows = []
 		for k, v in params:
@@ -978,7 +969,7 @@ class AutodockParameterWizard(QWizard):
 
 class AutodockVinaParameter(Parameter):
 	def __init__(self):
-		self.receptor = self.make_param(
+		self.receptor = AttrDict(
 			type = str,
 			default = '',
 			value = '',
@@ -986,7 +977,7 @@ class AutodockVinaParameter(Parameter):
 			required = False,
 			user = False
 		)
-		self.flex = self.make_param(
+		self.flex = AttrDict(
 			type = str,
 			default = '',
 			value = '',
@@ -994,7 +985,7 @@ class AutodockVinaParameter(Parameter):
 			required = False,
 			user = False
 		)
-		self.ligand = self.make_param(
+		self.ligand = AttrDict(
 			type = str,
 			default = '',
 			value = '',
@@ -1002,7 +993,7 @@ class AutodockVinaParameter(Parameter):
 			required = True,
 			user = False
 		)
-		self.scoring = self.make_param(
+		self.scoring = AttrDict(
 			type = str,
 			default = 'vina',
 			value = 'vina',
@@ -1011,7 +1002,7 @@ class AutodockVinaParameter(Parameter):
 			required = True,
 			user = True
 		)
-		self.maps = self.make_param(
+		self.maps = AttrDict(
 			type = str,
 			default = '',
 			value = '',
@@ -1019,7 +1010,7 @@ class AutodockVinaParameter(Parameter):
 			required = False,
 			user = False
 		)
-		self.center_x = self.make_param(
+		self.center_x = AttrDict(
 			type = float,
 			default = 0,
 			value = 0,
@@ -1027,7 +1018,7 @@ class AutodockVinaParameter(Parameter):
 			required = True,
 			user = False
 		)
-		self.center_y = self.make_param(
+		self.center_y = AttrDict(
 			type = float,
 			default = 0,
 			value = 0,
@@ -1035,7 +1026,7 @@ class AutodockVinaParameter(Parameter):
 			required = True,
 			user = False
 		)
-		self.center_z = self.make_param(
+		self.center_z = AttrDict(
 			type = float,
 			default = 0,
 			value = 0,
@@ -1043,7 +1034,7 @@ class AutodockVinaParameter(Parameter):
 			required = True,
 			user = False
 		)
-		self.size_x = self.make_param(
+		self.size_x = AttrDict(
 			type = float,
 			default = 0,
 			value = 0,
@@ -1051,7 +1042,7 @@ class AutodockVinaParameter(Parameter):
 			required = True,
 			user = False
 		)
-		self.size_y = self.make_param(
+		self.size_y = AttrDict(
 			type = float,
 			default = 0,
 			value = 0,
@@ -1059,7 +1050,7 @@ class AutodockVinaParameter(Parameter):
 			required = True,
 			user = False
 		)
-		self.size_z = self.make_param(
+		self.size_z = AttrDict(
 			type = float,
 			default = 0,
 			value = 0,
@@ -1067,7 +1058,7 @@ class AutodockVinaParameter(Parameter):
 			required = True,
 			user = False
 		)
-		self.out = self.make_param(
+		self.out = AttrDict(
 			type = str,
 			default = '',
 			value = '',
@@ -1075,7 +1066,7 @@ class AutodockVinaParameter(Parameter):
 			required = True,
 			user = False
 		)
-		self.cpu = self.make_param(
+		self.cpu = AttrDict(
 			type = int,
 			default = 1,
 			value = 1,
@@ -1084,7 +1075,7 @@ class AutodockVinaParameter(Parameter):
 			required = True,
 			user = True
 		)
-		self.seed = self.make_param(
+		self.seed = AttrDict(
 			type = int,
 			default = 0,
 			value = 0,
@@ -1093,7 +1084,7 @@ class AutodockVinaParameter(Parameter):
 			required = False,
 			user = True
 		)
-		self.exhaustiveness = self.make_param(
+		self.exhaustiveness = AttrDict(
 			type = int,
 			default = 8,
 			value = 8,
@@ -1102,7 +1093,7 @@ class AutodockVinaParameter(Parameter):
 			required = False,
 			user = True
 		)
-		self.max_evals = self.make_param(
+		self.max_evals = AttrDict(
 			type = int,
 			default = 0,
 			value = 0,
@@ -1111,7 +1102,7 @@ class AutodockVinaParameter(Parameter):
 			required = False,
 			user = True
 		)
-		self.num_modes = self.make_param(
+		self.num_modes = AttrDict(
 			type = int,
 			default = 9,
 			value = 9,
@@ -1120,7 +1111,7 @@ class AutodockVinaParameter(Parameter):
 			required = False,
 			user = True
 		)
-		self.min_rmsd = self.make_param(
+		self.min_rmsd = AttrDict(
 			type = float,
 			default = 1.0,
 			value = 1.0,
@@ -1129,7 +1120,7 @@ class AutodockVinaParameter(Parameter):
 			required = False,
 			user = True
 		)
-		self.energy_range = self.make_param(
+		self.energy_range = AttrDict(
 			type = float,
 			default = 3.0,
 			value = 3.0,
@@ -1138,7 +1129,7 @@ class AutodockVinaParameter(Parameter):
 			required = False,
 			user = True
 		)
-		self.spacing = self.make_param(
+		self.spacing = AttrDict(
 			type = float,
 			default = 0.375,
 			value = 0.375,
@@ -1146,7 +1137,7 @@ class AutodockVinaParameter(Parameter):
 			required = False,
 			user = False
 		)
-		self.verbosity = self.make_param(
+		self.verbosity = AttrDict(
 			type = int,
 			default = 1,
 			value = 1,
@@ -1156,14 +1147,9 @@ class AutodockVinaParameter(Parameter):
 			user = False
 		)
 
-	def get_sorted_items(self):
-		return sorted(self.items(), key=lambda x: x[1].order)
-
 	def make_config_file(self, config_file):
-		items =  self.get_sorted_items()
-
 		with open(config_file, 'w') as fw:
-			for p, m in items:
+			for p, m in self.items():
 				if m.required or m.default != m.value:
 					fw.write("{} = {}\n".format(p, m.value))
 
@@ -1193,7 +1179,7 @@ class AutodockVinaParameterWizard(QWizard):
 		self.create_parameter_widgets()
 
 	def create_parameter_widgets(self):
-		for p, m in self.params.get_sorted_items():
+		for p, m in self.params.items():
 			if not m.user:
 				continue
 
@@ -1248,7 +1234,7 @@ class AutodockVinaParameterWizard(QWizard):
 
 class QuickVinaParameter(Parameter):
 	def __init__(self):
-		self.receptor = self.make_param(
+		self.receptor = AttrDict(
 			type = str,
 			default = '',
 			value = '',
@@ -1256,7 +1242,7 @@ class QuickVinaParameter(Parameter):
 			required = False,
 			user = False
 		)
-		self.flex = self.make_param(
+		self.flex = AttrDict(
 			type = str,
 			default = '',
 			value = '',
@@ -1264,7 +1250,7 @@ class QuickVinaParameter(Parameter):
 			required = False,
 			user = False
 		)
-		self.ligand = self.make_param(
+		self.ligand = AttrDict(
 			type = str,
 			default = '',
 			value = '',
@@ -1272,7 +1258,7 @@ class QuickVinaParameter(Parameter):
 			required = True,
 			user = False
 		)
-		self.center_x = self.make_param(
+		self.center_x = AttrDict(
 			type = float,
 			default = 0,
 			value = 0,
@@ -1280,7 +1266,7 @@ class QuickVinaParameter(Parameter):
 			required = True,
 			user = False
 		)
-		self.center_y = self.make_param(
+		self.center_y = AttrDict(
 			type = float,
 			default = 0,
 			value = 0,
@@ -1288,7 +1274,7 @@ class QuickVinaParameter(Parameter):
 			required = True,
 			user = False
 		)
-		self.center_z = self.make_param(
+		self.center_z = AttrDict(
 			type = float,
 			default = 0,
 			value = 0,
@@ -1296,7 +1282,7 @@ class QuickVinaParameter(Parameter):
 			required = True,
 			user = False
 		)
-		self.size_x = self.make_param(
+		self.size_x = AttrDict(
 			type = float,
 			default = 0,
 			value = 0,
@@ -1304,7 +1290,7 @@ class QuickVinaParameter(Parameter):
 			required = True,
 			user = False
 		)
-		self.size_y = self.make_param(
+		self.size_y = AttrDict(
 			type = float,
 			default = 0,
 			value = 0,
@@ -1312,7 +1298,7 @@ class QuickVinaParameter(Parameter):
 			required = True,
 			user = False
 		)
-		self.size_z = self.make_param(
+		self.size_z = AttrDict(
 			type = float,
 			default = 0,
 			value = 0,
@@ -1320,7 +1306,7 @@ class QuickVinaParameter(Parameter):
 			required = True,
 			user = False
 		)
-		self.out = self.make_param(
+		self.out = AttrDict(
 			type = str,
 			default = '',
 			value = '',
@@ -1328,7 +1314,7 @@ class QuickVinaParameter(Parameter):
 			required = True,
 			user = False
 		)
-		self.cpu = self.make_param(
+		self.cpu = AttrDict(
 			type = int,
 			default = 1,
 			value = 1,
@@ -1337,7 +1323,7 @@ class QuickVinaParameter(Parameter):
 			required = True,
 			user = True
 		)
-		self.seed = self.make_param(
+		self.seed = AttrDict(
 			type = int,
 			default = 0,
 			value = 0,
@@ -1346,7 +1332,7 @@ class QuickVinaParameter(Parameter):
 			required = False,
 			user = True
 		)
-		self.exhaustiveness = self.make_param(
+		self.exhaustiveness = AttrDict(
 			type = int,
 			default = 8,
 			value = 8,
@@ -1355,7 +1341,7 @@ class QuickVinaParameter(Parameter):
 			required = False,
 			user = True
 		)
-		self.num_modes = self.make_param(
+		self.num_modes = AttrDict(
 			type = int,
 			default = 9,
 			value = 9,
@@ -1364,7 +1350,7 @@ class QuickVinaParameter(Parameter):
 			required = False,
 			user = True
 		)
-		self.energy_range = self.make_param(
+		self.energy_range = AttrDict(
 			type = float,
 			default = 3.0,
 			value = 3.0,
@@ -1374,14 +1360,9 @@ class QuickVinaParameter(Parameter):
 			user = True
 		)
 
-	def get_sorted_items(self):
-		return sorted(self.items(), key=lambda x: x[1].order)
-
 	def make_config_file(self, config_file):
-		items =  self.get_sorted_items()
-
 		with open(config_file, 'w') as fw:
-			for p, m in items:
+			for p, m in self.items():
 				if m.required or m.default != m.value:
 					fw.write("{} = {}\n".format(p, m.value))
 
@@ -1408,7 +1389,7 @@ class QuickVinaParameterWizard(QWizard):
 		self.create_parameter_widgets()
 
 	def create_parameter_widgets(self):
-		for p, m in self.params.get_sorted_items():
+		for p, m in self.params.items():
 			if not m.user:
 				continue
 

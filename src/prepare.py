@@ -5,7 +5,6 @@ import MolKit.protein
 
 from rdkit import Chem
 from MolKit import Read
-from PySide6.QtCore import QSettings
 from meeko.preparation import MoleculePreparation
 #from meeko.utils.obutils import OBMolSupplier
 from AutoDockTools.MoleculePreparation import AD4LigandPreparation
@@ -17,19 +16,15 @@ __all__ = ['prepare_autodock_ligand', 'prepare_autodock_receptor',
 	'prepare_meeko_ligand', 'prepare_ligand'
 ]
 
-def prepare_autodock_ligand(ligand_file, ligand_pdbqt):
-	settings = QSettings()
-	settings.beginGroup('Ligand')
-	repairs = settings.value('repairs', '')
-	charges_to_add = settings.value('charges_to_add', 'gasteiger')
-	#preserve_charge_types = settings.value('preserve_charge_types', '')
-	cleanup = settings.value('cleanup', 'nphs_lps')
-	allowed_bonds = settings.value('allowed_bonds', 'backbone')
-	check_for_fragments = settings.value('check_for_fragments', False, bool)
-	inactivate_all_torsions = settings.value('inactivate_all_torsions', False, bool)
-	attach_nonbonded_fragments = settings.value('attach_nonbonded_fragments', False, bool)
-	attach_singletons = settings.value('attach_singletons', False, bool)
-	settings.endGroup()
+def prepare_autodock_ligand(ligand_file, ligand_pdbqt, params):
+	repairs = params['repairs']
+	charges_to_add = params['charges_to_add']
+	cleanup = params['cleanup']
+	allowed_bonds = params['allowed_bonds']
+	check_for_fragments = params['check_for_fragments']
+	inactivate_all_torsions = params['inactivate_all_torsions']
+	attach_nonbonded_fragments = params['attach_nonbonded_fragments']
+	attach_singletons = params['attach_singletons']
 
 	if charges_to_add == 'None':
 		charges_to_add = None
@@ -61,11 +56,12 @@ def prepare_autodock_ligand(ligand_file, ligand_pdbqt):
 	'''
 
 	AD4LigandPreparation(mol,
+		#mode = 'automatic',
 		repairs = repairs,
 		charges_to_add = charges_to_add,
 		cleanup = cleanup,
 		allowed_bonds = allowed_bonds,
-		root = 'auto',
+		#root = 'auto',
 		outputfilename = ligand_pdbqt,
 		check_for_fragments = check_for_fragments,
 		bonds_to_inactivate = [],
@@ -85,16 +81,12 @@ def prepare_autodock_ligand(ligand_file, ligand_pdbqt):
 		raise Exception(mol.returnMsg)
 
 #modified from prepare_receptor4.py
-def prepare_autodock_receptor(receptor_file, receptor_pdbqt):
-	settings = QSettings()
-	settings.beginGroup('Receptor')
-	repairs = settings.value('repairs', '')
-	charges_to_add = settings.value('charges_to_add', 'gasteiger')
-	#preserve_charge_types = settings.value('preserve_charge_types', '')
-	cleanup = settings.value('cleanup', 'nphs_lps_waters_nonstdres')
-	delete_single_nonstd_residues = settings.value('delete_single_nonstd_residues', False, bool)
-	unique_atom_names = settings.value('unique_atom_names', False, bool)
-	settings.endGroup()
+def prepare_autodock_receptor(receptor_file, receptor_pdbqt, params):
+	repairs = params['repairs']
+	charges_to_add = params['charges_to_add']
+	cleanup = params['cleanup']
+	delete_single_nonstd_residues = params['delete_single_nonstd_residues']
+	unique_atom_names = params['unique_atom_names']
 
 	if charges_to_add == 'None':
 		charges_to_add = None
@@ -159,22 +151,19 @@ def prepare_autodock_receptor(receptor_file, receptor_pdbqt):
 	if mol.returnCode != 0:
 		raise Exception(mol.returnMsg)
 
-def prepare_meeko_ligand(ligand_file, ligand_pdbqt):
-	settings = QSettings()
-	settings.beginGroup('Meeko')
-	rigid_macrocycles = settings.value('rigid_macrocycles', False, bool)
-	keep_chorded_rings = settings.value('keep_chorded_rings', False, bool)
-	keep_equivalent_rings = settings.value('keep_equivalent_rings', False, bool)
-	hydrate = settings.value('hydrate', False, bool)
-	keep_nonpolar_hydrogens = settings.value('keep_nonpolar_hydrogens', False, bool)
-	flexible_amides = settings.value('flexible_amides', False, bool)
-	add_index_map = settings.value('add_index_map', False, bool)
-	remove_smiles = settings.value('remove_smiles', False, bool)
-	rigidify_bonds_smarts = settings.value('rigidify_bonds_smarts', '')
-	rigidify_bonds_indices = settings.value('rigidify_bonds_indices', '')
-	atom_type_smarts = settings.value('atom_type_smarts', '')
-	double_bond_penalty = settings.value('double_bond_penalty', 50, int)
-	settings.endGroup()
+def prepare_meeko_ligand(ligand_file, ligand_pdbqt, params):
+	rigid_macrocycles = params['rigid_macrocycles']
+	keep_chorded_rings = params['keep_chorded_rings']
+	keep_equivalent_rings = params['keep_equivalent_rings']
+	hydrate = params['hydrate']
+	keep_nonpolar_hydrogens = params['keep_nonpolar_hydrogens']
+	flexible_amides = params['flexible_amides']
+	add_index_map = params['add_index_map']
+	remove_smiles = params['remove_smiles']
+	rigidify_bonds_smarts = params['rigidify_bonds_smarts']
+	rigidify_bonds_indices = params['rigidify_bonds_indices']
+	atom_type_smarts = params['atom_type_smarts']
+	double_bond_penalty = params['double_bond_penalty']
 
 	if rigidify_bonds_smarts.strip():
 		rigidify_bonds_smarts = rigidify_bonds_smarts.strip().split(',')
@@ -193,11 +182,21 @@ def prepare_meeko_ligand(ligand_file, ligand_pdbqt):
 	else:
 		atom_type_smarts = {}
 
-	#mols = OBMolSupplier(ligand_file, 'pdb')
-	#mols = iter(mols)
-	#mol = next(mols)
-	#mol = load_molecule_from_file(ligand_file, 'pdb')
-	mol = Chem.MolFromPDBFile(ligand_file)
+	ligand_format = os.path.splitext(ligand_file)[1]
+
+	if ligand_format == '.pdb':
+		mol = Chem.MolFromPDBFile(ligand_file, removeHs=False)
+
+	elif ligand_format == '.mol2':
+		mol = Chem.MolFromMol2File(ligand_file, removeHs=False)
+
+	elif ligand_format == '.mol':
+		mol = Chem.MolFromMolFile(ligand_file, removeHs=False)
+
+	elif ligand_format == '.sdf':
+		#only get the first mol in sdf file
+		for mol in Chem.SDMolSupplier(ligand_file, removeHs=False):
+			break
 
 	preparator = MoleculePreparation(
 		keep_nonpolar_hydrogens = keep_nonpolar_hydrogens,
@@ -217,11 +216,10 @@ def prepare_meeko_ligand(ligand_file, ligand_pdbqt):
 	preparator.prepare(mol)
 	preparator.write_pdbqt_file(ligand_pdbqt)
 
-def prepare_ligand(ligand_file, ligand_pdbqt):
-	settings = QSettings()
-	tool = settings.value('Ligand/prepare_tool', 'prepare_ligand4')
+def prepare_ligand(ligand_file, ligand_pdbqt, params):
+	tool = params['tool']
 
 	if tool == 'prepare_ligand4':
-		prepare_autodock_ligand(ligand_file, ligand_pdbqt)
+		prepare_autodock_ligand(ligand_file, ligand_pdbqt, params)
 	elif tool == 'meeko':
-		prepare_meeko_ligand(ligand_file, ligand_pdbqt)
+		prepare_meeko_ligand(ligand_file, ligand_pdbqt, params)

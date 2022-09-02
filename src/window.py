@@ -1,5 +1,7 @@
 import os
+import time
 import psutil
+import multiprocessing
 
 from PySide6.QtGui import *
 from PySide6.QtCore import *
@@ -24,13 +26,14 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 
 	def __init__(self):
 		super(DockeyMainWindow, self).__init__()
-		self.job_query = None
+		#self.job_query = None
 		self.job_params = None
 		self.job_engine = None
-		self.job_mutex = QMutex()
+		#self.job_mutex = QMutex()
+		self.job_worker = None
 
 		self.pymol_actions = {}
-		self.pool = QThreadPool(self)
+		#self.pool = QThreadPool(self)
 		#self.pool.setMaxThreadCount(3)
 
 		self.setWindowTitle("Dockey v{}".format(DOCKEY_VERSION))
@@ -61,16 +64,17 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 	def closeEvent(self, event):
 		self.write_settings()
 
-		#quit pymol
-		#self.cmd.quit()
-
-		#remove all jobs
-		self.pool.clear()
-
 		#kill all subprocess
 		parent = psutil.Process(os.getpid())
-		for child in parent.children():
+		children = parent.children(recursive=True)
+		
+		for child in children:
 			child.kill()
+
+		if self.job_worker:
+			self.job_worker.exit()
+
+		#self.save_project()
 
 		event.accept()
 
@@ -80,10 +84,6 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		self.resize(settings.value('size', QSize(900, 600)))
 		self.move(settings.value('pos', QPoint(200, 200)))
 		settings.endGroup()
-
-		#set job number
-		num = settings.value('Job/concurrent', 1, int)
-		self.pool.setMaxThreadCount(num)
 
 	def write_settings(self):
 		settings = QSettings()
@@ -131,13 +131,7 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 
 			parent.pymol_actions.setdefault(index, []).append(lambda v: action.setChecked(v != false_value))
 
-			if type_ in (
-					1,  # bool
-					2,  # int
-					3,  # float
-					5,  # color
-					6,  # str
-			):
+			if type_ in (1, 2, 3, 5, 6):
 				action.setCheckable(True)
 				if values[0] == true_value:
 					action.setChecked(True)
@@ -278,16 +272,32 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 			self.box_adjuster.params.update_grid(data)
 			draw_gridbox(self.cmd, self.box_adjuster.params)
 
+	def load_mol_to_view(self, mol_name, mol_content, mol_format):
+		if mol_format == 'pdb':
+			self.cmd.read_pdbstr(mol_content, mol_name)
+
+		elif mol_format == 'mol':
+			self.cmd.read_molstr(mol_content, mol_name)
+
+		elif mol_format == 'mol2':
+			content = convert_string_to_pdb(mol_content, mol_format)
+			self.cmd.read_pdbstr(content, mol_name)
+
+		elif mol_format == 'sdf':
+			self.cmd.read_sdfstr(mol_content, mol_name)
+
 	@Slot()
 	def on_molecular_changed(self, index):
 		self.cmd.delete('all')
 		self.cmd.initialize()
 
-		name = index.data(Qt.DisplayRole)
-		sql = "SELECT id,type,pdb FROM molecular WHERE name=? LIMIT 1"
-		mol = DB.get_dict(sql, (name,))
+		#name = index.data(Qt.DisplayRole)
+		mol_id = index.siblingAtColumn(0).data(Qt.DisplayRole)
 
-		self.cmd.read_pdbstr(mol.pdb, name)
+		sql = "SELECT id,name,type,content,format FROM molecular WHERE id=? LIMIT 1"
+		mol = DB.get_dict(sql, (mol_id,))
+
+		self.load_mol_to_view(mol.name, mol.content, mol.format)
 
 		if mol.type == 1 and self.box_sidebar_act.isChecked():
 			self.draw_grid_box(mol.id)
@@ -346,7 +356,7 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		if status == 1:
 			self.pose_tab.show_job_pose(title, job_id)
 
-		elif status == 3:
+		elif status == 0:
 			self.pose_tab.show_job_error(title, message)
 
 	def create_pose_tab(self):
@@ -411,6 +421,13 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 			triggered = self.open_project
 		)
 		self.open_project_act.setIconVisibleInMenu(False)
+
+		self.save_project_act = QAction("&Save Project", self,
+			disabled = True,
+			shortcut = QKeySequence.Save,
+			triggered = self.save_project
+		)
+		self.project_ready.connect(self.save_project_act.setEnabled)
 
 		self.save_project_as_act = QAction("&Save Project As", self,
 			disabled = True,
@@ -635,6 +652,7 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		self.file_menu = self.menuBar().addMenu("&File")
 		self.file_menu.addAction(self.new_project_act)
 		self.file_menu.addAction(self.open_project_act)
+		self.file_menu.addAction(self.save_project_act)
 		self.file_menu.addAction(self.save_project_as_act)
 		self.file_menu.addAction(self.close_project_act)
 		self.file_menu.addSeparator()
@@ -763,7 +781,7 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 			url = event.mimeData().urls()[0]
 			project_file = url.toLocalFile()
 
-			if project_file.endswith('.dky'):
+			if project_file.endswith('.dock'):
 				if DB.active():
 					ret = QMessageBox.warning(self, "Warning",
 						"Are you sure you want to close the current project and open the dragged project?",
@@ -784,7 +802,12 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 
 	def open_settings_dialog(self):
 		dlg = DockeyConfigDialog(self)
-		dlg.exec()
+
+		if dlg.exec() == QDialog.Accepted:
+			if self.job_worker:
+				settings = QSettings()
+				num = settings.value('Job/concurrent', 1, int)
+				self.job_worker.signals.threads.emit(num)
 
 	def open_prepare_dialog(self):
 		dlg = MolecularPrepareDialog(self)
@@ -837,6 +860,10 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 
 		self.create_db_connect(project_file)
 
+	def save_project(self):
+		if DB.changed():
+			DB.commit()
+
 	def save_project_as(self):
 		project_file, _ = QFileDialog.getSaveFileName(self, filter="Dockey Project File (*.dock)")
 
@@ -852,6 +879,18 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		DB.save(project_file)
 
 	def close_project(self):
+		if DB.changed():
+			ret = QMessageBox.question(self, "Confirmation",
+				"Would you like to save project before closing project",
+				QMessageBox.Yes | QMessageBox.No | QMessageBox.Cancel
+			)
+
+			if ret == QMessageBox.Cancel:
+				return
+
+			elif ret == QMessageBox.Yes:
+				self.save_project()
+
 		self.mol_model.reset()
 		self.job_model.reset()
 		self.pose_model.reset()
@@ -894,7 +933,7 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		receptors, _ = QFileDialog.getOpenFileNames(self,
 			caption = "Select receptor files",
 			filter = (
-				"Receptors (*.pdb *.pdbqt *.mol2 *.mol *.smi *.sdf);;"
+				"Receptors (*.pdb *.mol2 *.mol *.sdf);;"
 				"All files (*.*)"
 			)
 		)
@@ -902,14 +941,11 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		if not receptors:
 			return
 
-		importor = ImportMoleculeFromFile(receptors, 1)
+		importor = ImportFileWorker(receptors, 1)
 		importor.signals.message.connect(self.show_message)
 		importor.signals.failure.connect(self.show_error_message)
 		importor.signals.success.connect(self.mol_model.select)
-		pool = QThreadPool.globalInstance()
-		pool.start(importor)
-
-		#self.import_moleculars(receptors, 1)
+		QThreadPool.globalInstance().start(importor)
 
 	def import_receptor_from_pdb(self):
 		#pdb_url = PDBDownloader.get_url(self)
@@ -923,7 +959,7 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		ligands, _ = QFileDialog.getOpenFileNames(self,
 			caption = "Select ligand files",
 			filter = (
-				"Receptors (*.pdb *.pdbqt *.mol2 *.mol *.smi *.sdf);;"
+				"Receptors (*.pdb *.mol2 *.mol *.sdf);;"
 				"All files (*.*)"
 			)
 		)
@@ -931,13 +967,11 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		if not ligands:
 			return
 
-		#self.import_moleculars(ligands, 2)
-		importor = ImportMoleculeFromFile(ligands, 2)
+		importor = ImportFileWorker(ligands, 2)
 		importor.signals.message.connect(self.show_message)
 		importor.signals.failure.connect(self.show_error_message)
 		importor.signals.success.connect(self.mol_model.select)
-		pool = QThreadPool.globalInstance()
-		pool.start(importor)
+		QThreadPool.globalInstance().start(importor)
 
 	def import_ligands_from_dir(self):
 		folder = QFileDialog.getExistingDirectory(self)
@@ -945,12 +979,11 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		if not folder:
 			return
 
-		importor = ImportMoleculeFromDir(folder, 2)
+		importor = ImportFolderWorker(folder, 2)
 		importor.signals.message.connect(self.show_message)
 		importor.signals.failure.connect(self.show_error_message)
 		importor.signals.success.connect(self.mol_model.select)
-		pool = QThreadPool.globalInstance()
-		pool.start(importor)
+		QThreadPool.globalInstance().start(importor)
 
 	def import_ligand_from_zinc(self):
 		#zinc_url = ZincDownloader.get_url(self)
@@ -1017,7 +1050,7 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 
 		pdb = self.cmd.get_pdbstr(name)
 
-		sql = "UPDATE molecular SET pdb=? WHERE name=?"
+		sql = "UPDATE molecular SET content=? WHERE name=?"
 		DB.query(sql, (pdb, name))
 
 	def pymol_add_all_hydrogens(self):
@@ -1109,71 +1142,37 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		DB.query("DELETE FROM grid WHERE id=?", (r.id,))
 
 	def generate_job_list(self):
-		'''
-		receptors = DB.get_column("SELECT id FROM molecular WHERE type=1")
-		ligands = DB.get_column("SELECT id FROM molecular WHERE type=2")
-
-		rows = []
-		for r in receptors:
-			for l in ligands:
-				rows.append((None, r, l, 0, 0, None, None, None))
-
-		sql = "INSERT INTO jobs VALUES (?,?,?,?,?,?,?,?)"
-		DB.insert_rows(sql, rows)
-
-		self.job_model.select()
-
-		return len(rows)
-		'''
 		DB.set_option('tool', self.job_engine)
-		#sql = "SELECT 1 FROM jobs LIMIT 1"
-		#if DB.get_exists(sql):
-		#	sql = "UPDATE jobs SET status=?,progress=?,started=?,finished=?,message=?"
-		#	DB.query(sql, (4, 0, 0, 0, None))
-		#	self.job_model.select()
-		#	self.start_jobs()
-		#else:		
+
 		thread = JobListGenerator()
 		thread.signals.message.connect(self.show_message)
 		thread.signals.success.connect(self.job_model.select)
-		thread.signals.success.connect(self.start_jobs)
-		pool = QThreadPool.globalInstance()
-		pool.start(thread)
+		thread.signals.finished.connect(self.start_jobs)
+		QThreadPool.globalInstance().start(thread)
 
-	def start_jobs(self):
-		self.job_query = DB.query("SELECT id FROM jobs")
-		settings = QSettings()
-		num = settings.value('Job/concurrent', 1, int) * 2
+	def stop_job(self, job):
+		if self.job_worker is not None:
+			self.job_worker.stop_job(job)
 
-		for i in range(num):
-			self.submit_job()
-
-	def submit_job(self):
-		self.job_mutex.lock()
-		job = self.job_query.fetchone()
-		self.job_mutex.unlock()
-
-		if not job:
-			return
-
-		job = job[0]
-
-		if self.job_engine == 'autodock':
-			worker = AutodockWorker(job, self.job_params)
-		elif self.job_engine == 'vina':
-			worker = AutodockVinaWorker(job, self.job_params)
-		elif self.job_engine == 'qvina':
-			worker = QuickVinaWorker(job, self.job_params)
-
-		worker.signals.refresh.connect(self.job_model.update_row)
-		worker.signals.finished.connect(self.pose_tab.select)
-		worker.signals.finished.connect(self.submit_job)
-
-		sql = "UPDATE jobs SET status=? WHERE id=?"
-		DB.query(sql, (0, job))
+		sql = "UPDATE jobs SET status=?,message=? WHERE id=?"
+		DB.query(sql, (4, 'Stopped', job))
 		self.job_model.update_row(job)
 
-		self.pool.start(worker)
+	def start_jobs(self):
+		params = self.job_params.deep_copy()
+
+		if self.job_engine == 'autodock':
+			self.job_worker = AutodockWorker(params)
+		elif self.job_engine == 'vina':
+			self.job_worker = AutodockVinaWorker(params)
+		elif self.job_engine == 'qvina':
+			self.job_worker = QuickVinaWorker(params)
+
+		self.job_worker.signals.refresh.connect(self.job_model.update_row)
+		self.job_worker.signals.failure.connect(self.show_error_message)
+		self.job_worker.signals.finished.connect(self.pose_tab.select)
+
+		QThreadPool.globalInstance().start(self.job_worker)
 
 	def check_mols(self):
 		receptors = DB.get_one("SELECT 1 FROM molecular WHERE type=1 LIMIT 1")
@@ -1211,7 +1210,6 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 
 		#clear logs
 		DB.query("DELETE FROM logs")
-
 		#delete tool option
 		DB.set_option('tool', '')
 

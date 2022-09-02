@@ -1,6 +1,7 @@
 import os
 import sys
 import rc_icons
+import multiprocessing
 
 from PySide6.QtCore import *
 from PySide6.QtWidgets import *
@@ -9,6 +10,8 @@ from config import *
 from window import *
 
 if __name__ == '__main__':
+	multiprocessing.freeze_support()
+
 	QCoreApplication.setOrganizationName("BIG")
 	QCoreApplication.setOrganizationDomain("dockey.readthedocs.io")
 	QCoreApplication.setApplicationName("Dockey")

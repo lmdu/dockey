@@ -120,6 +120,7 @@ class GridBoxSettingPanel(QWidget):
 	def __init__(self, parent=None):
 		super(GridBoxSettingPanel, self).__init__(parent)
 		self.parent = parent
+		self.settings = QSettings()
 
 		#self.params = GridBoxParamter()
 
@@ -145,6 +146,9 @@ class GridBoxSettingPanel(QWidget):
 		draw_gridbox(self.parent.cmd, self.params)
 
 	def update_value(self, k, v):
+		if k == 'spacing':
+			self.settings.setValue('Grid/spacing', v)
+
 		if self.params[k] == v:
 			return
 

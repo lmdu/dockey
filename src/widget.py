@@ -431,18 +431,20 @@ class PoseTabWidget(QTabWidget):
 	def __init__(self, parent=None):
 		super(PoseTabWidget, self).__init__(parent)
 		self.parent = parent
-		self.setTabBarAutoHide(True)
 
 		self.create_best_table()
 		self.create_pose_table()
 		self.create_error_text()
 
+		self.setUsesScrollButtons(False)
+		self.setTabBarAutoHide(True)
+
 	def create_best_table(self):
 		self.best_table = BestTableView(self.parent)
 		self.best_model = BestTableModel()
 		self.best_table.setModel(self.best_model)
-		self.best_table.hideColumn(0)
 		self.best_table.hideColumn(1)
+		self.best_table.hideColumn(2)
 		self.best_table.verticalHeader().hide()
 		self.best_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
 		self.best_table.setSelectionBehavior(QAbstractItemView.SelectRows)
@@ -497,6 +499,8 @@ class InteractionTabWidget(QTabWidget):
 		self.binding_site = None
 		self.complex_pdb = None
 		self.complex_vis = None
+
+		self.setUsesScrollButtons(False)
 
 		self.create_hydrogen_table()
 		self.create_halogen_table()
@@ -745,8 +749,6 @@ class DockeyConfigDialog(QDialog):
 				i.widget.setValue(val)
 
 	def write_settings(self):
-		self.change_concurrent_jobs()
-
 		for i in self.input_widgets:
 			if i.wgtype == 'browse':
 				val = i.widget.get_text()
@@ -760,24 +762,6 @@ class DockeyConfigDialog(QDialog):
 			self.settings.setValue(i.option, val)
 
 		self.accept()
-
-	def change_concurrent_jobs(self):
-		val = self.settings.value('Job/concurrent', 1, int)
-		num = self.thread_input.value()
-
-		if num <= val:
-			return
-
-		self.parent.pool.setMaxThreadCount(num)
-		active = self.parent.pool.activeThreadCount()
-		wait = val * 2 - active
-		new = num - wait + 1
-
-		if new < 0:
-			new = 1
-
-		for i in range(new):
-			self.parent.submit_job()
 
 class MolecularPrepareDialog(QDialog):
 	def __init__(self, parent=None):
@@ -830,7 +814,7 @@ class MolecularPrepareDialog(QDialog):
 		self.register_widget(b_radio, 'radio', 'Receptor/repairs', 'bonds', str)
 		self.register_widget(h_radio, 'radio', 'Receptor/repairs', 'hydrogens', str)
 		self.register_widget(c_h_radio, 'radio', 'Receptor/repairs', 'checkhydrogens', str)
-		self.register_widget(non_radio, 'radio', 'Receptor/repairs', 'None', str)
+		self.register_widget(non_radio, 'radio', 'Receptor/repairs', '', str)
 
 		repair_group = QButtonGroup(self)
 		repair_group.addButton(b_h_radio)
@@ -944,7 +928,7 @@ class MolecularPrepareDialog(QDialog):
 		self.register_widget(b_radio, 'radio', 'Ligand/repairs', 'bonds', str)
 		self.register_widget(h_radio, 'radio', 'Ligand/repairs', 'hydrogens', str)
 		self.register_widget(c_h_radio, 'radio', 'Ligand/repairs', 'checkhydrogens', str)
-		self.register_widget(non_radio, 'radio', 'Ligand/repairs', 'None', str)
+		self.register_widget(non_radio, 'radio', 'Ligand/repairs', '', str)
 
 		repair_group = QButtonGroup(self)
 		repair_group.addButton(b_h_radio)
@@ -1092,16 +1076,16 @@ class MolecularPrepareDialog(QDialog):
 		dbp_layout.addWidget(QLabel("<font color='gray'><small>penalty > 100 prevents breaking double bonds</small></font>"))
 		meeko_layout.addLayout(dbp_layout)
 
-		self.register_widget(rbs_input, 'edit', 'Ligand/rigidify_bonds_smarts', '', str)
-		self.register_widget(rbi_input, 'edit', 'Ligand/rigidify_bonds_indices', '', str)
-		self.register_widget(ats_input, 'edit', 'Ligand/atom_type_smarts', '', str)
-		self.register_widget(dbp_spin, 'spin', 'Ligand/double_bond_penalty', 50, int)
+		self.register_widget(rbs_input, 'edit', 'Meeko/rigidify_bonds_smarts', '', str)
+		self.register_widget(rbi_input, 'edit', 'Meeko/rigidify_bonds_indices', '', str)
+		self.register_widget(ats_input, 'edit', 'Meeko/atom_type_smarts', '', str)
+		self.register_widget(dbp_spin, 'spin', 'Meeko/double_bond_penalty', 50, int)
 
 	def read_settings(self):
 		for i in self.input_widgets:
 			if i.wgtype == 'radio':
 				if 'repairs' in i.option:
-					val = self.settings.value(i.option, 'None')
+					val = self.settings.value(i.option, '')
 
 				elif 'charges_to_add' in i.option:
 					val = self.settings.value(i.option, 'gasteiger')
@@ -1181,6 +1165,8 @@ class MolecularPrepareDialog(QDialog):
 			elif i.wgtype == 'select':
 				val = i.widget.currentText()
 				self.settings.setValue(i.option, val)
+
+		self.accept()
 
 	def reset_settings(self):
 		self.settings.remove('Receptor')
@@ -1272,10 +1258,10 @@ class DownloaderDialog(QDialog):
 			QMessageBox.critical(self.parent, "Error", self.reply.errorString())
 
 	def save_molecular(self, mol):
-		sql = "INSERT INTO molecular VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)"
+		sql = "INSERT INTO molecular VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
 		mi = get_molecule_information(mol, True, self.mol_id, self.mol_fmt)
-		row = [None, mi.name, self.mol_type, mi.pdb, mi.atoms, mi.bonds,
-			mi.hvyatoms, mi.residues, mi.rotors, mi.formula, mi.energy,
+		row = [None, mi.name, self.mol_type, mi.content, mi.format, mi.atoms,
+			mi.bonds, mi.hvyatoms, mi.residues, mi.rotors, mi.formula, mi.energy,
 			mi.weight, mi.logp
 		]
 		DB.query(sql, row)

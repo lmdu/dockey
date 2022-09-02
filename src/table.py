@@ -1,3 +1,5 @@
+import psutil
+
 from PySide6.QtGui import *
 from PySide6.QtCore import *
 from PySide6.QtWidgets import *
@@ -22,12 +24,98 @@ class MoleculeDetailDialog(QDialog):
 		self.setLayout(layout)
 
 		label = QLabel(info, self)
+		label.setWordWrap(True)
 		layout.addWidget(label)
 
 		btn_box = QDialogButtonBox(QDialogButtonBox.Ok)
 		btn_box.accepted.connect(self.accept)
 		btn_box.rejected.connect(self.reject)
 		layout.addWidget(btn_box)
+
+class JobStatusesDialog(QDialog):
+	def __init__(self, parent, info):
+		super(JobStatusesDialog, self).__init__(parent)
+		self.setWindowTitle("Statuses Overview")
+		layout = QVBoxLayout()
+		self.setLayout(layout)
+
+		layout.addWidget(QLabel("Number of Jobs:", self))
+
+		label = QLabel(info, self)
+		label.setWordWrap(True)
+		layout.addWidget(label)
+
+		btn_box = QDialogButtonBox(QDialogButtonBox.Ok)
+		btn_box.accepted.connect(self.accept)
+		btn_box.rejected.connect(self.reject)
+		layout.addWidget(btn_box)
+
+class JobDetailDialog(QDialog):
+	def __init__(self, parent, info, pid):
+		super(JobDetailDialog, self).__init__(parent)
+		self.parent = parent
+		self.procs = []
+
+		self.setWindowTitle("Job Details")
+		layout = QVBoxLayout()
+		self.setLayout(layout)
+
+		info_label = QLabel(info, self)
+		info_label.setWordWrap(True)
+		layout.addWidget(info_label)
+
+		self.usage_label = QLabel("<table cellspacing='10'><tr><td>CPU: 0 | Memory: 0</td></tr></table>", self)
+		self.usage_label.setAlignment(Qt.AlignCenter)
+		layout.addWidget(self.usage_label)
+
+		btn_box = QDialogButtonBox(QDialogButtonBox.Ok)
+		btn_box.accepted.connect(self.accept)
+		btn_box.rejected.connect(self.reject)
+		layout.addWidget(btn_box)
+
+		if pid and psutil.pid_exists(pid):
+			proc = psutil.Process(pid)
+
+			for child in proc.children():
+				self.procs.append(child)
+
+			self.procs.append(proc)
+
+		else:
+			self.procs = None
+
+		self.timer = QTimer(self)
+		self.timer.timeout.connect(self.update_usage)
+		self.timer.start(1000)
+		self.accepted.connect(self.timer.stop)
+
+	@Slot()
+	def update_usage(self):
+		if self.procs is None:
+			self.usage_label.setText("<table cellspacing='10'><tr><td>CPU: 0 | Memory: 0</td></tr></table>")
+			return
+
+		cpu = 0
+		mem = 0
+		memp = 0
+
+		try:
+			for proc in self.procs:
+				cpu += proc.cpu_percent()
+				mem += proc.memory_info().rss
+				memp += proc.memory_percent()
+		except:
+			self.procs = None
+			self.usage_label.setText("<table cellspacing='10'><tr><td>CPU: 0 | Memory: 0</td></tr></table>")
+			return
+			
+		self.usage_label.setText(
+			"<table cellspacing='10'><tr><td>CPU: {:.2f}% | Memory: {}, {:.2f}%</td></tr></table>".format(
+				cpu/psutil.cpu_count(False),
+				memory_format(mem),
+				memp
+			)
+		)
 
 class JobLogDialog(QDialog):
 	def __init__(self, parent, job):
@@ -95,12 +183,23 @@ class DockeyListView(QListView):
 			triggered = self.add_ligands
 		)
 
-		del_m_act = QAction("Delete", self,
+		del_m_act = QAction("Delete Select", self,
 			triggered = self.delete_molecular
 		)
 		del_m_act.setDisabled(not self.current_index.isValid())
 
+		clr_r_act = QAction("Delete Receptors", self,
+			enabled = DB.active(),
+			triggered = self.delete_receptors
+		)
+
+		clr_l_act = QAction("Delete Ligands", self,
+			enabled = DB.active(),
+			triggered = self.delete_ligands
+		)
+
 		clr_m_act = QAction("Delete All", self,
+			enabled = DB.active(),
 			triggered = self.delete_all
 		)
 
@@ -116,6 +215,9 @@ class DockeyListView(QListView):
 		menu.addAction(self.parent.import_ligand_act)
 		menu.addSeparator()
 		menu.addAction(del_m_act)
+		menu.addSeparator()
+		menu.addAction(clr_r_act)
+		menu.addAction(clr_l_act)
 		menu.addAction(clr_m_act)
 		menu.addSeparator()
 		menu.addAction(view_act)
@@ -134,8 +236,18 @@ class DockeyListView(QListView):
 		if not self.current_index.isValid():
 			return
 
-		name = self.current_index.data(role=Qt.DisplayRole)
-		DB.query("DELETE FROM molecular WHERE name=?",(name,))
+		mid = self.current_index.siblingAtColumn(0).data(role=Qt.DisplayRole)
+		DB.query("DELETE FROM molecular WHERE id=?",(mid,))
+		self.parent.mol_model.select()
+
+	@Slot()
+	def delete_ligands(self):
+		DB.query("DELETE FROM molecular WHERE type=2")
+		self.parent.mol_model.select()
+
+	@Slot()
+	def delete_receptors(self):
+		DB.query("DELETE FROM molecular WHERE type=1")
 		self.parent.mol_model.select()
 
 	@Slot()
@@ -148,22 +260,23 @@ class DockeyListView(QListView):
 		if not self.current_index.isValid():
 			return
 
-		name = self.current_index.data(role=Qt.DisplayRole)
-		sql = "SELECT * FROM molecular WHERE name=? LIMIT 1"
-		mol = DB.get_dict(sql, (name,))
+		mid = self.current_index.siblingAtColumn(0).data(role=Qt.DisplayRole)
+		sql = "SELECT * FROM molecular WHERE id=? LIMIT 1"
+		mol = DB.get_dict(sql, (mid,))
 
 		if mol:
 			info = (
 				"<table cellspacing='10'>"
 				"<tr><td>{} name: </td><td>{}</td></tr>"
+				"<tr><td>{} format: </td><td>{}</td></tr>"
 				"<tr><td>Number of atoms: </td><td>{}</td></tr>"
 				"<tr><td>Number of bonds: </td><td>{}</td></tr>"
 				"<tr><td>Number of heavy atoms: </td><td>{}</td></tr>"
 				"<tr><td>Number of residues: </td><td>{}</td></tr>"
 				"<tr><td>Number of rotors: </td><td>{}</td></tr>"
-				"<tr><td>Stochoimetric formula: </td><td>{}</td></tr>"
+				"<tr><td>Chemical formula: </td><td>{}</td></tr>"
 				#"<tr><td>Heat of formation: </td><td>{} kcal/mol</td></tr>"
-				"<tr><td>Molecular Weight: </td><td>{}</td></tr>"
+				"<tr><td>Molecular weight: </td><td>{}</td></tr>"
 				"<tr><td>Calculated logP: </td><td>{}</td></tr>"
 				"</table>"
 			)
@@ -171,6 +284,8 @@ class DockeyListView(QListView):
 			dlg = MoleculeDetailDialog(self.parent, info.format(
 				'Receptor' if mol.type == 1 else 'Ligand',
 				mol.name,
+				'Receptor' if mol.type == 1 else 'Ligand',
+				mol.format,
 				mol.atoms,
 				mol.bonds,
 				mol.hvyatoms,
@@ -218,6 +333,7 @@ class DockeyTableModel(QAbstractTableModel):
 
 	def __init__(self, parent=None):
 		super(DockeyTableModel, self).__init__(parent)
+		self.parent = parent
 
 		#store ids of displayed row
 		self.displayed = []
@@ -345,7 +461,18 @@ class DockeyTableModel(QAbstractTableModel):
 
 class MolecularTableModel(DockeyTableModel):
 	table = 'molecular'
-	custom_headers = ['ID','Name', 'Type']
+	custom_headers = ['ID', 'Name', 'Type']
+
+	@property
+	def read_sql(self):
+		remainder = self.total_count - self.read_count
+		fetch_count = min(self._reads, remainder)
+
+		return "SELECT id FROM {} ORDER BY type LIMIT {},{}".format(
+			self.table,
+			self.read_count,
+			fetch_count
+		)
 
 	def data(self, index, role):
 		if role == Qt.DecorationRole:
@@ -354,6 +481,7 @@ class MolecularTableModel(DockeyTableModel):
 
 			if v == 1:
 				return QIcon(":/icons/receptor.svg")
+
 			elif v == 2:
 				return QIcon(":/icons/ligand.svg")
 
@@ -363,25 +491,25 @@ class JobsTableModel(DockeyTableModel):
 	table = 'jobs'
 	custom_headers = [' ID ', 'Receptor', 'Ligand', ' Status ', ' Progress ']
 
-	status = {
-		0: 'Pending',
+	statuses = {
+		0: 'Failure',
 		1: 'Success',
 		2: 'Running',
-		3: 'Failure',
-		4: 'Queuing'
+		3: 'Waiting',
+		4: 'Stopped'
 	}
 	status_colors = {
-		0: QColor(255, 193, 7),
+		0: QColor(220, 53, 69),
 		1: QColor(25, 135, 84),
 		2: QColor(13, 110, 253),
-		3: QColor(220, 53, 69),
+		3: QColor(255, 193, 7),
 		4: QColor(188, 188, 188)
 	}
 	status_icons = {
-		0: QIcon(':/icons/pend.svg'),
+		0: QIcon(':/icons/error.svg'),
 		1: QIcon(':/icons/success.svg'),
 		2: QIcon(':/icons/run.svg'),
-		3: QIcon(':/icons/error.svg'),
+		3: QIcon(':/icons/pend.svg'),
 		4: QIcon(':/icons/queue.svg')
 	}
 
@@ -413,7 +541,7 @@ class JobsTableModel(DockeyTableModel):
 
 		if role == Qt.DisplayRole:
 			if col == 3:
-				return self.status[val]
+				return self.statuses[val]
 
 			elif col == 5 or col == 6:
 				return time_format(val)
@@ -434,6 +562,9 @@ class JobsTableModel(DockeyTableModel):
 
 	@Slot()
 	def update_row(self, rowid):
+		if rowid not in self.displayed:
+			return
+
 		rowid -= 1
 		colid = len(self.custom_headers)-1
 		self.update_cache(rowid)
@@ -497,11 +628,11 @@ class PoseTableModel(DockeyTableModel):
 	def switch_table(self, tool=None):
 		if tool == 'autodock':
 			self.custom_headers = ['ID', 'Job', 'Run', 'Energy', 'cRMSD', 'rRMSD',
-				'logKi', 'LE', 'FQ', 'SILE', 'LLE', 'LELP'
+				'logKi', 'LE', 'FQ', 'SILE', 'LLE', 'LELP', 'Ki'
 			]
 		elif tool in ['vina', 'qvina']:
 			self.custom_headers = ['ID', 'Job', 'Mode', 'Affinity', 'lRMSD', 'uRMSD',
-				'logKi', ' LE', 'FQ', 'SILE', 'LLE', 'LELP'
+				'logKi', ' LE', 'FQ', 'SILE', 'LLE', 'LELP', 'Ki'
 			]
 		else:
 			self.custom_headers = ['ID', 'Job']
@@ -531,6 +662,8 @@ class PoseTableModel(DockeyTableModel):
 
 class BestTableModel(PoseTableModel):
 	table = 'best'
+	sorter = ''
+	custom_headers = ['', 'PID', 'Job']
 
 	@property
 	def count_sql(self):
@@ -539,8 +672,8 @@ class BestTableModel(PoseTableModel):
 	@property
 	def get_sql(self):
 		return (
-			"SELECT b.pid,p.jid,m1.name,m2.name,p.energy,p.rmsd1,"
-			"p.rmsd2,p.logki, p.le,p.sile,p.fq,p.lle,p.lelp,p.ki,"
+			"SELECT b.id,b.pid,p.jid,m1.name,m2.name,p.energy,p.rmsd1,"
+			"p.rmsd2,p.logki,p.le,p.sile,p.fq,p.lle,p.lelp,p.ki,"
 			"p.mode,p.complex FROM best AS b "
 			"LEFT JOIN pose AS p ON p.id=b.pid "
 			"LEFT JOIN jobs AS j ON j.id=p.jid "
@@ -554,23 +687,51 @@ class BestTableModel(PoseTableModel):
 		remainder = self.total_count - self.read_count
 		fetch_count = min(self._reads, remainder)
 
-		return "SELECT id FROM {} LIMIT {},{}".format(
-			self.table,
-			self.read_count,
-			fetch_count
-		)
+		if self.sorter:
+			sql = "SELECT b.id FROM {} AS b LEFT JOIN pose \
+			AS p ON p.id=b.pid ORDER BY {}".format(
+				self.table,
+				self.sorter
+			)
+		else:
+			sql = "SELECT id FROM {} LIMIT {},{}".format(
+				self.table,
+				self.read_count,
+				fetch_count
+			)
+		return sql
 
 	def switch_table(self, tool=None):
 		if tool == 'autodock':
-			self.custom_headers = ['ID', 'Job', 'Receptor', 'Ligand', 'Energy',
-				'cRMSD', 'rRMSD','logKi', 'LE', 'FQ', 'SILE', 'LLE', 'LELP'
+			self.custom_headers = ['ID', 'PID', 'Job', 'Receptor', 'Ligand', 'Energy',
+				'cRMSD', 'rRMSD','logKi', 'LE', 'SILE', 'FQ', 'LLE', 'LELP', 'Ki'
 			]
 		elif tool in ['vina', 'qvina']:
-			self.custom_headers = ['ID', 'Job', 'Receptor', 'Ligand', 'Affinity',
-				'lRMSD', 'uRMSD', 'logKi', ' LE', 'FQ', 'SILE', 'LLE', 'LELP'
+			self.custom_headers = ['ID', 'PID', 'Job', 'Receptor', 'Ligand', 'Affinity',
+				'lRMSD', 'uRMSD', 'logKi', ' LE', 'SILE', 'FQ', 'LLE', 'LELP', 'Ki'
 			]
 		else:
-			self.custom_headers = ['ID', 'Job']
+			self.custom_headers = ['', 'PID', 'Job']
+
+	def sort(self, column, order):
+		fields = ['b.id', '', '', '', '', 'p.energy', 'p.rmsd1', 'p.rmsd2', 'p.logki', 'p.le',
+			'p.sile', 'p.fq', 'p.lle', 'p.lelp'
+		]
+
+		if column in [1, 2, 3, 4, 14]:
+			return
+
+		if order == Qt.DescendingOrder:
+			self.sorter = "{} DESC".format(fields[column])
+
+		elif order == Qt.AscendingOrder:
+			self.sorter = fields[column]
+
+		else:
+			self.sorter = ''
+
+		self.select()
+
 
 class BindingSiteModel(DockeyTableModel):
 	table = 'binding_site'
@@ -701,27 +862,55 @@ class JobTableView(QTableView):
 	def sizeHint(self):
 		return QSize(300, 150)
 
+	def get_pid(self, job):
+		if self.parent.job_worker:
+			return self.parent.job_worker.get_job_pid(job)
+
 	@Slot()
 	def on_custom_menu(self, pos):
 		self.current_index = self.indexAt(pos)
 
-		view_detail_act = QAction("View Details", self,
-			triggered = self.view_details
+		view_detail_act = QAction("View Job Details", self,
+			triggered = self.view_job_details
 		)
 		view_detail_act.setEnabled(self.current_index.isValid())
 
-		view_logs_act = QAction("View Log Files", self,
-			triggered = self.view_logs
+		view_status_act = QAction("View Job Statuses", self,
+			disabled = not DB.active(),
+			triggered = self.view_job_statuses
 		)
-		view_logs_act.setEnabled(self.current_index.isValid())
+
+		#view_logs_act = QAction("View Log Files", self,
+		#	triggered = self.view_logs
+		#)
+		#view_logs_act.setEnabled(self.current_index.isValid())
+		stop_job_act = QAction("Stop Select Job", self,
+			triggered = self.stop_select_job
+		)
+		stop_job_act.setEnabled(False)
+
+		if self.current_index.isValid():
+			status = self.current_index.siblingAtColumn(3).data(Qt.DisplayRole)
+
+			if status == 'Running':
+				stop_job_act.setEnabled(True)
+
+		export_act = QAction("Export Table", self,
+			triggered = self.export_table
+		)
 
 		menu = QMenu(self)
 		menu.addAction(view_detail_act)
-		menu.addAction(view_logs_act)
+		menu.addAction(view_status_act)
+		menu.addSeparator()
+		menu.addAction(stop_job_act)
+		#menu.addAction(view_logs_act)
+		menu.addSeparator()
+		menu.addAction(export_act)
 		menu.popup(self.viewport().mapToGlobal(pos))
 
 	@Slot()
-	def view_details(self):
+	def view_job_details(self):
 		if not self.current_index.isValid():
 			return
 
@@ -741,20 +930,54 @@ class JobTableView(QTableView):
 			"<tr><td>Start time: </td><td>{}</td></tr>"
 			"<tr><td>Finish time: </td><td>{}</td></tr>"
 			"<tr><td>Elapsed time: </d><td>{}</td></tr>"
-			"<tr><td>Message: </td><td>{}</td></tr>"
 			"</table>"
 		)
 
-		dlg = MoleculeDetailDialog(self.parent, info.format(
+		statuses = [
+			'<font color="red">Failure</font>',
+			'<font color="green">Success</font>',
+			'<font color="blue">Running</font>',
+			'<font color="orange">Waiting</font>',
+			'<font color="black">Stopped</font>',
+		]
+
+		pid = self.get_pid(jid)
+
+		dlg = JobDetailDialog(self.parent, info.format(
 			receptor,
 			ligand,
-			['Pending', 'Success', 'Running', 'Error'][job.status],
+			statuses[job.status],
 			time_format(job.started),
 			time_format(job.finished),
-			time_elapse(job.started, job.finished),
-			job.message
-		))
+			time_elapse(job.started, job.finished)
+		), pid)
 		dlg.exec()
+
+	@Slot()
+	def view_job_statuses(self):
+		statuses = ['Failure', 'Success', 'Running', 'Waiting', 'Stopped']
+		sql = "SELECT status, COUNT(1) from jobs group by status"
+
+		total = 0
+		rows = ["<table cellspacing='10'>"]
+		for s, c in DB.query(sql):
+			rows.append("<tr><td>{}:</td><td>{}</td></tr>".format(
+				statuses[s], c
+			))
+			total += c
+		rows.append("<tr><td>Total:</td><td>{}</td></tr>".format(total))
+		info = ''.join(rows)
+
+		dlg = JobStatusesDialog(self.parent, info)
+		dlg.exec()
+
+	@Slot()
+	def stop_select_job(self):
+		if not self.current_index.isValid():
+			return
+
+		jid = self.current_index.row() + 1
+		self.parent.stop_job(jid)
 
 	@Slot()
 	def view_logs(self):
@@ -763,6 +986,31 @@ class JobTableView(QTableView):
 
 		jid = self.current_index.row() + 1
 		JobLogDialog.view_log(self.parent, jid)
+
+	@Slot()
+	def export_table(self):
+		out, _ = QFileDialog.getSaveFileName(self.parent, filter="CSV file (*.csv)")
+
+		if not out:
+			return
+
+		sql = self.model().get_sql.split('WHERE')[0]
+		statuses = self.model().statuses
+
+		with open(out, 'w') as fw:
+			fw.write("ID,Receptor,Ligand,Status,Started,Finished\n")
+
+			for row in DB.query(sql):
+				fw.write("{},{},{},{},{},{}\n".format(
+					row[0], row[1], row[2],
+					statuses[row[3]],
+					time_format(row[5]),
+					time_format(row[6])
+				)
+			)
+
+		self.parent.show_message("Export table to {}".format(out))
+
 
 class PoseTableView(QTableView):
 	def __init__(self, parent=None):
@@ -836,10 +1084,10 @@ class PoseTableView(QTableView):
 		sql = "SELECT * FROM pose WHERE jid=?"
 
 		with open(out, 'w') as fw:
-			fw.write("{}\n".format(','.join(headers[2:])))
+			fw.write("{}\n".format(','.join(headers)))
 
 			for row in DB.query(sql, (jid,)):
-				fw.write("{}\n".format(','.join(map(str,row[2:11]))))
+				fw.write("{}\n".format(','.join(map(str,row[0:len(headers)]))))
 
 		self.parent.show_message("Export table to {}".format(out))
 
@@ -940,6 +1188,10 @@ class PoseTableView(QTableView):
 		dlg.exec()
 
 class BestTableView(PoseTableView):
+	def __init__(self, parent):
+		super(BestTableView, self).__init__(parent)
+		self.setSortingEnabled(True)
+
 	@Slot()
 	def on_custom_menu(self, pos):
 		self.current_index = self.indexAt(pos)
@@ -998,10 +1250,10 @@ class BestTableView(PoseTableView):
 		sql = self.model().get_sql.split('WHERE')[0]
 
 		with open(out, 'w') as fw:
-			fw.write("{}\n".format(','.join(headers[2:])))
+			fw.write("{}\n".format(','.join(headers)))
 
 			for row in DB.query(sql):
-				fw.write("{}\n".format(','.join(map(str,row[2:13]))))
+				fw.write("{}\n".format(','.join(map(str,row[0:len(headers)]))))
 
 		self.parent.show_message("Export table to {}".format(out))
 

@@ -7,7 +7,8 @@ DB_TABLES = {
 		('id', 'INTEGER PRIMARY KEY'),
 		('name', 'TEXT'),
 		('type', 'INTEGER'),
-		('pdb', 'TEXT'),
+		('content', 'TEXT'),
+		('format', 'TEXT'),
 		('atoms', 'INTEGER'),
 		('bonds', 'INTEGER'),
 		('hvyatoms', 'INTEGER'),
@@ -188,6 +189,7 @@ def row_factory(cursor, row):
 
 class DataBackend:
 	conn = None
+	file = None
 
 	def __init__(self):
 		#self.connect()
@@ -196,6 +198,37 @@ class DataBackend:
 	def __del__(self):
 		if self.conn:
 			self.conn.close()
+
+	def __getstate__(self):
+		return self.file
+
+	def __setstate__(self, state):
+		self.file = state
+		self.connect(self.file)
+
+	#def __enter__(self):
+	#	self.reconnect()
+
+	#def __exit__(self):
+	#	self.close()
+
+	def _optimize_writting(self):
+		#self.query("PRAGMA journal_mode=WAL")
+		#self.query("PRAGMA synchronous=normal")
+		#self.query("PRAGMA temp_store=memory")
+		#self.query("PRAGMA mmap_size=30000000000")
+		self.query("PRAGMA synchronous=off")
+		#self.query("BEGIN")
+
+	def begin(self):
+		self.query("BEGIN")
+
+	def commit(self):
+		self.query("COMMIT")
+
+	def changed(self):
+		if self.active():
+			return self.conn.changes() > 0
 
 	@property
 	def cursor(self):
@@ -213,11 +246,18 @@ class DataBackend:
 			sql = "CREATE TABLE IF NOT EXISTS {} ({})".format(table, columns)
 			self.query(sql)
 
+	def reconnect(self):
+		self.close()
+		self.conn = apsw.Connection(self.file)
+		self._optimize_writting()
+
 	def connect(self, db_file=':memory:'):
 		self.close()
 		self.conn = apsw.Connection(db_file)
+		self.file = db_file
 		#self.conn.setrowtrace(row_factory)
 		self._create_tables()
+		self._optimize_writting()
 
 	def close(self):
 		if self.conn:
@@ -236,7 +276,9 @@ class DataBackend:
 		self.query("DELETE FROM {}".format(table))
 
 	def insert_rows(self, sql, rows):
+		self.begin()
 		self.cursor.executemany(sql, rows)
+		self.commit()
 
 	def table_exists(self, table):
 		try:

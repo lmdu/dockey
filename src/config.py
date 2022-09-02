@@ -1,5 +1,7 @@
 import sys
 import apsw
+import numpy
+import rdkit
 import pymol
 import psutil
 import openbabel
@@ -10,7 +12,7 @@ __all__ = ['DOCKEY_VERSION', 'DOCKEY_BUILD', 'DOCKEY_ABOUT']
 
 DOCKEY_VERSION = "0.4.0"
 
-DOCKEY_BUILD = "220801"
+DOCKEY_BUILD = "220902"
 
 DOCKEY_ABOUT = """
 <p>Dockey - Molecular Docking and Virtual Screening</p>
@@ -63,6 +65,24 @@ DOCKEY_ABOUT = """
 			</a>
 		</td>
 	</tr>
+		<tr>
+		<td>RDKit</td>
+		<td>v{rdkit}</td>
+		<td>
+			<a href="https://www.rdkit.org/">
+				https://www.rdkit.org
+			</a>
+		</td>
+	</tr>
+	<tr>
+		<td>Meeko</td>
+		<td>v{meeko}</td>
+		<td>
+			<a href="https://github.com/forlilab/Meeko">
+				https://github.com/forlilab/Meeko
+			</a>
+		</td>
+	</tr>
 	<tr>
 		<td>Plip</td>
 		<td>v{plip}</td>
@@ -78,6 +98,15 @@ DOCKEY_ABOUT = """
 		<td>
 			<a href="https://github.com/giampaolo/psutil">
 				https://github.com/giampaolo/psutil
+			</a>
+		</td>
+	</tr>
+	<tr>
+		<td>NumPy</td>
+		<td>v{numpy}</td>
+		<td>
+			<a href="https://numpy.org/">
+				https://numpy.org
 			</a>
 		</td>
 	</tr>
@@ -129,7 +158,10 @@ DOCKEY_ABOUT = """
 	pyside = pyside_version,
 	pymol = pymol.cmd.get_version()[0],
 	babel = openbabel.__version__,
+	rdkit = rdkit.__version__,
+	meeko = '0.3.3',
 	plip = plip_version,
 	psutil = psutil.__version__,
+	numpy = numpy.__version__,
 	icon = '1.7.0'
 )

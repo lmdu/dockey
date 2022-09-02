@@ -9,12 +9,13 @@ from PySide6.QtCore import *
 
 from param import *
 from utils import *
+from process import *
 from gridbox import *
 from backend import *
 from prepare import *
 
 __all__ = ['AutodockWorker', 'AutodockVinaWorker', 'QuickVinaWorker',
-	'ImportMoleculeFromFile', 'ImportMoleculeFromDir', 'JobListGenerator',
+	'ImportFileWorker', 'ImportFolderWorker', 'JobListGenerator',
 ]
 
 class ImportSignals(QObject):
@@ -22,191 +23,253 @@ class ImportSignals(QObject):
 	failure = Signal(str)
 	message = Signal(str)
 
-class ImportMoleculeFromFile(QRunnable):
+class ImportWorker(QRunnable):
+	processer = None
+
 	def __init__(self, mol_files, mol_type=0):
-		super(ImportMoleculeFromFile, self).__init__()
+		super(ImportWorker, self).__init__()
+		self.setAutoDelete(True)
 		self.signals = ImportSignals()
 		self.mol_files = mol_files
 		self.mol_type = mol_type
+		self.consumer, self.producer = multiprocessing.Pipe()
 
-	def run(self):
-		mols = []
+	def delete_imported_molecules(self):
+		DB.query("DELETE FROM molecular")
 
-		for mol_file in self.mol_files:
-			m = get_molecule_information(mol_file)
-
-			if 'error' in m:
-				self.signals.failure.emit("{}: {}".format(mol_file, m.error))
-				return
-
-			mols.append([None, m.name, self.mol_type, m.pdb, m.atoms,
-				m.bonds, m.hvyatoms, m.residues, m.rotors, m.formula,
-				m.energy, m.weight, m.logp
-			])
-
-			#self.signals.message.emit("Importing {}".format(mol_file))
-
-		sql = "INSERT INTO molecular VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)"
-		DB.insert_rows(sql, mols)
-
-		mol_type = ['', 'receptor(s)', 'ligand(s)'][self.mol_type]
-
-		self.signals.message.emit("Imported {} {}".format(len(mols), mol_type))
-		self.signals.success.emit()
-
-class ImportMoleculeFromDir(QRunnable):
-	def __init__(self, mol_dir, mol_type=0):
-		super(ImportMoleculeFromDir, self).__init__()
-		self.signals = ImportSignals()
-		self.mol_dir = mol_dir
-		self.mol_type = mol_type
-		self.mol_count = 0
-		self.mol_list = []
-
-	def write(self):
+	def write_molecules(self, data):
 		mol_type = ['', 'receptors', 'ligands'][self.mol_type]
-		sql = "INSERT INTO molecular VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)"
-		if mol_list:
-			self.mol_count += len(self.mol_list)
-			DB.insert_rows(sql, self.mol_list)
-			self.mol_list = []
-			self.signals.message.emit("Imported {} {}".format(self.mol_count, mol_type))
+		sql = "INSERT INTO molecular VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
+		DB.insert_rows(sql, data['rows'])
+		self.signals.message.emit("Imported {} {}".format(data['total'], mol_type))
 
 	def run(self):
-		mol_files = QDirIterator(self.mol_dir, QDir.Files)
-		mols = []
-		
-		total_count = 0
-		while mol_files.hasNext():
-			mol_file = mol_files.next()
+		proc = self.processer(self.mol_files, self.mol_type, self.producer)
+		proc.start()
 
-			m = get_molecule_information(mol_file)
+		self.producer.close()
 
-			if 'error' in m:
-				self.signals.failure.emit("{}: {}".format(mol_file, m.error))
-				return
+		while 1:
+			try:
+				data = self.consumer.recv()
 
-			self.mol_lsit.append([None, m.name, self.mol_type, m.pdb, m.atoms,
-				m.bonds, m.hvyatoms, m.residues, m.rotors, m.formula,
-				m.energy, m.weight, m.logp
-			])
+				if data['action'] == 'insert':
+					self.write_molecules(data)
 
-			if len(mols) == 100:
-				self.write()
+				elif data['action'] == 'failure':
+					self.signals.failure.emit(data['message'])
+					self.delete_imported_molecules()
 
-		self.write()
-		self.signals.success.emit()
+			except EOFError:
+				break
 
-class JobSignals(QObject):
+			except:
+				self.signals.failure.emit(traceback.format_exc())
+				break
+
+			else:
+				self.signals.success.emit()
+
+class ImportFileWorker(ImportWorker):
+	processer = ImportFileProcess
+
+class ImportFolderWorker(ImportWorker):
+	processer = ImportFolderProcess
+
+class JobListSignals(QObject):
+	failure = Signal(str)
 	message = Signal(str)
 	success = Signal()
+	finished = Signal()
 
 class JobListGenerator(QRunnable):
 	def __init__(self):
 		super(JobListGenerator, self).__init__()
-		self.signals = JobSignals()
-		self.job_list = []
-		self.job_count = 0
+		self.setAutoDelete(True)
+		self.signals = JobListSignals()
+		self.consumer, self.producer = multiprocessing.Pipe()
 
-	def write(self):
-		if self.job_list:
-			self.job_count += len(self.job_list)
-			DB.insert_rows("INSERT INTO jobs VALUES (?,?,?,?,?,?,?,?)", self.job_list)
-			self.job_list = []
-			self.signals.message.emit("Generate {} jobs".format(self.job_count))
+	def write_jobs(self, data):
+		sql = "INSERT INTO jobs VALUES (?,?,?,?,?,?,?,?)"	
+		DB.insert_rows(sql, data['rows'])
+		self.signals.message.emit("Generate {} jobs".format(data['total']))
 
 	def run(self):
-		rsql = "SELECT id FROM molecular WHERE type=1"
-		lsql = "SELECT id FROM molecular WHERE type=2"
+		proc = JobListProcess(DB, self.producer)
+		proc.start()
 
-		jobs = []
-		total_count = 0
-		for r in DB.query(rsql):
-			for l in DB.query(lsql):
-				self.job_list.append((None, r[0], l[0], 4, 0, 0, 0, None))
+		self.producer.close()
 
-				if len(jobs) == 100:
-					self.write()
+		while 1:
+			try:
+				data = self.consumer.recv()
 
-		self.write()
-		self.signals.success.emit()
+				if data['action'] == 'insert':
+					self.write_jobs(data)
+
+				if data['action'] == 'failure':
+					self.signals.failure.emit(data['message'])
+
+			except EOFError:
+				break
+
+			except:
+				self.signals.failure.emit(traceback.format_exc())
+				break
+
+			else:
+				self.signals.success.emit()
+
+		self.signals.finished.emit()
 
 class WorkerSignals(QObject):
 	finished = Signal()
-	#error = Signal(str)
-	#progress = Signal(int)
 	refresh = Signal(int)
+	message = Signal(str)
+	failure = Signal(str)
+	threads = Signal(int)
+	stopjob = Signal(int)
 
 class BaseWorker(QRunnable):
-	def __init__(self, job, params):
+	processer = None
+
+	def __init__(self, params):
 		super(BaseWorker, self).__init__()
-		self.job = self.get_job(job)
+		self.jobs = {}
 		self.params = params
 		self.signals = WorkerSignals()
 		self.settings = QSettings()
+		self.consumer, self.producer = multiprocessing.Pipe()
+		self.job_query = None
+		self.job_num = self.settings.value('Job/concurrent', 1, int)
+		self.signals.threads.connect(self.change_job_numbers)
+		self.signals.stopjob.connect(self.stop_job)
+		self.setAutoDelete(True)
 
-		if os.name == 'nt':
-			self.creationflags = 0x08000000
-		else:
-			self.creationflags = 0
+	def exit(self):
+		self.job_query = None
+		self.producer.close()
 
-	def get_job(self, _id):
-		sql = (
-			"SELECT j.id,j.rid,j.lid,m1.name,m1.pdb,m2.name,m2.pdb "
-			"FROM jobs AS j LEFT JOIN molecular AS m1 ON m1.id=j.rid "
-			"LEFT JOIN molecular AS m2 ON m2.id=j.lid WHERE j.id=?"
+	@Slot()
+	def change_job_numbers(self, num):
+		self.job_num = num
+		num = len(self.jobs)
+
+		if self.job_num > num:
+			for i in range(self.job_num - num):
+				self.submit_job()
+
+	def update_progress(self, data):
+		sql = "UPDATE jobs SET progress=? WHERE id=?"
+		DB.query(sql, (data['message'], data['job']))
+		self.signals.refresh.emit(data['job'])
+
+	def update_started(self, data):
+		sql = "UPDATE jobs SET status=?,progress=?,started=? WHERE id=?"
+		DB.query(sql, (2, 0, data['message'], data['job']))
+		self.signals.refresh.emit(data['job'])
+
+	def update_finished(self, data):
+		sql = "UPDATE jobs SET progress=?,finished=? WHERE id=?"
+		DB.query(sql, (100, data['message'], data['job']))
+		self.signals.refresh.emit(data['job'])
+		self.signals.finished.emit()
+
+	def update_success(self, data):
+		sql = "UPDATE jobs SET status=?,message=? WHERE id=?"
+		DB.query(sql, (1, data['message'], data['job']))
+		self.signals.refresh.emit(data['job'])
+
+	def update_error(self, data):
+		sql = "UPDATE jobs SET status=?,message=? WHERE id=?"
+		DB.query(sql, (0, data['message'], data['job']))
+		self.signals.refresh.emit(data['job'])
+
+	def get_prepare_params(self):
+		tool = self.settings.value('Ligand/prepare_tool', 'prepare_ligand4')
+
+		if tool == 'prepare_ligand4':
+			self.settings.beginGroup('Ligand')
+			lig_params = dict(
+				tool = 'prepare_ligand4',
+				repairs = self.settings.value('repairs', ''),
+				charges_to_add = self.settings.value('charges_to_add', 'gasteiger'),
+				#preserve_charge_types = self.settings.value('preserve_charge_types', ''),
+				cleanup = self.settings.value('cleanup', 'nphs_lps'),
+				allowed_bonds = self.settings.value('allowed_bonds', 'backbone'),
+				check_for_fragments = self.settings.value('check_for_fragments', False, bool),
+				inactivate_all_torsions = self.settings.value('inactivate_all_torsions', False, bool),
+				attach_nonbonded_fragments = self.settings.value('attach_nonbonded_fragments', False, bool),
+				attach_singletons = self.settings.value('attach_singletons', False, bool)
+			)
+			self.settings.endGroup()
+
+		elif tool == 'meeko':
+			self.settings.beginGroup('Meeko')
+			lig_params = dict(
+				tool = 'meeko',
+				rigid_macrocycles = self.settings.value('rigid_macrocycles', False, bool),
+				keep_chorded_rings = self.settings.value('keep_chorded_rings', False, bool),
+				keep_equivalent_rings = self.settings.value('keep_equivalent_rings', False, bool),
+				hydrate = self.settings.value('hydrate', False, bool),
+				keep_nonpolar_hydrogens = self.settings.value('keep_nonpolar_hydrogens', False, bool),
+				flexible_amides = self.settings.value('flexible_amides', False, bool),
+				add_index_map = self.settings.value('add_index_map', False, bool),
+				remove_smiles = self.settings.value('remove_smiles', False, bool),
+				rigidify_bonds_smarts = self.settings.value('rigidify_bonds_smarts', ''),
+				rigidify_bonds_indices = self.settings.value('rigidify_bonds_indices', ''),
+				atom_type_smarts = self.settings.value('atom_type_smarts', ''),
+				double_bond_penalty = self.settings.value('double_bond_penalty', 50, int)
+			)
+			self.settings.endGroup()
+		
+		self.settings.beginGroup('Receptor')
+		rep_params = dict(
+			repairs = self.settings.value('repairs', ''),
+			charges_to_add = self.settings.value('charges_to_add', 'gasteiger'),
+			#preserve_charge_types = self.settings.value('preserve_charge_types', ''),
+			cleanup = self.settings.value('cleanup', 'nphs_lps_waters_nonstdres'),
+			delete_single_nonstd_residues = self.settings.value('delete_single_nonstd_residues', False, bool),
+			unique_atom_names = self.settings.value('unique_atom_names', False, bool)
 		)
-		job = DB.get_row(sql, (_id,))
-		grid = DB.get_row("SELECT * FROM grid WHERE rid=? LIMIT 1", (job[1],))
+		self. settings.endGroup()
 
-		if not grid:
-			grid = [0, job[1]]
-			spacing = GridBoxSettingPanel.params.spacing
-			sql = "SELECT pdb FROM molecular WHERE id=? LIMIT 1"
-			pdb_str = DB.get_one(sql, (job[1],))
-			dims = get_dimension_from_pdb(pdb_str, spacing)
-			grid.extend(dims)
-			grid.append(spacing)
+		return lig_params, rep_params
 
-		return AttrDict({
-			'id': job[0],
-			'rid': job[1],
-			'lid': job[2],
-			'rname': job[3],
-			'rpdb': job[4],
-			'lname': job[5],
-			'lpdb': job[6],
-			'x': grid[2],
-			'y': grid[3],
-			'z': grid[4],
-			'cx': grid[5],
-			'cy': grid[6],
-			'cz': grid[7],
-			'spacing': grid[8]
-		})
+	def get_all_params(self):
+		lig_params, rep_params = self.get_prepare_params()
+		grid_space = self.settings.value('Grid/spacing', 0.375, float)
+		return [self.params, lig_params, rep_params, grid_space]
 
-	def save_pose(self, poses):
-		sql = "INSERT INTO pose VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
-		DB.insert_rows(sql, poses)
-		sql = "SELECT id, min(energy) FROM pose WHERE jid=?"
-		pid = DB.get_one(sql, (self.job.id,))
-		sql = "INSERT INTO best VALUES (?,?)"
-		DB.query(sql, (None, pid))
-		sql = "SELECT id FROM pose WHERE jid=?"
-		return DB.get_column(sql, (self.job.id,))
+	def write_pose_interactions(self, data):
+		jid = data['job']
+		best = data['best']
+		poses = data['poses']
+		interactions = data['interactions']
 
-	def save_interaction(self, pids, poses):
-		self.update_message("Analyzing interactions")
-		with multiprocessing.Pool(1) as pool:
-			proc = pool.apply_async(get_complex_interactions, (pids, poses))
-			interactions = proc.get()
+		pose_sql = "INSERT INTO pose VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
+		DB.insert_rows(pose_sql, poses)
 
-		#pids = ','.join(bs[1] for bs in interactions.binding_site)
-		pids = ','.join(map(str, pids))
-		sql = "INSERT INTO binding_site VALUES (?,?,?)"
-		DB.insert_rows(sql, interactions['binding_site'])
-		sql = "SELECT * FROM binding_site WHERE pid IN ({})".format(pids)
-		site_mapping = {"{}:{}".format(row[1], row[2]): row[0] for row in DB.query(sql)}
+		pid_sql = "SELECT id FROM pose WHERE jid=?"
+		pose_ids = DB.get_column(pid_sql, (jid,))
+
+		best_sql = "INSERT INTO best VALUES (?,?)"
+		DB.query(best_sql, (None, pose_ids[best]))
+
+		site_sql = "INSERT INTO binding_site VALUES (?,?,?)"
+		sites = interactions['binding_site']
+
+		#convert index to real id 
+		for site in sites:
+			site[1] = pose_ids[site[1]]
+
+		DB.insert_rows(site_sql, sites)
+
+		bs_sql = "SELECT * from binding_site WHERE pid IN ({})".format(
+			','.join(map(str, pose_ids))
+		)
+		site_mapping = {"{}:{}".format(pose_ids.index(row[1]), row[2]) : row[0] for row in DB.query(bs_sql)}
+
 		cols_mapping = {
 			'hydrogen_bond': 12,
 			'halogen_bond': 10,
@@ -232,111 +295,121 @@ class BaseWorker(QRunnable):
 			sql = "INSERT INTO {} VALUES ({})".format(k, ','.join(['?']*cols_mapping[k]))
 			DB.insert_rows(sql, interactions[k])
 
-	def save_log(self, name, log_file):
-		sql = "INSERT INTO logs VALUES (?,?,?,?)"
+	def make_temp_dir(self):
+		temp_dir = QTemporaryDir()
+		temp_dir.setAutoRemove(False)
 
-		with open(log_file) as fh:
-			content = fh.read()
+		if not temp_dir.isValid():
+			raise Exception(
+				"Could not create temporary work directory, {}".format(
+					temp_dir.errorString()
+				)
+			)
 
-		logs = [(None, self.job.id, name, content)]
-		DB.insert_rows(sql, logs)
+		return temp_dir
 
-	def update_status(self, status):
-		sql = "UPDATE jobs SET status=? WHERE id=?"
-		DB.query(sql, (status, self.job.id))
-		self.signals.refresh.emit(self.job.id)
+	def start_process(self, job):
+		temp_dir = self.make_temp_dir()
+		params = self.get_all_params()
+		cmds = self.get_commands()
+		proc = self.processer(job, params, cmds, temp_dir.path(), self.producer, DB)
+		proc.start()
 
-	def update_progress(self, progress):
-		sql = "UPDATE jobs SET progress=? WHERE id=?"
-		DB.query(sql, (progress, self.job.id))
-		self.signals.refresh.emit(self.job.id)
+		self.jobs[job] = AttrDict(
+			tempdir = temp_dir,
+			process = proc
+		)
 
-	def update_message(self, message):
-		sql = "UPDATE jobs SET message=? WHERE id=?"
-		DB.query(sql, (message, self.job.id))
-		self.signals.refresh.emit(self.job.id)
+	def submit_job(self):
+		if self.job_query is None:
+			return
 
-	def update_started(self):
-		started = int(time.time())
-		sql = "UPDATE jobs SET status=?,progress=?,started=? WHERE id=?"
-		DB.query(sql, (2, 0, started, self.job.id))
-		self.signals.refresh.emit(self.job.id)
+		if len(self.jobs) > self.job_num:
+			return
 
-	def update_finished(self):
-		finished = int(time.time())
-		sql = "UPDATE jobs SET progress=?,finished=? WHERE id=?"
-		DB.query(sql, (100, finished, self.job.id))
-		self.signals.refresh.emit(self.job.id)
-		self.signals.finished.emit()
+		row = self.job_query.fetchone()
 
-	def update_error(self, error):
-		sql = "UPDATE jobs SET status=?,message=? WHERE id=?"
-		DB.query(sql, (3, error, self.job.id))
-		self.signals.refresh.emit(self.job.id)
+		if row:
+			self.start_process(row[0])
 
-	def update_success(self):
-		sql = "UPDATE jobs SET status=?,message=? WHERE id=?"
-		DB.query(sql, (1, "The job was successfully finished", self.job.id))
-		self.signals.refresh.emit(self.job.id)
+	def delete_job(self, job):
+		obj = self.jobs.pop(job)
+		obj.tempdir.remove()
 
-	def pipline(self):
-		pass
+	def stop_job(self, job):
+		if job not in self.jobs:
+			return
+
+		obj = self.jobs.pop(job)
+
+		parent = psutil.Process(obj.process.pid)
+		children = parent.children(recursive=True)
+
+		for child in children:
+			child.kill()
+
+		obj.process.join()
+		obj.tempdir.remove()
+
+		if len(self.jobs) < self.job_num:
+			self.submit_job()
+
+	def get_job_pid(self, job):
+		if job not in self.jobs:
+			return
+
+		return self.jobs[job].process.pid
 
 	@Slot()
 	def run(self):
-		self.update_started()
+		self.job_query = DB.query("SELECT id FROM jobs")
 
 		try:
-			#make a temp work dir
-			self.temp_dir = QTemporaryDir()
-			if not self.temp_dir.isValid():
-				raise Exception(
-					"Could not create temporary work directory, {}".format(
-						self.temp_dir.errorString()
-					)
-				)
-			self.work_dir = self.temp_dir.path()
+			for i in range(self.job_num):
+				self.submit_job()
 
-			#run worker
-			self.pipline()
+			while 1:
+				try:
+					data = self.consumer.recv()
+
+					if data['action'] == 'start':
+						self.update_started(data)
+
+					elif data['action'] == 'progress':
+						self.update_progress(data)
+
+					elif data['action'] == 'error':
+						self.update_error(data)
+
+					elif data['action'] == 'success':
+						self.update_success(data)
+
+					elif data['action'] == 'result':
+						self.write_pose_interactions(data)
+
+					elif data['action'] == 'finish':
+						self.update_finished(data)
+						self.delete_job(data['job'])
+						self.submit_job()
+
+				except EOFError:
+					break
+
+				except:
+					raise Exception(traceback.format_exc())
+					break
+
 		except:
-			self.update_error(traceback.format_exc())
-		else:
-			self.update_success()
+			self.signals.message.emit(traceback.format_exc())
+
 		finally:
-			self.temp_dir.remove()
-			self.update_finished()
+			for job in self.jobs:
+				self.jobs[job].tempdir.remove()
 
-	def get_mgltools(self):
-		mgltools_path = self.settings.value('Tools/MGLTools')
-		py27 = os.path.join(mgltools_path, 'python.exe')
-		script_path = os.path.join(mgltools_path, 'Lib', 'site-packages',
-			'AutoDockTools', 'Utilities24')
-		return py27, script_path
-
-	def execute(self, cmd, args, wkdir):
-		proc = QProcess()
-		proc.setWorkingDirectory(wkdir)
-		proc.start(cmd, args)
-		proc.waitForFinished(-1)
-
-	def prepare_receptor(self, infile, outfile):
-		#py27, folder = self.get_mgltools()
-		#script = os.path.join(folder, 'prepare_receptor4.py')
-		#args = [script, '-r', infile, '-o', outfile, '-A', 'bonds_hydrogens']
-		#self.execute(py27, args, os.path.dirname(infile))
-		prepare_autodock_receptor(infile, outfile)
-
-	def prepare_ligand(self, infile, outfile):
-		#py27, folder = self.get_mgltools()
-		#script = os.path.join(folder, 'prepare_ligand4.py')
-		#args = [script, '-l', infile, '-o', outfile, '-A', 'bonds_hydrogens']
-		#self.execute(py27, args, os.path.dirname(infile))
-		prepare_ligand(infile, outfile)
+			self.signals.finished.emit()
 
 class AutodockWorker(BaseWorker):
-	def __init__(self, job, params):
-		super(AutodockWorker, self).__init__(job, params)
+	processer = AutodockProcess
 
 	def get_commands(self):
 		autodock = self.settings.value('Tools/autodock_4')
@@ -344,162 +417,8 @@ class AutodockWorker(BaseWorker):
 
 		return autodock, autogrid
 
-	def pipline(self):
-		#convert receptor and ligand to pdbqt format
-		rpdb = os.path.join(self.work_dir, "{}.pdb".format(self.job.rname))
-		rpdbqt = os.path.join(self.work_dir, "{}.pdbqt".format(self.job.rname))
-
-		with open(rpdb, 'w') as fw:
-			fw.write(self.job.rpdb)
-
-		self.prepare_receptor(rpdb, rpdbqt)
-
-		lpdb = os.path.join(self.work_dir, "{}.pdb".format(self.job.lname))
-		lpdbqt = os.path.join(self.work_dir, "{}.pdbqt".format(self.job.lname))
-
-		with open(lpdb, 'w') as fw:
-			fw.write(self.job.lpdb)
-		
-		self.prepare_ligand(lpdb, lpdbqt)
-
-		#set autogrid parameter and create gpf parameter file
-		ag_param = AutogridParameter(rpdbqt, lpdbqt, (self.job.x, self.job.y, self.job.z),
-			(self.job.cx, self.job.cy, self.job.cz), self.job.spacing
-		)
-		gpf_file = ag_param.make_gpf_file()
-		glg_file = gpf_file.replace('.gpf', '.glg')
-		self.log_file = glg_file
-		self.save_log('gpf_file', gpf_file)
-
-		autodock, autogrid = self.get_commands()
-
-		self.update_message("Running autogrid")
-		proc = psutil.Popen([autogrid, '-p', gpf_file, '-l', glg_file],
-			stdin = subprocess.PIPE,
-			stdout = subprocess.PIPE,
-			stderr = subprocess.PIPE,
-			cwd = self.work_dir,
-			encoding = 'utf8',
-			creationflags = self.creationflags
-		)
-
-		read_start = 0
-
-		while proc.poll() is None:
-			if QFileInfo(glg_file).size() > read_start:
-				p = 0
-
-				with open(glg_file) as log:
-					log.seek(read_start)
-
-					for line in log:
-						if '%' in line:
-							p = round(float(line.strip().split()[2].strip('%'))*0.05, 2)
-
-					read_start = log.tell()
-
-				if p > 0:
-					self.update_progress(p)
-			else:
-				QThread.sleep(1)
-
-		if proc.returncode != 0:
-			raise Exception(proc.stderr.read())
-
-		self.save_log('glg_file', glg_file)
-
-		#set autodock4 parameters and make dpf parameter file
-		dpf_file = self.params.make_dpf_file(rpdbqt, lpdbqt)
-		dlg_file = dpf_file.replace('.dpf', '.dlg')
-
-		#run autodock4
-		self.update_message("Running autodock")
-		proc = psutil.Popen([autodock, '-p', dpf_file, '-l', dlg_file],
-			stdin = subprocess.PIPE,
-			stdout = subprocess.PIPE,
-			stderr = subprocess.PIPE,
-			cwd = self.work_dir,
-			encoding = 'utf8',
-			creationflags = self.creationflags
-		)
-
-		read_start = 0
-
-		while proc.poll() is None:
-			if QFileInfo(dlg_file).size() > read_start:
-				p = 0
-
-				with open(dlg_file) as log:
-					log.seek(read_start)
-
-					for line in log:
-						if line.startswith('Run:'):
-							cols = line.strip().split()
-							p = round(5+int(cols[1])/int(cols[9])*90, 2)
-
-					read_start = log.tell()
-
-				if p > 0:
-					self.update_progress(p)
-			else:
-				QThread.sleep(1)
-
-		if proc.returncode != 0:
-			raise Exception(proc.stderr.read())
-
-		self.save_log('dlg_file', dlg_file)
-
-		#parse autodock dlg log file
-		self.update_message("Analyzing docking results")
-		runs = {}
-		rows = []
-
-		receptor = convert_pdbqt_to_pdb(rpdbqt, as_string=False)
-
-		with open(dlg_file) as fh:
-			for line in fh:
-				if 'RMSD TABLE' in line:
-					break
-
-				if line.startswith("DOCKED: MODEL"):
-					rid = int(line.strip().split()[2])
-					runs[rid] = [0, []]
-
-				elif line.startswith("DOCKED: USER    Estimated Inhibition Constant"):
-					runs[rid][0] = line.split('=')[1].strip().split('(')[0].strip()
-
-				if line.startswith("DOCKED:"):
-					runs[rid][1].append(line[8:])
-
-			for line in fh:
-				if 'INFORMATION ENTROPY ANALYSIS' in line:
-					break
-
-				cols = line.strip().split()
-
-				if len(cols) == 7:
-					rid = int(cols[2])
-					#rank = int(cols[0])
-					energy = float(cols[3])
-					ki = runs[rid][0]
-					logki = convert_ki_to_log(ki)
-					crmsd = float(cols[4])
-					rrmsd = float(cols[5])
-					pose = convert_pdbqt_to_pdb(''.join(runs[rid][1]))
-					comp = generate_complex_pdb(receptor, pose)
-					row = [None, self.job.id, rid, energy, crmsd, rrmsd]
-					lea = ligand_efficiency_assessment(pose, energy, ki)
-					row.extend(lea)
-					row.append(pose)
-					row.append(comp)
-					rows.append(row)
-
-		pids = self.save_pose(rows)
-		self.save_interaction(pids, rows)
-
 class AutodockVinaWorker(BaseWorker):
-	def __init__(self, job, params):
-		super(AutodockVinaWorker, self).__init__(job, params)
+	processer = AutodockVinaProcess
 
 	def get_commands(self):
 		vina = self.settings.value('Tools/autodock_vina')
@@ -507,315 +426,9 @@ class AutodockVinaWorker(BaseWorker):
 
 		return vina, autogrid
 
-	def pipline(self):
-		#convert receptor and ligand to pdbqt format
-		rpdb = os.path.join(self.work_dir, "{}.pdb".format(self.job.rname))
-		rpdbqt = os.path.join(self.work_dir, "{}.pdbqt".format(self.job.rname))
-
-		with open(rpdb, 'w') as fw:
-			fw.write(self.job.rpdb)
-
-		self.prepare_receptor(rpdb, rpdbqt)
-
-		lpdb = os.path.join(self.work_dir, "{}.pdb".format(self.job.lname))
-		lpdbqt = os.path.join(self.work_dir, "{}.pdbqt".format(self.job.lname))
-
-		with open(lpdb, 'w') as fw:
-			fw.write(self.job.lpdb)
-
-		self.prepare_ligand(lpdb, lpdbqt)
-
-		#get commands
-		vina, autogrid = self.get_commands()
-
-		#if use autodock scoring function
-		#set autogrid parameter and create gpf parameter file
-		if self.params.scoring.value == 'ad4':
-			ag_param = AutogridParameter(rpdbqt, lpdbqt, (self.job.x, self.job.y, self.job.z),
-				(self.job.cx, self.job.cy, self.job.cz), self.job.spacing
-			)
-			gpf_file = ag_param.make_gpf_file()
-			glg_file = gpf_file.replace('.gpf', '.glg')
-			self.log_file = glg_file
-
-			self.save_log('gpf_file', gpf_file)
-
-			self.update_message("Running autogrid")
-			proc = psutil.Popen([autogrid, '-p', gpf_file, '-l', glg_file],
-				stdin = subprocess.PIPE,
-				stdout = subprocess.PIPE,
-				stderr = subprocess.PIPE,
-				cwd = self.work_dir,
-				encoding = 'utf8',
-				creationflags = self.creationflags
-			)
-
-			read_start = 0
-
-			while proc.poll() is None:
-				if QFileInfo(glg_file).size() > read_start:
-					p = 0
-
-					with open(glg_file) as log:
-						log.seek(read_start)
-
-						for line in log:
-							if '%' in line:
-								p = round(float(line.strip().split()[2].replace('%', ''))*0.05, 2)
-
-						read_start = log.tell()
-
-					if p > 0:
-						self.update_progress(p)
-				else:
-					QThread.sleep(1)
-
-			if proc.returncode != 0:
-				raise Exception(proc.stderr.read())
-
-			self.save_log('glg_file', glg_file)
-
-			self.params.maps.value = self.job.rname
-		else:
-			#using autodock score function no need --receptor arg
-			self.params.receptor.value = os.path.basename(rpdbqt)
-
-		#set autodock vina parameters and make config file
-		config_file = os.path.join(self.work_dir, "config.txt".format(self.job.rname))
-		out_file = os.path.join(self.work_dir, "out.pdbqt")
-		log_file = os.path.join(self.work_dir, "out.log")
-
-		self.params.ligand.value = os.path.basename(lpdbqt)
-		self.params.center_x.value = self.job.cx
-		self.params.center_y.value = self.job.cy
-		self.params.center_z.value = self.job.cz
-		self.params.size_x.value = self.job.x
-		self.params.size_y.value = self.job.y
-		self.params.size_z.value = self.job.z
-		self.params.spacing.value = self.job.spacing
-		self.params.out.value = os.path.basename(out_file)
-		self.params.make_config_file(config_file)
-
-		self.save_log('config_file', config_file)
-
-		#run autodock vina
-		self.update_message("Running autodock vina")
-		proc = psutil.Popen([vina, '--config', config_file],
-			stdin = subprocess.PIPE,
-			stdout = subprocess.PIPE,
-			stderr = subprocess.PIPE,
-			cwd = self.work_dir,
-			encoding = 'utf8',
-			creationflags = self.creationflags
-		)
-
-		star = 0
-		log_fw = open(log_file, 'w')
-
-		while proc.poll() is None:
-			chars = proc.stdout.read(5)
-
-			for char in chars:
-				if char == '*':
-					star += 1
-					
-			p = round(star/51*90, 2)
-			self.update_progress(p)
-
-			if chars:
-				log_fw.write(chars)
-			else:
-				QThread.msleep(500)
-
-		log_fw.write(proc.stdout.read())
-		log_fw.close()
-
-		if proc.returncode != 0:
-			raise Exception(proc.stderr.read())
-
-		self.save_log('log_file', log_file)
-		self.save_log('out_file', out_file)
-
-		self.update_message("Analyzing docking results")
-		rows = []
-		with open(log_file) as fh:
-			for line in fh:
-				if line.startswith('-----+'):
-					break
-
-			for line in fh:
-				cols = line.strip().split()
-				run = int(cols[0])
-				energy = float(cols[1])
-				rmsd1 = float(cols[2])
-				rmsd2 = float(cols[3])
-
-				rows.append([None, self.job.id, run, energy, rmsd1, rmsd2])
-
-		modes = {}
-		with open(out_file) as fh:
-			for line in fh:
-				if line.startswith('MODEL'):
-					lines = [line]
-					idx = int(line.strip().split()[1]) - 1
-
-				elif line.startswith('ENDMDL'):
-					lines.append(line)
-					mode = convert_pdbqt_to_pdb(''.join(lines))
-					modes[idx] = mode
-				else:
-					lines.append(line)
-
-		receptor = convert_pdbqt_to_pdb(rpdbqt, as_string=False)
-
-		for i, row in enumerate(rows):
-			mode = modes.get(i, '')
-
-			if mode:
-				comp = generate_complex_pdb(receptor, mode)
-			else:
-				comp = ''
-
-			lea = ligand_efficiency_assessment(mode, row[3])
-			rows[i].extend(lea)
-			rows[i].append(mode)
-			rows[i].append(comp)
-
-		pids = self.save_pose(rows)
-		self.save_interaction(pids, rows)
-
 class QuickVinaWorker(BaseWorker):
-	def __init__(self, job, params):
-		super(QuickVinaWorker, self).__init__(job, params)
+	processer = QuickVinaProcess
 
 	def get_commands(self):
 		vina = self.settings.value('Tools/quick_vina_w')
 		return vina
-
-	def pipline(self):
-		#convert receptor and ligand to pdbqt format
-		rpdb = os.path.join(self.work_dir, "{}.pdb".format(self.job.rname))
-		rpdbqt = os.path.join(self.work_dir, "{}.pdbqt".format(self.job.rname))
-
-		with open(rpdb, 'w') as fw:
-			fw.write(self.job.rpdb)
-
-		self.prepare_receptor(rpdb, rpdbqt)
-
-		lpdb = os.path.join(self.work_dir, "{}.pdb".format(self.job.lname))
-		lpdbqt = os.path.join(self.work_dir, "{}.pdbqt".format(self.job.lname))
-
-		with open(lpdb, 'w') as fw:
-			fw.write(self.job.lpdb)
-
-		self.prepare_ligand(lpdb, lpdbqt)
-
-		#get commands
-		vina = self.get_commands()
-		self.params.receptor.value = os.path.basename(rpdbqt)
-
-		#set autodock vina parameters and make config file
-		config_file = os.path.join(self.work_dir, "config.txt".format(self.job.rname))
-		out_file = os.path.join(self.work_dir, "out.pdbqt")
-		log_file = os.path.join(self.work_dir, "out.log")
-
-		self.params.ligand.value = os.path.basename(lpdbqt)
-		self.params.center_x.value = self.job.cx
-		self.params.center_y.value = self.job.cy
-		self.params.center_z.value = self.job.cz
-		self.params.size_x.value = self.job.x
-		self.params.size_y.value = self.job.y
-		self.params.size_z.value = self.job.z
-		self.params.out.value = os.path.basename(out_file)
-		self.params.make_config_file(config_file)
-
-		self.save_log('config_file', config_file)
-
-		#run quick vina
-		self.update_message("Running quick vina")
-		proc = psutil.Popen([vina, '--config', config_file],
-			stdin = subprocess.PIPE,
-			stdout = subprocess.PIPE,
-			stderr = subprocess.PIPE,
-			cwd = self.work_dir,
-			encoding = 'utf8',
-			creationflags = self.creationflags
-		)
-
-		star = 0
-		log_fw = open(log_file, 'w')
-
-		while proc.poll() is None:
-			chars = proc.stdout.read(5)
-
-			for char in chars:
-				if char == '*':
-					star += 1
-					
-			p = round(star/51*90, 2)
-			self.update_progress(p)
-
-			if chars:
-				log_fw.write(chars)
-			else:
-				QThread.msleep(500)
-
-		log_fw.write(proc.stdout.read())
-		log_fw.close()
-
-		if proc.returncode != 0:
-			raise Exception(proc.stderr.read())
-
-		self.save_log('log_file', log_file)
-		self.save_log('out_file', out_file)
-
-		self.update_message("Analyzing docking results")
-		rows = []
-		with open(log_file) as fh:
-			for line in fh:
-				if line.startswith('-----+'):
-					break
-
-			for line in fh:
-				if line.startswith('Writing output'):
-					break
-
-				cols = line.strip().split()
-				run = int(cols[0])
-				energy = float(cols[1])
-				rmsd1 = float(cols[2])
-				rmsd2 = float(cols[3])
-
-				rows.append([None, self.job.id, run, energy, rmsd1, rmsd2])
-
-		modes = {}
-		with open(out_file) as fh:
-			for line in fh:
-				if line.startswith('MODEL'):
-					lines = [line]
-					idx = int(line.strip().split()[1]) - 1
-
-				elif line.startswith('ENDMDL'):
-					lines.append(line)
-					mode = convert_pdbqt_to_pdb(''.join(lines))
-					modes[idx] = mode
-				else:
-					lines.append(line)
-
-		receptor = convert_pdbqt_to_pdb(rpdbqt, as_string=False)
-
-		for i, row in enumerate(rows):
-			mode = modes.get(i, '')
-
-			if mode:
-				comp = generate_complex_pdb(receptor, mode)
-			else:
-				comp = ''
-
-			lea = ligand_efficiency_assessment(mode, row[3])
-			rows[i].extend(lea)
-			rows[i].append(mode)
-			rows[i].append(comp)
-
-		pids = self.save_pose(rows)
-		self.save_interaction(pids, rows)
