@@ -22,6 +22,7 @@ jobs:
           pip install git+https://github.com/lmdu/AutoDockTools_py3
           pip install -r requirements.txt
           pip install plip==2.2.2 --no-deps
+          python package\slim_meeko.py
 
       - name: Build executable
         run: pyinstaller package/build_win.spec
@@ -64,6 +65,7 @@ jobs:
           pip install git+https://github.com/lmdu/AutoDockTools_py3
           pip install -r requirements.txt
           pip install plip==2.2.2 --no-deps
+          python3 package/slim_meeko.py
 
       - name: Build executable
         run: pyinstaller package/build_linux.spec
@@ -94,7 +96,7 @@ jobs:
 
   build_mac:
     name: Build on Mac
-    runs-on: macos-10.15
+    runs-on: macos-11
 
     steps:
       - uses: actions/checkout@v2.4.0
@@ -111,11 +113,11 @@ jobs:
         run: |
           brew install boost
           brew install open-babel
-          pip3 install https://github.com/lmdu/pymol-wheel/releases/download/2.6/pymol-2.6.0a0-cp39-cp39-macosx_10_9_x86_64.whl
-          #pip3 install https://github.com/lmdu/openbabel-wheel/releases/download/3.1.1.post5/openbabel-3.1.1.5-cp38-cp38-macosx_10_9_x86_64.whl
+          pip3 install https://github.com/lmdu/pymol-wheel/releases/download/2.6/pymol-2.6.0a0-cp310-cp310-macosx_10_9_x86_64.whl
           pip3 install git+https://github.com/lmdu/AutoDockTools_py3
           pip3 install -r requirements.txt
           pip3 install plip==2.2.2 --no-deps
+          python3 package/slim_meeko.py
 
       - name: Build executable
         run: pyinstaller package/build_mac.spec
