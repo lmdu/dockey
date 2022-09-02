@@ -111,13 +111,13 @@ jobs:
           HOMEBREW_NO_INSTALL_CLEANUP: 1
           #HOMEBREW_NO_INSTALLED_DEPENDENTS_CHECK: 1
         run: |
-          brew install boost
-          brew install open-babel
-          pip3 install https://github.com/lmdu/pymol-wheel/releases/download/2.6/pymol-2.6.0a0-cp310-cp310-macosx_10_9_x86_64.whl
-          pip3 install git+https://github.com/lmdu/AutoDockTools_py3
-          pip3 install -r requirements.txt
-          pip3 install plip==2.2.2 --no-deps
-          python3 package/slim_meeko.py
+          sudo brew install boost
+          sudo brew install open-babel
+          sudo pip3 install https://github.com/lmdu/pymol-wheel/releases/download/2.6/pymol-2.6.0a0-cp310-cp310-macosx_10_9_x86_64.whl
+          sudo pip3 install git+https://github.com/lmdu/AutoDockTools_py3
+          sudo pip3 install -r requirements.txt
+          sudo pip3 install plip==2.2.2 --no-deps
+          sudo python3 package/slim_meeko.py
 
       - name: Build executable
         run: pyinstaller package/build_mac.spec
