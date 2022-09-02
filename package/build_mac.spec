@@ -7,10 +7,10 @@ block_cipher = None
 a = Analysis(['../src/main.py'],
              pathex=[],
              binaries=[
-                ('/usr/local/Cellar/open-babel/3.1.1_1/lib/openbabel/3.1.0/*', 'openbabel/lib'),
-                ('/usr/local/Cellar/open-babel/3.1.1_1/lib/libinchi.0.dylib', '.')
+                ('/usr/local/Cellar/open-babel/3.1.1_2/lib/openbabel/3.1.0/*', 'openbabel/lib'),
+                ('/usr/local/Cellar/open-babel/3.1.1_2/lib/libinchi.0.dylib', '.')
              ],
-             datas=[('/usr/local/Cellar/open-babel/3.1.1_1/share/openbabel/3.1.0/*', 'openbabel/data')],
+             datas=[('/usr/local/Cellar/open-babel/3.1.1_2/share/openbabel/3.1.0/*', 'openbabel/data')],
              hiddenimports=[],
              hookspath=['hooks'],
              hooksconfig={},
