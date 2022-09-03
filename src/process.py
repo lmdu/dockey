@@ -128,7 +128,7 @@ class JobListProcess(multiprocessing.Process):
 
 		for r in self.db.query(rsql):
 			for l in self.db.query(lsql):
-				self.job_list.append((None, r[0], l[0], 3, 0, 0, 0, None))
+				self.job_list.append((None, r[0], l[0], 3, 0, 0, 0, ''))
 
 				if len(self.job_list) == 200:
 					self.write()
@@ -140,10 +140,12 @@ class JobListProcess(multiprocessing.Process):
 			self.process()
 
 		except:
+			error = traceback.format_exc()
 			self.producer.send({
 				'action': 'failure',
-				'message': traceback.format_exc()
+				'message': error
 			})
+			print(error)
 
 		finally:
 			self.producer.close()
@@ -167,41 +169,44 @@ class BaseProcess(multiprocessing.Process):
 		#else:
 		#	self.creationflags = 0
 
-	def get_job(self, _id):
-		sql = (
-			"SELECT j.id,j.rid,m1.name,m1.content,m1.format,j.lid,m2.name,m2.content,m2.format "
-			"FROM jobs AS j LEFT JOIN molecular AS m1 ON m1.id=j.rid "
-			"LEFT JOIN molecular AS m2 ON m2.id=j.lid WHERE j.id=?"
-		)
-
-		job = self.db.get_row(sql, (_id,))
-		grid = self.db.get_row("SELECT * FROM grid WHERE rid=? LIMIT 1", (job[1],))
+	def get_job(self, jid):
+		job = self.db.get_dict("SELECT * FROM jobs WHERE id=? LIMIT 1", (jid,))
+		rep = self.db.get_dict("SELECT * FROM molecular WHERE id=? LIMIT 1", (job.rid,))
+		lig = self.db.get_dict("SELECT * FROM molecular WHERE id=? LIMIT 1", (job.lid,))
+		grid = self.db.get_dict("SELECT * FROM grid WHERE rid=? LIMIT 1", (job.rid,))
 
 		if not grid:
-			grid = [0, job[1]]
+			grid = [0, job.rid]
 			sql = "SELECT content FROM molecular WHERE id=? LIMIT 1"
-			pdb_str = self.db.get_one(sql, (job[1],))
+			pdb_str = self.db.get_one(sql, (job.rid,))
 			dims = get_dimension_from_pdb(pdb_str, self.grid_spacing)
-			grid.extend(dims)
-			grid.append(self.grid_spacing)
+			grid = AttrDict({
+				'x': dims[0],
+				'y': dims[1],
+				'z': dims[2],
+				'cx': dims[3],
+				'cy': dims[4],
+				'cz': dims[5],
+				'spacing': self.grid_spacing
+			})
 
 		return AttrDict({
-			'id': job[0],
-			'rid': job[1],
-			'rn': job[2],
-			'rc': job[3],
-			'rf': job[4],
-			'lid': job[5],
-			'ln': job[6],
-			'lc': job[7],
-			'lf': job[8],
-			'x': grid[2],
-			'y': grid[3],
-			'z': grid[4],
-			'cx': grid[5],
-			'cy': grid[6],
-			'cz': grid[7],
-			'spacing': grid[8]
+			'id': job.id,
+			'rid': rep.id,
+			'rn': rep.name,
+			'rc': rep.content,
+			'rf': rep.format,
+			'lid': lig.id,
+			'ln': lig.name,
+			'lc': lig.content,
+			'lf': lig.format,
+			'x': grid.x,
+			'y': grid.y,
+			'z': grid.z,
+			'cx': grid.cx,
+			'cy': grid.cy,
+			'cz': grid.cy,
+			'spacing': grid.spacing
 		})
 
 	def send_result(self, poses):
@@ -296,7 +301,9 @@ class BaseProcess(multiprocessing.Process):
 			self.do()
 
 		except:
-			self.update_error(traceback.format_exc())
+			error = traceback.format_exc()
+			self.update_error(error)
+			print(error)
 
 		else:
 			self.update_success()

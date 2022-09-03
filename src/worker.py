@@ -114,7 +114,9 @@ class JobListGenerator(QRunnable):
 				break
 
 			except:
-				self.signals.failure.emit(traceback.format_exc())
+				error = traceback.format_exc()
+				self.signals.failure.emit(error)
+				print(error)
 				break
 
 			else:
@@ -396,11 +398,14 @@ class BaseWorker(QRunnable):
 					break
 
 				except:
-					raise Exception(traceback.format_exc())
+					error = traceback.format_exc()
+					raise Exception(error)
 					break
 
 		except:
-			self.signals.message.emit(traceback.format_exc())
+			error = traceback.format_exc()
+			self.signals.message.emit(error)
+			print(error)
 
 		finally:
 			for job in self.jobs:

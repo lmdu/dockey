@@ -204,7 +204,7 @@ class DataBackend:
 
 	def __setstate__(self, state):
 		self.file = state
-		self.connect(self.file)
+		self.reconnect()
 
 	#def __enter__(self):
 	#	self.reconnect()
@@ -216,9 +216,10 @@ class DataBackend:
 		#self.query("PRAGMA journal_mode=WAL")
 		#self.query("PRAGMA synchronous=normal")
 		#self.query("PRAGMA temp_store=memory")
-		#self.query("PRAGMA mmap_size=30000000000")
-		self.query("PRAGMA synchronous=off")
+		#self.query("PRAGMA mmap_size=3000000000")
+		#self.query("PRAGMA synchronous=OFF")
 		#self.query("BEGIN")
+		pass
 
 	def begin(self):
 		self.query("BEGIN")
@@ -248,12 +249,14 @@ class DataBackend:
 
 	def reconnect(self):
 		self.close()
-		self.conn = apsw.Connection(self.file)
-		self._optimize_writting()
+		self.conn = apsw.Connection(self.file, flags = apsw.SQLITE_OPEN_READONLY)
+		#self.conn.setbusytimeout(100000)
+		#self._optimize_writting()
 
 	def connect(self, db_file=':memory:'):
 		self.close()
 		self.conn = apsw.Connection(db_file)
+		self.conn.setbusytimeout(1000000)
 		self.file = db_file
 		#self.conn.setrowtrace(row_factory)
 		self._create_tables()

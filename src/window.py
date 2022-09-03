@@ -893,7 +893,7 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 
 		self.mol_model.reset()
 		self.job_model.reset()
-		self.pose_model.reset()
+		self.pose_tab.clear()
 		self.interaction_tab.reset()
 
 		#reset pymol
@@ -1159,6 +1159,11 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		self.job_model.update_row(job)
 
 	def start_jobs(self):
+		ret = DB.get_one("SELECT 1 FROM jobs LIMIT 1")
+
+		if not ret:
+			return
+
 		params = self.job_params.deep_copy()
 
 		if self.job_engine == 'autodock':
