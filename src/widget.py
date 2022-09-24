@@ -486,6 +486,11 @@ class PoseTabWidget(QTabWidget):
 	def select(self):
 		self.best_model.select()
 
+	def reset(self):
+		self.pose_model.reset()
+		self.best_model.reset()
+		self.pose_error.clear()
+
 	def clear(self):
 		self.pose_model.clear()
 		self.best_model.clear()

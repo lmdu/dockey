@@ -319,7 +319,7 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 
 	def create_gridbox_adjuster(self):
 		self.box_adjuster = GridBoxSettingPanel(self)
-		self.box_dock = QDockWidget("Gridbox", self)
+		self.box_dock = QDockWidget("Grid", self)
 		self.box_dock.setAllowedAreas(Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea)
 		self.box_dock.setWidget(self.box_adjuster)
 		self.addDockWidget(Qt.RightDockWidgetArea, self.box_dock)
@@ -378,7 +378,7 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 
 	@Slot()
 	def on_best_pose_changed(self, index):
-		new_index = self.pose_tab.best_model.index(index.row(), 0)
+		new_index = self.pose_tab.best_model.index(index.row(), 1)
 		pid = new_index.data(Qt.DisplayRole)
 		self.interaction_tab.change_pose(pid)
 
@@ -757,6 +757,10 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 	def show_error_message(self, msg):
 		QMessageBox.critical(self, "Error", msg)
 
+	@Slot()
+	def show_popup_message(self, msg):
+		QMessageBox.information(self, "Message", msg)
+
 	def create_db_connect(self, db_file):
 		try:
 			DB.connect(db_file)
@@ -893,7 +897,7 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 
 		self.mol_model.reset()
 		self.job_model.reset()
-		self.pose_tab.clear()
+		self.pose_tab.reset()
 		self.interaction_tab.reset()
 
 		#reset pymol
@@ -1151,6 +1155,14 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		QThreadPool.globalInstance().start(thread)
 
 	def stop_job(self, job):
+		ret = QMessageBox.warning(self, "Warning",
+			"Are you sure you want to stop this job?",
+			QMessageBox.Yes | QMessageBox.No
+		)
+
+		if ret == QMessageBox.No:
+			return False
+
 		if self.job_worker is not None:
 			self.job_worker.stop_job(job)
 

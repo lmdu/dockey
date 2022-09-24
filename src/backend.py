@@ -256,7 +256,7 @@ class DataBackend:
 	def connect(self, db_file=':memory:'):
 		self.close()
 		self.conn = apsw.Connection(db_file)
-		self.conn.setbusytimeout(1000000)
+		#self.conn.setbusytimeout(1000000)
 		self.file = db_file
 		#self.conn.setrowtrace(row_factory)
 		self._create_tables()

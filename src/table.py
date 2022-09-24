@@ -1,3 +1,5 @@
+import os
+import csv
 import psutil
 
 from PySide6.QtGui import *
@@ -5,6 +7,7 @@ from PySide6.QtCore import *
 from PySide6.QtWidgets import *
 
 from utils import *
+from worker import *
 from backend import *
 
 __all__ = ['DockeyListView', 'JobTableView', 'PoseTableView',
@@ -516,10 +519,10 @@ class JobsTableModel(DockeyTableModel):
 	@property
 	def get_sql(self):
 		return (
-			"SELECT j.id,m1.name,m2.name,j.status,j.progress,"
+			"SELECT j.id,r.name,l.name,j.status,j.progress,"
 			"j.started,j.finished,j.message FROM jobs AS j "
-			"LEFT JOIN molecular AS m1 ON m1.id=j.rid "
-			"LEFT JOIN molecular AS m2 ON m2.id=j.lid "
+			"LEFT JOIN molecular AS r ON r.id=j.rid "
+			"LEFT JOIN molecular AS l ON l.id=j.lid "
 			"WHERE j.id=? LIMIT 1"
 		)
 
@@ -672,13 +675,13 @@ class BestTableModel(PoseTableModel):
 	@property
 	def get_sql(self):
 		return (
-			"SELECT b.id,b.pid,p.jid,m1.name,m2.name,p.energy,p.rmsd1,"
+			"SELECT b.id,b.pid,p.jid,r.name,l.name,p.energy,p.rmsd1,"
 			"p.rmsd2,p.logki,p.le,p.sile,p.fq,p.lle,p.lelp,p.ki,"
 			"p.mode,p.complex FROM best AS b "
 			"LEFT JOIN pose AS p ON p.id=b.pid "
 			"LEFT JOIN jobs AS j ON j.id=p.jid "
-			"LEFT JOIN molecular AS m1 ON m1.id=j.rid "
-			"LEFT JOIN molecular AS m2 ON m2.id=j.lid "
+			"LEFT JOIN molecular AS r ON r.id=j.rid "
+			"LEFT JOIN molecular AS l ON l.id=j.lid "
 			"WHERE b.id=?"
 		)
 
@@ -1234,9 +1237,9 @@ class BestTableView(PoseTableView):
 			return None, None
 
 		row = self.current_index.row()
-		index = self.current_index.model().createIndex(row, 0)
-		pid = index.data(role=Qt.DisplayRole)
 		index = self.current_index.model().createIndex(row, 1)
+		pid = index.data(role=Qt.DisplayRole)
+		index = self.current_index.model().createIndex(row, 2)
 		jid = index.data(role=Qt.DisplayRole)
 		return pid, jid
 
@@ -1361,6 +1364,8 @@ class InteractionTableView(QTableView):
 		self.setSelectionBehavior(QAbstractItemView.SelectRows)
 		self.setEditTriggers(QAbstractItemView.NoEditTriggers)
 		self.doubleClicked.connect(self.on_double_clicked)
+		self.setContextMenuPolicy(Qt.CustomContextMenu)
+		self.customContextMenuRequested.connect(self.on_custom_menu)
 
 	def sizeHint(self):
 		return QSize(300, 150)
@@ -1369,4 +1374,112 @@ class InteractionTableView(QTableView):
 		chain = index.siblingAtColumn(2).data()
 		residue = index.siblingAtColumn(3).data()
 		self.parent.cmd.zoom('{}/{}/'.format(chain, residue), animate=0.5)
-	
+
+	def on_custom_menu(self, pos):
+		self.table_models = {
+			'hydrogen_bond': HydrogenBondsModel, 
+			'halogen_bond': HalogenBondsModel,
+			'hydrophobic_interaction': HydrophobicInteractionModel,
+			'salt_bridge': SaltBridgesModel,
+			'water_bridge': WaterBridgesModel,
+			'pi_stacking': PiStackingModel,
+			'pi_cation': PiCationModel,
+			'metal_complex': MetalComplexModel
+		}
+
+		exp_cur_act = QAction("Export Current Table", self,
+			triggered = self.export_current_table
+		)
+		exp_all_act = QAction("Export All Tables", self,
+			triggered = self.export_all_tables
+		)
+		exp_best_act = QAction("Export Interactions for Best Poses", self,
+			triggered = self.export_best_poses_interactions
+		)
+		exp_pose_act = QAction("Export Interactions for All Poses", self,
+			triggered = self.export_all_poses_interactions
+		)
+
+		menu = QMenu(self)
+		menu.addAction(exp_cur_act)
+		menu.addAction(exp_all_act)
+		menu.addSeparator()
+		menu.addAction(exp_best_act)
+		menu.addAction(exp_pose_act)
+		menu.popup(self.mapToGlobal(pos))
+
+	def export_current_table(self):
+		out, _ = QFileDialog.getSaveFileName(self.parent, filter="CSV file (*.csv)")
+
+		if not out:
+			return
+
+		table = self.model().table
+		bid = self.model().binding_site
+		sql = "SELECT site FROM binding_site WHERE id=? LIMIT 1"
+		site = DB.get_one(sql, (bid,))
+		sql = "SELECT * FROM {} WHERE bid=?".format(table)
+
+		with open(out, 'w', newline='') as fw:
+			writer = csv.writer(fw)
+			writer.writerow(self.model().custom_headers)
+			for row in DB.query(sql, (bid,)):
+				row = list(row)
+				row[1] = site
+				writer.writerow(row)
+
+		self.parent.show_popup_message("Export table to {}".format(out))
+
+	def export_all_tables(self):
+		out_dir = QFileDialog.getExistingDirectory(self.parent)
+
+		if not out_dir:
+			return
+
+		bid = self.model().binding_site
+		sql = "SELECT site FROM binding_site WHERE id=? LIMIT 1"
+		site = DB.get_one(sql, (bid,))
+
+		for table in self.table_models:
+			rows = []
+			sql = "SELECT * FROM {} WHERE bid={}".format(table, bid)
+			headers = self.table_models[table].custom_headers
+
+			for row in DB.query(sql):
+				row = list(row)
+				row[1] = site
+				rows.append(row)
+
+			if rows:
+				out_file = os.path.join(out_dir, '{}.csv'.format(table))
+				with open(out_file, 'w', newline='') as fw:
+					writer = csv.writer(fw)
+					writer.writerow(headers)
+					writer.writerows(rows)
+
+		self.parent.show_popup_message("Successfully export all tables")
+
+	def export_best_poses_interactions(self):
+		out_dir = QFileDialog.getExistingDirectory(self.parent)
+
+		if not out_dir:
+			return
+
+		threader = BestInteractionExportWorker(out_dir, self.table_models)
+		threader.signals.message.connect(self.parent.show_message)
+		message = "Successfully export interactions for best poses"
+		threader.signals.finished.connect(lambda: self.parent.show_popup_message(message))
+		QThreadPool.globalInstance().start(threader)
+
+	def export_all_poses_interactions(self):
+		out_dir = QFileDialog.getExistingDirectory(self.parent)
+
+		if not out_dir:
+			return
+
+		threader = PoseInteractionExportWorker(out_dir, self.table_models)
+		threader.signals.message.connect(self.parent.show_message)
+		message = "Successfully export interactions for all poses"
+		threader.signals.finished.connect(lambda: self.parent.show_popup_message(message))
+		QThreadPool.globalInstance().start(threader)
+

@@ -104,10 +104,11 @@ class ImportFolderProcess(ImportProcess):
 		self.write()
 
 class JobListProcess(multiprocessing.Process):
-	def __init__(self, db, producer):
+	def __init__(self, rids, lids, producer):
 		super(JobListProcess, self).__init__()
 		self.daemon = True
-		self.db = db
+		self.rids = rids
+		self.lids = lids
 		self.job_list = []
 		self.job_count = 0
 		self.producer = producer
@@ -121,14 +122,12 @@ class JobListProcess(multiprocessing.Process):
 				'total': self.job_count
 			})
 			self.job_list = []
+			print("send {}".format(self.job_count))
 
 	def process(self):
-		rsql = "SELECT id FROM molecular WHERE type=1"
-		lsql = "SELECT id FROM molecular WHERE type=2"
-
-		for r in self.db.query(rsql):
-			for l in self.db.query(lsql):
-				self.job_list.append((None, r[0], l[0], 3, 0, 0, 0, ''))
+		for r in self.rids:
+			for l in self.lids:
+				self.job_list.append((None, r, l, 3, 0, 0, 0, ''))
 
 				if len(self.job_list) == 200:
 					self.write()
@@ -151,63 +150,22 @@ class JobListProcess(multiprocessing.Process):
 			self.producer.close()
 
 class BaseProcess(multiprocessing.Process):
-	def __init__(self, job_id, params, cmds, work_dir, producer, db):
+	def __init__(self, job, params, cmds, work_dir, producer):
 		super(BaseProcess, self).__init__()
 		self.daemon = True
-		self.job_id = job_id
+		self.job = job
 		self.producer = producer
 		self.cmds = cmds
-		self.db = db
 		self.work_dir = work_dir
 		self.dock_params = params[0]
 		self.ligp_params = params[1]
 		self.repp_params = params[2]
-		self.grid_spacing = params[3]
+		#self.grid_spacing = params[3]
 		
 		#if os.name == 'nt':
 		#	self.creationflags = 0x08000000
 		#else:
 		#	self.creationflags = 0
-
-	def get_job(self, jid):
-		job = self.db.get_dict("SELECT * FROM jobs WHERE id=? LIMIT 1", (jid,))
-		rep = self.db.get_dict("SELECT * FROM molecular WHERE id=? LIMIT 1", (job.rid,))
-		lig = self.db.get_dict("SELECT * FROM molecular WHERE id=? LIMIT 1", (job.lid,))
-		grid = self.db.get_dict("SELECT * FROM grid WHERE rid=? LIMIT 1", (job.rid,))
-
-		if not grid:
-			grid = [0, job.rid]
-			sql = "SELECT content FROM molecular WHERE id=? LIMIT 1"
-			pdb_str = self.db.get_one(sql, (job.rid,))
-			dims = get_dimension_from_pdb(pdb_str, self.grid_spacing)
-			grid = AttrDict({
-				'x': dims[0],
-				'y': dims[1],
-				'z': dims[2],
-				'cx': dims[3],
-				'cy': dims[4],
-				'cz': dims[5],
-				'spacing': self.grid_spacing
-			})
-
-		return AttrDict({
-			'id': job.id,
-			'rid': rep.id,
-			'rn': rep.name,
-			'rc': rep.content,
-			'rf': rep.format,
-			'lid': lig.id,
-			'ln': lig.name,
-			'lc': lig.content,
-			'lf': lig.format,
-			'x': grid.x,
-			'y': grid.y,
-			'z': grid.z,
-			'cx': grid.cx,
-			'cy': grid.cy,
-			'cz': grid.cy,
-			'spacing': grid.spacing
-		})
 
 	def send_result(self, poses):
 		interactions = get_complex_interactions(poses)
@@ -221,7 +179,7 @@ class BaseProcess(multiprocessing.Process):
 				best = i
 
 		self.producer.send({
-			'job': self.job_id,
+			'job': self.job.id,
 			'action': 'result',
 			'best': best,
 			'poses': poses,
@@ -230,7 +188,7 @@ class BaseProcess(multiprocessing.Process):
 
 	def send_message(self, mtype, message):
 		self.producer.send({
-			'job': self.job_id,
+			'job': self.job.id,
 			'action': mtype,
 			'message': message
 		})
@@ -295,8 +253,6 @@ class BaseProcess(multiprocessing.Process):
 	def run(self):
 		self.update_started()
 
-		self.job = self.get_job(self.job_id)
-
 		try:
 			self.do()
 
@@ -335,8 +291,8 @@ class AutodockProcess(BaseProcess):
 			stdout = subprocess.PIPE,
 			stderr = subprocess.PIPE,
 			cwd = self.work_dir,
-			encoding = 'utf8',
-			creationflags = self.creationflags
+			encoding = 'utf8'
+			#creationflags = self.creationflags
 		)
 
 		read_start = 0
@@ -419,7 +375,7 @@ class AutodockProcess(BaseProcess):
 
 				if line.startswith("DOCKED: MODEL"):
 					rid = int(line.strip().split()[2])
-					runs[rid] = [0, []]
+					runs[rid] = ['', []]
 
 				elif line.startswith("DOCKED: USER    Estimated Inhibition Constant"):
 					runs[rid][0] = line.split('=')[1].strip().split('(')[0].strip()
@@ -438,7 +394,6 @@ class AutodockProcess(BaseProcess):
 					#rank = int(cols[0])
 					energy = float(cols[3])
 					ki = runs[rid][0]
-					logki = convert_ki_to_log(ki)
 					crmsd = float(cols[4])
 					rrmsd = float(cols[5])
 					pose = convert_pdbqt_to_pdb(''.join(runs[rid][1]))

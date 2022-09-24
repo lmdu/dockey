@@ -1,4 +1,5 @@
 import os
+import csv
 import time
 import psutil
 import traceback
@@ -16,6 +17,7 @@ from prepare import *
 
 __all__ = ['AutodockWorker', 'AutodockVinaWorker', 'QuickVinaWorker',
 	'ImportFileWorker', 'ImportFolderWorker', 'JobListGenerator',
+	'PoseInteractionExportWorker', 'BestInteractionExportWorker'
 ]
 
 class ImportSignals(QObject):
@@ -32,7 +34,7 @@ class ImportWorker(QRunnable):
 		self.signals = ImportSignals()
 		self.mol_files = mol_files
 		self.mol_type = mol_type
-		self.consumer, self.producer = multiprocessing.Pipe()
+		self.consumer, self.producer = multiprocessing.Pipe(duplex=False)
 
 	def delete_imported_molecules(self):
 		DB.query("DELETE FROM molecular")
@@ -87,15 +89,18 @@ class JobListGenerator(QRunnable):
 		super(JobListGenerator, self).__init__()
 		self.setAutoDelete(True)
 		self.signals = JobListSignals()
-		self.consumer, self.producer = multiprocessing.Pipe()
+		self.consumer, self.producer = multiprocessing.Pipe(duplex=False)
 
 	def write_jobs(self, data):
-		sql = "INSERT INTO jobs VALUES (?,?,?,?,?,?,?,?)"	
+		sql = "INSERT INTO jobs VALUES (?,?,?,?,?,?,?,?)"
 		DB.insert_rows(sql, data['rows'])
 		self.signals.message.emit("Generate {} jobs".format(data['total']))
 
 	def run(self):
-		proc = JobListProcess(DB, self.producer)
+		rids = DB.get_column("SELECT id FROM molecular WHERE type=1")
+		lids = DB.get_column("SELECT id FROM molecular WHERE type=2")
+
+		proc = JobListProcess(rids, lids, self.producer)
 		proc.start()
 
 		self.producer.close()
@@ -141,7 +146,7 @@ class BaseWorker(QRunnable):
 		self.params = params
 		self.signals = WorkerSignals()
 		self.settings = QSettings()
-		self.consumer, self.producer = multiprocessing.Pipe()
+		self.consumer, self.producer = multiprocessing.Pipe(duplex=False)
 		self.job_query = None
 		self.job_num = self.settings.value('Job/concurrent', 1, int)
 		self.signals.threads.connect(self.change_job_numbers)
@@ -151,6 +156,47 @@ class BaseWorker(QRunnable):
 	def exit(self):
 		self.job_query = None
 		self.producer.close()
+
+	def get_job(self, jid):
+		job = DB.get_dict("SELECT * FROM jobs WHERE id=? LIMIT 1", (jid,))
+		rep = DB.get_dict("SELECT * FROM molecular WHERE id=? LIMIT 1", (job.rid,))
+		lig = DB.get_dict("SELECT * FROM molecular WHERE id=? LIMIT 1", (job.lid,))
+		grid = DB.get_dict("SELECT * FROM grid WHERE rid=? LIMIT 1", (job.rid,))
+
+		if not grid:
+			grid = [0, job.rid]
+			sql = "SELECT content FROM molecular WHERE id=? LIMIT 1"
+			pdb_str = DB.get_one(sql, (job.rid,))
+			grid_space = self.settings.value('Grid/spacing', 0.375, float)
+			dims = get_dimension_from_pdb(pdb_str, grid_space)
+			grid = AttrDict({
+				'x': dims[0],
+				'y': dims[1],
+				'z': dims[2],
+				'cx': dims[3],
+				'cy': dims[4],
+				'cz': dims[5],
+				'spacing': grid_space
+			})
+
+		return AttrDict({
+			'id': job.id,
+			'rid': rep.id,
+			'rn': rep.name,
+			'rc': rep.content,
+			'rf': rep.format,
+			'lid': lig.id,
+			'ln': lig.name,
+			'lc': lig.content,
+			'lf': lig.format,
+			'x': grid.x,
+			'y': grid.y,
+			'z': grid.z,
+			'cx': grid.cx,
+			'cy': grid.cy,
+			'cz': grid.cy,
+			'spacing': grid.spacing
+		})
 
 	@Slot()
 	def change_job_numbers(self, num):
@@ -240,8 +286,7 @@ class BaseWorker(QRunnable):
 
 	def get_all_params(self):
 		lig_params, rep_params = self.get_prepare_params()
-		grid_space = self.settings.value('Grid/spacing', 0.375, float)
-		return [self.params, lig_params, rep_params, grid_space]
+		return [self.params, lig_params, rep_params]
 
 	def write_pose_interactions(self, data):
 		jid = data['job']
@@ -310,14 +355,15 @@ class BaseWorker(QRunnable):
 
 		return temp_dir
 
-	def start_process(self, job):
+	def start_process(self, jid):
 		temp_dir = self.make_temp_dir()
 		params = self.get_all_params()
 		cmds = self.get_commands()
-		proc = self.processer(job, params, cmds, temp_dir.path(), self.producer, DB)
+		job = self.get_job(jid)
+		proc = self.processer(job, params, cmds, temp_dir.path(), self.producer)
 		proc.start()
 
-		self.jobs[job] = AttrDict(
+		self.jobs[job.id] = AttrDict(
 			tempdir = temp_dir,
 			process = proc
 		)
@@ -437,3 +483,73 @@ class QuickVinaWorker(BaseWorker):
 	def get_commands(self):
 		vina = self.settings.value('Tools/quick_vina_w')
 		return vina
+
+class InteractionExportSignal(QObject):
+	message = Signal(str)
+	finished = Signal()
+
+class InteractionExportWorker(QRunnable):
+	def __init__(self, out_dir, table_models):
+		super(InteractionExportWorker, self).__init__()
+		self.setAutoDelete(True)
+		self.out_dir = out_dir
+		self.table_models = table_models
+		self.signals = InteractionExportSignal()
+
+	@property
+	def sql(self):
+		pass
+
+	def run(self):
+		for site in DB.query(self.sql):
+			for table in self.table_models:
+				rows = []
+				sql = "SELECT * FROM {} WHERE bid={}".format(table, site[0])
+
+				for row in DB.query(sql):
+					res = [site[2], site[3], site[4], site[1]]
+					res.extend(row[2:])
+					rows.append(res)
+
+				if rows:
+					out_file = os.path.join(self.out_dir, '{}.csv'.format(table))
+
+					if not os.path.exists(out_file):
+						headers = ['Receptor', 'Ligand', 'Mode', 'Binding Site']
+						headers.extend(self.table_models[table].custom_headers[2:])
+
+						with open(out_file, 'w', newline='') as fw:
+							writer = csv.writer(fw)
+							writer.writerow(headers)
+							writer.writerows(rows)
+					else:
+						with open(out_file, 'a', newline='') as fw:
+							writer = csv.writer(fw)
+							writer.writerows(rows)
+
+			self.signals.message.emit("Export tables for {} vs {}".format(site[2], site[3]))
+
+		self.signals.finished.emit()
+
+class BestInteractionExportWorker(InteractionExportWorker):
+	@property
+	def sql(self):
+		return (
+			"SELECT s.id,s.site,r.name,l.name,p.run FROM binding_site AS s "
+			"INNER JOIN best AS b ON b.pid=s.pid "
+			"INNER JOIN pose AS p ON p.id=b.pid "
+			"INNER JOIN jobs AS j ON j.id=p.jid "
+			"LEFT JOIN molecular AS r ON r.id=j.rid "
+			"LEFT JOIN molecular AS l ON l.id=j.lid"
+		)
+
+class PoseInteractionExportWorker(InteractionExportWorker):
+	@property
+	def sql(self):
+		return (
+			"SELECT s.id,s.site,r.name,l.name,p.run FROM binding_site AS s "
+			"INNER JOIN pose AS p ON p.id=s.pid "
+			"INNER JOIN jobs AS j ON j.id=p.jid "
+			"LEFT JOIN molecular AS r ON r.id=j.rid "
+			"LEFT JOIN molecular AS l ON l.id=j.lid"
+		)

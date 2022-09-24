@@ -351,6 +351,9 @@ def memory_format(size):
 	return "{:.2f}{}".format(size, unit)
 
 def convert_ki_to_log(ki_str):
+	if not ki_str:
+		return ''
+
 	ki, unit = ki_str.split()
 	ki = float(ki)
 
@@ -426,13 +429,13 @@ def get_molecule_information(mol_file, from_string=False, mol_name=None, mol_for
 		content = mol_content
 	)
 
-def ligand_efficiency_assessment(pdb_str, energy, ki=0):
-	if ki:
-		logki = convert_ki_to_log(ki)
-	else:
+def ligand_efficiency_assessment(pdb_str, energy, ki=None):
+	if ki is None:
 		ki = convert_energy_to_ki(energy)
 		logki = round(math.log10(ki), 3)
 		ki = convert_ki_to_str(ki)
+	else:
+		logki = convert_ki_to_log(ki)
 
 	if pdb_str:
 		obc = openbabel.OBConversion()
@@ -453,7 +456,10 @@ def ligand_efficiency_assessment(pdb_str, energy, ki=0):
 		logp = des.Predict(mol)
 
 		#calculate ligand lipophilic efficiency
-		lle = round(-1*logki - logp, 3)
+		if logki:
+			lle = round(-1*logki - logp, 3)
+		else:
+			lle = None
 
 		#calculate fit quality
 		le_scale = 0.0715 + 7.5328/ha + 25.7079/math.pow(ha,2) - 361.4722/math.pow(ha, 3)
@@ -604,6 +610,14 @@ def get_complex_interactions(poses):
 					"{:.2}".format(mc.distance),
 					mc.location
 				])
+
+	#remove plip temp file
+	if 'pdbcomplex' in mol.sourcefiles:
+		temp_file = mol.sourcefiles['pdbcomplex']
+
+		if temp_file.startswith('plipfixed.'):
+			if os.path.isfile(temp_file):
+				os.remove(temp_file)
 
 	return interactions
 
