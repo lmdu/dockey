@@ -3,7 +3,7 @@
 </p>
 <h1 align="center">Dockey</h1>
 <p align="center">
-    <em>an integrated graphic user interface tool for molecular docking and virtual screening<em>
+    <em>an integrated graphic user interface tool for molecular docking and virtual screening</em>
 </p>
 <p align="center" width="100%">
     <a href="https://github.com/lmdu/dockey/actions/workflows/build.yml">
