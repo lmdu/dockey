@@ -212,7 +212,7 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		self.feedback_dock.setVisible(False)
 
 		#timer
-		self.feedback_timer = QTimer()
+		self.feedback_timer = QTimer(self)
 		self.feedback_timer.setSingleShot(True)
 		self.feedback_timer.timeout.connect(self.update_feedback)
 		self.feedback_timer.start(100)

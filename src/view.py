@@ -232,7 +232,7 @@ class PymolGLWidget(QOpenGLWidget):
 		self.setFocusPolicy(Qt.ClickFocus)
 
 		# for idle rendering
-		self._timer = QTimer()
+		self._timer = QTimer(self)
 		self._timer.setSingleShot(True)
 		self._timer.timeout.connect(self._pymol_process)
 

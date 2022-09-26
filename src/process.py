@@ -122,7 +122,6 @@ class JobListProcess(multiprocessing.Process):
 				'total': self.job_count
 			})
 			self.job_list = []
-			print("send {}".format(self.job_count))
 
 	def process(self):
 		for r in self.rids:

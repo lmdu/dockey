@@ -615,7 +615,7 @@ def get_complex_interactions(poses):
 	if 'pdbcomplex' in mol.sourcefiles:
 		temp_file = mol.sourcefiles['pdbcomplex']
 
-		if temp_file.startswith('plipfixed.'):
+		if temp_file and temp_file.startswith('plipfixed.'):
 			if os.path.isfile(temp_file):
 				os.remove(temp_file)
 

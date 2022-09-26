@@ -22,11 +22,11 @@
     </a>
 </p>
 
-# Introduction
+## Introduction
 
 Computer-aided drug design (CADD) has become one of the most efficient methods to greatly reduce the costs and time as well as the attrition rates for identification of promising drug candidates. CADD can be broadly divided into structure-based and ligand-based drug design approaches. Molecular docking is the most widely used structure-based CADD approach to assist in streamlining and accelerating the overall drug discovery process. The goal of molecular docking is to predict the preferred conformation, affinity and interaction of a ligand within the binding site of a macromolecular with the aid of computational tools. AutoDock and its variants are the most popular docking tools for study of protein-ligand interactions and virtual screening. We developed Dockey, a novel graphical user interface tool with seamless integration of several external tools that implements a complete streamlined docking pipeline including molecular preparation, paralleled docking execution, interaction detection and conformation visualization.
 
-# Features
+## Features
 
 - Support for pdb, mol, mol2, sdf and other formats that can be identified by [OpenBabel](http://openbabel.org/docs/current/FileFormats/Overview.html).
 - Support for Windows, Linux and MacOS systems
@@ -36,7 +36,7 @@ Computer-aided drug design (CADD) has become one of the most efficient methods t
 - Visualization of receptors, ligands, complexes and interactions
 - Single project file for easy sharing between any systems and computers
 
-# Integrated tools
+## Integrated tools
 
 - [Pymol](https://pymol.org)
 - [OpenBabel](http://openbabel.org)
@@ -45,16 +45,16 @@ Computer-aided drug design (CADD) has become one of the most efficient methods t
 - [Plip](https://github.com/pharmai/plip)
 - [AutoDockTools](https://github.com/lmdu/AutoDockTools_py3)
 
-# Docking engines
+## Docking engines
 
 - [AutoDock4](https://autodock.scripps.edu)
 - [AutoDock Vina](https://github.com/ccsb-scripps/AutoDock-Vina)
 - [QuickVina-W](https://qvina.github.io/)
 
-# Documentation
+## Usage
 
-[https://dockey.readthedocs.io/en/latest](https://dockey.readthedocs.io/en/latest/)
+The documentation is available here: [https://dockey.readthedocs.io/en/latest](https://dockey.readthedocs.io/en/latest/)
 
-# Download
+## Download
 
 You can download the latest installer for Windows, Linux and MacOS from [https://github.com/lmdu/dockey/releases](https://github.com/lmdu/dockey/releases)
