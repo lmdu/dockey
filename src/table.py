@@ -443,10 +443,8 @@ class DockeyTableModel(QAbstractTableModel):
 		self.beginResetModel()
 		self.cache_row = [-1, None]
 		self.total_count = DB.get_one(self.count_sql)
-		self.displayed = DB.get_column(self.read_sql)
-		self.read_count = len(self.displayed)
+		self.read_count = 0
 		self.endResetModel()
-
 		self.row_count.emit(self.total_count)
 
 	def reset(self):

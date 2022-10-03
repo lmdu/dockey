@@ -652,7 +652,7 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		self.file_menu = self.menuBar().addMenu("&File")
 		self.file_menu.addAction(self.new_project_act)
 		self.file_menu.addAction(self.open_project_act)
-		self.file_menu.addAction(self.save_project_act)
+		#self.file_menu.addAction(self.save_project_act)
 		self.file_menu.addAction(self.save_project_as_act)
 		self.file_menu.addAction(self.close_project_act)
 		self.file_menu.addSeparator()

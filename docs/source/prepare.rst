@@ -1,15 +1,6 @@
 Molecular Preparation
 =====================
 
-Project file
-------------
-
-Firstly, you should create or open a project file before docking. Go to **File** menu -> **New Project** or Go to **Toolbar** -> |new|, and then input a name to create a new project file with *.dock* extension.
-
-If you have a project file with *.dock* extension that created by Dockey software, you can go to **File** menu -> **Open Project** to open it.
-
-Certainly, you can go to **File** menu -> **Save Project As** to save current opened project to another file. you can also go to **File** menu -> **Close Project** to close the opened project file.
-
 Import molecules
 ----------------
 
@@ -76,8 +67,13 @@ First, click one receptor in molecular list to view in PyMOL view, and then:
 
 		|delchain|
 
-.. |new| image:: _static/new.png
-	:width: 22
+Receptor Preparation
+--------------------
+
+Ligand Preparation
+------------------
+
+
 .. |pdb| image:: _static/pdb.png
 	:width: 400
 .. |zinc| image:: _static/zinc.png
