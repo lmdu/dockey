@@ -28,28 +28,28 @@ Computer-aided drug design (CADD) has become one of the most efficient methods t
 
 ## Features
 
-    - Support for pdb, mol, mol2, sdf and other formats that can be identified by OpenBabel
-    - Support for Windows, Linux and MacOS systems
-    - Applicable to AutoDock4, AutoDock Vina and QuickVina-W
-    - Automatically dock thousands of ligands to multiple receptors in parallel
-    - Detection of non-covalent protein-ligand interactions
-    - Visualization of receptors, ligands, complexes and interactions
-    - Single project file for easy sharing between any systems and computers
+- Support for pdb, mol, mol2, sdf and other formats that can be identified by OpenBabel
+- Support for Windows, Linux and MacOS systems
+- Applicable to AutoDock4, AutoDock Vina and QuickVina-W
+- Automatically dock thousands of ligands to multiple receptors in parallel
+- Detection of non-covalent protein-ligand interactions
+- Visualization of receptors, ligands, complexes and interactions
+- Single project file for easy sharing between any systems and computers
 
 ## Integrated tools
 
-    - [Pymol](https://pymol.org)
-    - [OpenBabel](http://openbabel.org)
-    - [RDKit](https://www.rdkit.org)
-    - [Meeko](https://github.com/forlilab/Meeko)
-    - [Plip](https://github.com/pharmai/plip)
-    - [AutoDockTools](https://github.com/lmdu/AutoDockTools_py3)
+- [Pymol](https://pymol.org)
+- [OpenBabel](http://openbabel.org)
+- [RDKit](https://www.rdkit.org)
+- [Meeko](https://github.com/forlilab/Meeko)
+- [Plip](https://github.com/pharmai/plip)
+- [AutoDockTools](https://github.com/lmdu/AutoDockTools_py3)
 
 ## Docking engines
 
-    - [AutoDock4](https://autodock.scripps.edu)
-    - [AutoDock Vina](https://github.com/ccsb-scripps/AutoDock-Vina)
-    - [QuickVina-W](https://qvina.github.io/)
+- [AutoDock4](https://autodock.scripps.edu)
+- [AutoDock Vina](https://github.com/ccsb-scripps/AutoDock-Vina)
+- [QuickVina-W](https://qvina.github.io/)
 
 ## Usage
 
