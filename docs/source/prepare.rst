@@ -1,62 +1,10 @@
 Molecular Preparation
 =====================
 
-Import molecules
-----------------
-
-After creating or opening project file, you will be allowed to import receptors and ligands. The Dockey supports various formats that can be read by `OpenBabel <http://openbabel.org/docs/current/FileFormats/Overview.html>`_.
-
-.. note::
-
-	The Dockey will identify molecule file format through extension name. Please make sure that the molecule file extension is identical with its content.
-
-Import Receptors
-~~~~~~~~~~~~~~~~
-
-#. Go **File** menu -> **Import Receptors** to select receptor files and import to Dockey.
-#. Go **File** menu -> **Import Receptor from PDB** to open a dialog, and then input an PDB ID and click ``Import`` button. The Dockey will automatically download the molecule from `RCSB PDB <https://www.rcsb.org/>`_ database and import it.
-
-.. rst-class:: wy-text-center
-
-	|pdb|
-
-Import Ligands
-~~~~~~~~~~~~~~
-
-#. Go **File** menu -> **Import Ligands** to select ligand files and import to Dockey.
-#. Go **File** menu -> **Import Ligand from Zinc** to open a dialog, and then input an Zinc ID, select Zinc version (15 or 20), and click ``Import`` button. The Dockey will automatically download the molecule from `Zinc <https://zinc.docking.org/>`_ database and import it.
-
-.. rst-class:: wy-text-center
-
-	|zinc|
-
-Molecular List
---------------
-
-The imported ligands and receptors will be separately displayed in molecular list.
-
-.. rst-class:: wy-text-center
-
-	|mol|
-
-The molecular list has right-click menu. You can use **Import Receptors** and **Import Ligands** in menu list to import receptor and ligand files.
-
-.. rst-class:: wy-text-center
-
-	|molmenu|
-
-You also allowed to use **Delete** to remove current selected molecule and **Delete All** to remove all molecules from Dockey.
-
-You can use **View Details** to obtain detailed information of molecule including number of atoms, bonds, heavy atoms, residues and rotors, formula, molecular weight as well as calculated *logp*.
-
-.. rst-class:: wy-text-center
-
-	|molinfo|
-
 Receptor Preprocessing
 ----------------------
 
-First, click one receptor in molecular list to view in PyMOL view, and then:
+First, click one receptor in molecular list to view in PyMOL, and then:
 
 #. Go to **Edit** menu -> **Remove Water** to delete water from receptor.
 #. Go to **Edit** menu -> **Remove Solvent** to delete solvent from receptor.
@@ -67,22 +15,43 @@ First, click one receptor in molecular list to view in PyMOL view, and then:
 
 		|delchain|
 
+.. note::
+
+	Sometimes you can skip the receptor preprocessing step and remove water in preparing step.
+
 Receptor Preparation
 --------------------
+
+Dockey use ``prepare_receptor4.py`` in `AutoDockTools <https://github.com/lmdu/AutoDockTools_py3>`_ to prepare receptor and generate PDBQT file. Before starting docking tasks, you can go to **Edit** -> **Molecular Preparation Settings** to open preparation setting dialog.
+
+.. rst-class:: wy-text-center
+
+	|mpr|
+
+The paramter description can be found `here <https://github.com/lmdu/AutoDockTools_py3/blob/master/AutoDockTools/Utilities24/prepare_receptor4.py>`_.
 
 Ligand Preparation
 ------------------
 
+You can use ``prepare_ligand4.py`` in `AutoDockTools <https://github.com/lmdu/AutoDockTools_py3>`_ or `Meeko <https://github.com/forlilab/Meeko>`_ to prepare ligands and generate PDBQT file. Before starting docking tasks, you can go to **Edit** -> **Molecular Preparation Settings** to open preparation setting dialog, and then click **Ligand** tab to switch to ligand preparation setting page.
 
-.. |pdb| image:: _static/pdb.png
-	:width: 400
-.. |zinc| image:: _static/zinc.png
-	:width: 400
-.. |mol| image:: _static/molecules.png
-	:width: 400
-.. |molmenu| image:: _static/molmenus.png
-	:width: 400
-.. |molinfo| image:: _static/molinfo.png
-	:width: 400
+Select ``prepare_ligand4`` as ligand preparation tool, you will see the parameters for prepare_ligand4. The parameter description can be found `here <https://github.com/lmdu/AutoDockTools_py3/blob/master/AutoDockTools/Utilities24/prepare_ligand4.py>`_.
+
+.. rst-class:: wy-text-center
+
+	|mpl|
+
+Select ``Meeko`` as ligand preparation tool, you will see the parameters for Meeko.
+
+.. rst-class:: wy-text-center
+
+	|mpm|
+
 .. |delchain| image:: _static/delchain.png
 	:width: 300
+.. |mpr| image:: _static/mpr.png
+	:width: 600
+.. |mpl| image:: _static/mpl.png
+	:width: 600
+.. |mpm| image:: _static/mpm.png
+	:width: 600

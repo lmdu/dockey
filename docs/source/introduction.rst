@@ -5,7 +5,7 @@ Computer-aided drug design (CADD) has become one of the most efficient methods t
 
 Its features include:
 
-- Support for pdb, mol, mol2, sdf and other formats that can be identified by `OpenBabel <http://openbabel.org/docs/current/FileFormats/Overview.html>`_).
+- Support for pdb, mol, mol2, sdf and other formats that can be identified by OpenBabel
 - Support for Windows, Linux and MacOS systems
 - Applicable to AutoDock4, AutoDock Vina and QuickVina-W
 - Automatically dock thousands of ligands to multiple receptors in parallel

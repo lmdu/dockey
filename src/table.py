@@ -440,19 +440,20 @@ class DockeyTableModel(QAbstractTableModel):
 		self.cache_row[1] = DB.get_row(self.get_sql, (_id,))
 
 	def select(self):
-		self.beginResetModel()
 		self.cache_row = [-1, None]
-		self.total_count = DB.get_one(self.count_sql)
 		self.read_count = 0
+		self.displayed = []
+		self.beginResetModel()
+		self.total_count = DB.get_one(self.count_sql)
 		self.endResetModel()
 		self.row_count.emit(self.total_count)
 
 	def reset(self):
-		self.beginResetModel()
 		self.cache_row = [-1, None]
 		self.read_count = 0
-		self.total_count = 0
 		self.displayed = []
+		self.beginResetModel()
+		self.total_count = 0
 		self.endResetModel()
 
 	def clear(self):
