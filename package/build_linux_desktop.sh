@@ -1,7 +1,7 @@
 #!/bin/sh
 
 version=$1
-packager=$2
+#packager=$2
 
 wget https://github.com/goreleaser/nfpm/releases/download/v2.11.3/nfpm_2.11.3_Linux_x86_64.tar.gz
 tar xzvf nfpm_2.11.3_Linux_x86_64.tar.gz
