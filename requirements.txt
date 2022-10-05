@@ -4,4 +4,4 @@ psutil==5.9.1
 meeko==0.3.3
 rdkit==2022.3.5
 PySide6==6.2.4
-pyinstaller==5.3
+pyinstaller==5.4.1
