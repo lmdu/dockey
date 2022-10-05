@@ -78,7 +78,8 @@ jobs:
         run: |
           version=`awk '/^DOCKEY_VERSION/{print $NF}' src/config.py | sed 's/\"//g'`
           cd dist
-          #tar -czvf Dockey-v${version}-linux.tar.gz Dockey
+          ubuntu=$(cat /etc/issue | cut -d " " -f2 | sed "s/\.4//")
+          tar -czvf Dockey-v${version}-ubuntu${ubuntu}.tar.gz Dockey
           chmod a+x ../package/build_linux_desktop.sh
           ../package/build_linux_desktop.sh $version deb
 

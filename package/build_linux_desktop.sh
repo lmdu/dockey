@@ -52,7 +52,7 @@ cp ../src/icons/logo.svg ./logo.svg
 
 ubuntu=$(cat /etc/issue | cut -d " " -f2 | sed "s/\.4//")
 
-./nfpm pkg -t Dockey-v${version}-ubuntu-${ubuntu}.deb
+./nfpm pkg -t Dockey-v${version}-ubuntu${ubuntu}.deb
 #./nfpm pkg -t Dockey-v${version}-amd64.rpm
 
 #if [ "$packager" = "deb" ]
