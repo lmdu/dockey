@@ -43,13 +43,9 @@ jobs:
         with:
           files: dist/*.exe
 
-  build_ubuntu:
+  build_ubuntu1:
     name: Build on Ubuntu
-    runs-on: ${{ matrix.os }}
-
-    strategy:
-      matrix:
-        os: [ubuntu-20.04, ubuntu-22.04]
+    runs-on: ubuntu-20.04
 
     steps:
       - uses: actions/checkout@v2.4.0
@@ -78,8 +74,58 @@ jobs:
         run: |
           version=`awk '/^DOCKEY_VERSION/{print $NF}' src/config.py | sed 's/\"//g'`
           cd dist
-          ubuntu=$(cat /etc/issue | cut -d " " -f2 | sed "s/\.4//")
-          tar -czvf Dockey-v${version}-ubuntu${ubuntu}.tar.gz Dockey
+          tar -czvf Dockey-v${version}-ubuntu20.04.tar.gz Dockey
+          chmod a+x ../package/build_linux_desktop.sh
+          ../package/build_linux_desktop.sh $version deb
+
+      - uses: actions/upload-artifact@v2
+        with:
+          name: Dockey-linux
+          path: |
+            dist/*.deb
+            #dist/*.rpm
+            dist/*.tar.gz
+
+      - uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: |
+            dist/*.deb
+            #dist/*.rpm
+            #dist/*.tar.gz
+
+  build_ubuntu2:
+    name: Build on Ubuntu
+    runs-on: ubuntu-22.04
+
+    steps:
+      - uses: actions/checkout@v2.4.0
+
+      #- name: Install Python
+      #  uses: actions/setup-python@v2
+      #  with:
+      #    python-version: 3.8
+
+      - name: Install requirements
+        run: |
+          python3 --version
+          pip --version
+          sudo apt install libcairo2-dev
+          sudo apt install python3-openbabel
+          pip install https://github.com/lmdu/pymol-wheel/releases/download/2.6/pymol-2.6.0a0-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
+          pip install git+https://github.com/lmdu/AutoDockTools_py3
+          pip install -r requirements.txt
+          pip install plip==2.2.2 --no-deps
+          python3 package/slim_meeko.py
+
+      - name: Build executable
+        run: pyinstaller package/build_linux.spec
+
+      - name: Package installer
+        run: |
+          version=`awk '/^DOCKEY_VERSION/{print $NF}' src/config.py | sed 's/\"//g'`
+          cd dist
+          tar -czvf Dockey-v${version}-ubuntu20.04.tar.gz Dockey
           chmod a+x ../package/build_linux_desktop.sh
           ../package/build_linux_desktop.sh $version deb
 
