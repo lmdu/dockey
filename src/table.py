@@ -589,8 +589,9 @@ class JobsTableDelegate(QStyledItemDelegate):
 		bar.textVisible = True
 		bar.textAlignment = Qt.AlignCenter
 		bar.state |= QStyle.StateFlag.State_Horizontal
-
+		painter.save()
 		QApplication.style().drawControl(QStyle.CE_ProgressBar, bar, painter)
+		painter.restore()
 
 class PoseTableModel(DockeyTableModel):
 	table = 'pose'
