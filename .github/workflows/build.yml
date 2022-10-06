@@ -80,7 +80,7 @@ jobs:
 
       - uses: actions/upload-artifact@v2
         with:
-          name: Dockey-linux
+          name: Dockey-ubuntu20.04
           path: |
             dist/*.deb
             #dist/*.rpm
@@ -131,7 +131,7 @@ jobs:
 
       - uses: actions/upload-artifact@v2
         with:
-          name: Dockey-linux
+          name: Dockey-linux22.04
           path: |
             dist/*.deb
             #dist/*.rpm
