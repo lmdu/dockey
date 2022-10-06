@@ -1,13 +1,19 @@
 # -*- mode: python ; coding: utf-8 -*-
-
+import sys
 
 block_cipher = None
 
+if sys.version.startswith('3.8'):
+    ob_libs = '/usr/lib/openbabel/3.0.0/*'
+    ob_share = '/usr/share/openbabel/3.0.0/*'
+else:
+    ob_libs = '/usr/lib/x86_64-linux-gnu/openbabel/3.1.1/*'
+    ob_share = '/usr/share/openbabel/3.1.1/*'
 
 a = Analysis(['../src/main.py'],
              pathex=[],
-             binaries=[('/usr/lib/openbabel/3.0.0/*', 'openbabel/lib')],
-             datas=[('/usr/share/openbabel/3.0.0/*', 'openbabel/data')],
+             binaries=[(ob_libs, 'openbabel/lib')],
+             datas=[(ob_share, 'openbabel/data')],
              hiddenimports=[],
              hookspath=['hooks'],
              hooksconfig={},

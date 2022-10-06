@@ -372,14 +372,12 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 
 	@Slot()
 	def on_task_pose_changed(self, index):
-		new_index = self.pose_tab.pose_model.index(index.row(), 0)
-		pid = new_index.data(Qt.DisplayRole)
+		pid = index.siblingAtColumn(0).data(Qt.DisplayRole)
 		self.interaction_tab.change_pose(pid)
 
 	@Slot()
 	def on_best_pose_changed(self, index):
-		new_index = self.pose_tab.best_model.index(index.row(), 1)
-		pid = new_index.data(Qt.DisplayRole)
+		pid = index.siblingAtColumn(1).data(Qt.DisplayRole)
 		self.interaction_tab.change_pose(pid)
 
 	def create_molecular_model(self):

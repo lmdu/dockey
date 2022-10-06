@@ -239,9 +239,8 @@ class DockeyListView(QListView):
 		if not self.current_index.isValid():
 			return
 
-		mid = self.current_index.siblingAtColumn(0).data(role=Qt.DisplayRole)
-		DB.query("DELETE FROM molecular WHERE id=?",(mid,))
-		self.parent.mol_model.select()
+		mid = self.current_index.siblingAtColumn(0)
+		self.parent.mol_model.remove(self.current_index.row())
 
 	@Slot()
 	def delete_ligands(self):
@@ -440,25 +439,33 @@ class DockeyTableModel(QAbstractTableModel):
 		self.cache_row[1] = DB.get_row(self.get_sql, (_id,))
 
 	def select(self):
-		self.cache_row = [-1, None]
-		self.read_count = 0
-		self.displayed = []
 		self.beginResetModel()
+		self.cache_row = [-1, None]
 		self.total_count = DB.get_one(self.count_sql)
+		self.displayed = DB.get_column(self.read_sql)
+		self.read_count = len(self.displayed)
 		self.endResetModel()
 		self.row_count.emit(self.total_count)
 
 	def reset(self):
+		self.beginResetModel()
 		self.cache_row = [-1, None]
 		self.read_count = 0
 		self.displayed = []
-		self.beginResetModel()
 		self.total_count = 0
 		self.endResetModel()
 
 	def clear(self):
 		DB.query("DELETE FROM {}".format(self.table))
 		self.reset()
+
+	def remove(self, row):
+		self.beginRemoveRows(QModelIndex(), row, row)
+		real_id = self.displayed.pop(row)
+		self.total_count -= 1
+		self.read_count -= 1
+		DB.query("DELETE FROM {} WHERE id=?".format(self.table),(real_id,))
+		self.endRemoveRows()
 
 class MolecularTableModel(DockeyTableModel):
 	table = 'molecular'
