@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 version=$1
 #packager=$2
