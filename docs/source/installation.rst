@@ -12,13 +12,13 @@ Prior to installing Dockey, you should first install a docking engine, any of `A
      - Versions
    * - |windows|
      - Windows
-     - 7, 8, 10, 11
+     - 10, 11
    * - |linux|
      - Ubuntu
-     - 18.04, 20.04, 22.04
+     - 20.04
    * - |macos|
      - MacOS
-     - Mojave, Catalina, Big Sur, Monterey
+     - Big Sur 11.7
 
 Windows
 -------
