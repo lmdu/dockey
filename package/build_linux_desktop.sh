@@ -50,9 +50,9 @@ echo "$nfpmconfig" > nfpm.yaml
 # copy logo file
 cp ../src/icons/logo.svg ./logo.svg
 
-ubuntu=$(cat /etc/issue | cut -d " " -f2 | sed "s/\.4//")
+uver=$(cat /etc/issue | cut -d " " -f2)
 
-./nfpm pkg -t Dockey-v${version}-ubuntu${ubuntu}.deb
+./nfpm pkg -t Dockey-v${version}-ubuntu${uver:0:5}.deb
 #./nfpm pkg -t Dockey-v${version}-amd64.rpm
 
 #if [ "$packager" = "deb" ]

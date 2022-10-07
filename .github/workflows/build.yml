@@ -59,8 +59,8 @@ jobs:
         run: |
           python3 --version
           pip --version
-          sudo apt install libcairo2-dev
-          sudo apt install python3-openbabel
+          sudo apt install -y libcairo2-dev
+          sudo apt install -y python3-openbabel
           pip install https://github.com/lmdu/pymol-wheel/releases/download/2.6/pymol-2.6.0a0-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
           pip install git+https://github.com/lmdu/AutoDockTools_py3
           pip install -r requirements.txt
@@ -110,8 +110,9 @@ jobs:
         run: |
           python3 --version
           pip --version
-          sudo apt install libcairo2-dev
-          sudo apt install python3-openbabel
+          pip install -U pip
+          sudo apt install -y libcairo2-dev
+          sudo apt install -y python3-openbabel
           pip install https://github.com/lmdu/pymol-wheel/releases/download/2.6/pymol-2.6.0a0-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
           pip install git+https://github.com/lmdu/AutoDockTools_py3
           pip install -r requirements.txt
@@ -131,7 +132,7 @@ jobs:
 
       - uses: actions/upload-artifact@v2
         with:
-          name: Dockey-linux22.04
+          name: Dockey-ubuntu22.04
           path: |
             dist/*.deb
             #dist/*.rpm
@@ -144,7 +145,6 @@ jobs:
             dist/*.deb
             #dist/*.rpm
             #dist/*.tar.gz
-
 
   build_mac:
     name: Build on Mac
