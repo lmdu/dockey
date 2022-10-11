@@ -161,10 +161,10 @@ class BaseProcess(multiprocessing.Process):
 		self.repp_params = params[2]
 		#self.grid_spacing = params[3]
 		
-		#if os.name == 'nt':
-		#	self.creationflags = 0x08000000
-		#else:
-		#	self.creationflags = 0
+		if os.name == 'nt':
+			self.creationflags = 0x08000000
+		else:
+			self.creationflags = 0
 
 	def send_result(self, poses):
 		interactions = get_complex_interactions(poses)
@@ -290,8 +290,8 @@ class AutodockProcess(BaseProcess):
 			stdout = subprocess.PIPE,
 			stderr = subprocess.PIPE,
 			cwd = self.work_dir,
-			encoding = 'utf8'
-			#creationflags = self.creationflags
+			encoding = 'utf8',
+			creationflags = self.creationflags
 		)
 
 		read_start = 0
@@ -331,7 +331,7 @@ class AutodockProcess(BaseProcess):
 			stderr = subprocess.PIPE,
 			cwd = self.work_dir,
 			encoding = 'utf8',
-			#creationflags = self.creationflags
+			creationflags = self.creationflags
 		)
 
 		read_start = 0
@@ -436,7 +436,7 @@ class AutodockVinaProcess(BaseProcess):
 				stderr = subprocess.PIPE,
 				cwd = self.work_dir,
 				encoding = 'utf8',
-				#creationflags = self.creationflags
+				creationflags = self.creationflags
 			)
 
 			read_start = 0
@@ -495,7 +495,7 @@ class AutodockVinaProcess(BaseProcess):
 			stderr = subprocess.PIPE,
 			cwd = self.work_dir,
 			encoding = 'utf8',
-			#creationflags = self.creationflags
+			creationflags = self.creationflags
 		)
 
 		star = 0
@@ -609,7 +609,7 @@ class QuickVinaProcess(BaseProcess):
 			stderr = subprocess.PIPE,
 			cwd = self.work_dir,
 			encoding = 'utf8',
-			#creationflags = self.creationflags
+			creationflags = self.creationflags
 		)
 
 		star = 0

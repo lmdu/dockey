@@ -218,7 +218,7 @@ class AutodockParameter(Parameter):
 			comment = 'File containing flexible residues',
 			scope = 'global',
 			required = False,
-			user = True,
+			user = False,
 		)
 		self.about = AttrDict(
 			type = list,
