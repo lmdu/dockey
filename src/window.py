@@ -882,6 +882,7 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 
 	def close_project(self):
 		if DB.changed():
+			'''
 			ret = QMessageBox.question(self, "Confirmation",
 				"Would you like to save project before closing project",
 				QMessageBox.Yes | QMessageBox.No | QMessageBox.Cancel
@@ -892,6 +893,7 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 
 			elif ret == QMessageBox.Yes:
 				self.save_project()
+			'''
 
 		self.mol_model.reset()
 		self.job_model.reset()
