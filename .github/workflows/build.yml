@@ -33,7 +33,7 @@ jobs:
           $version = $line.Split('"')[1]
           iscc /DMyAppVersion=$version package/build_win_installer.iss
 
-      - uses: actions/upload-artifact@v2
+      - uses: actions/upload-artifact@v3
         with:
           name: Dockey-win64
           path: dist/*.exe
