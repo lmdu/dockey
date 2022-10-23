@@ -1,21 +1,20 @@
-# -*- mode: python ; coding: utf-8 -*-
-
+import sys
 
 block_cipher = None
 
+if sys.platform == 'darwin':
+    icon_file = '../src/icons/logo.icns'
+else:
+    icon_file = '../src/icons/logo.ico'
 
 a = Analysis(['../src/main.py'],
              pathex=[],
-             binaries=[
-                ('/usr/local/Cellar/open-babel/3.1.1_2/lib/openbabel/3.1.0/*', 'openbabel/lib'),
-                ('/usr/local/Cellar/open-babel/3.1.1_2/lib/libinchi.0.dylib', '.')
-             ],
-             datas=[('/usr/local/Cellar/open-babel/3.1.1_2/share/openbabel/3.1.0/*', 'openbabel/data')],
+             binaries=[],
+             datas=[],
              hiddenimports=[],
              hookspath=['hooks'],
-             
              hooksconfig={},
-             runtime_hooks=['hooks/pyi_rth_openbabel.py'],
+             runtime_hooks=[],
              excludes=['FixTk', 'tcl', 'tk', '_tkinter', 'tkinter', 'Tkinter'],
              win_no_prefer_redirects=False,
              win_private_assemblies=False,
@@ -32,22 +31,24 @@ exe = EXE(pyz,
           debug=False,
           bootloader_ignore_signals=False,
           strip=False,
-          upx=True,
+          upx=False,
           console=False,
           disable_windowed_traceback=False,
           target_arch=None,
           codesign_identity=None,
           entitlements_file=None,
-          icon='../src/icons/logo.icns')
+          icon=icon_file)
 coll = COLLECT(exe,
                a.binaries,
                a.zipfiles,
                a.datas, 
                strip=False,
-               upx=True,
+               upx=False,
                upx_exclude=[],
                name='Dockey')
-app = BUNDLE(coll,
-             name='Dockey.app',
-             icon='../src/icons/logo.icns',
-             bundle_identifier=None)
+
+if sys.platform == 'darwin':
+    app = BUNDLE(coll,
+                 name='Dockey.app',
+                 icon=icon_file,
+                 bundle_identifier=None)
