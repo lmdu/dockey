@@ -153,8 +153,8 @@ jobs:
           #HOMEBREW_NO_INSTALLED_DEPENDENTS_CHECK: 1
         run: |
           sudo pip3 install -U pip
-          sudo pip3 install https://github.com/lmdu/pymol-wheel/releases/download/2.6.0.post2/pymol-2.6.0a0-cp39-cp39-macosx_10_9_x86_64.whl
-          sudo pip3 install https://github.com/lmdu/openbabel-wheel/releases/download/3.1.1.post6/openbabel-3.1.1-cp39-cp39-macosx_11_0_x86_64.whl
+          sudo pip3 install https://github.com/lmdu/pymol-wheel/releases/download/2.6.0.post2/pymol-2.6.0a0-cp38-cp38-macosx_10_9_x86_64.whl
+          sudo pip3 install https://github.com/lmdu/openbabel-wheel/releases/download/3.1.1.post6/openbabel-3.1.1-cp38-cp38-macosx_11_0_x86_64.whl
           sudo pip3 install git+https://github.com/lmdu/AutoDockTools_py3
           sudo pip3 install -r requirements.txt
           sudo pip3 install plip==2.2.2 --no-deps
