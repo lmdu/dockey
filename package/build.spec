@@ -2,7 +2,9 @@ import sys
 
 block_cipher = None
 
-if sys.platform == 'darwin':
+if sys.platform == 'win32':
+    icon_file = ['../src/icons/logo.ico', '../src/icons/association.ico']
+elif sys.platform == 'darwin':
     icon_file = '../src/icons/logo.icns'
 else:
     icon_file = '../src/icons/logo.ico'
@@ -11,7 +13,7 @@ a = Analysis(['../src/main.py'],
              pathex=[],
              binaries=[],
              datas=[],
-             hiddenimports=[],
+             hiddenimports=['PySide6.QtWidgets', 'PySide6.QtGui', 'PySide6.QtOpenGLWidgets'],
              hookspath=['hooks'],
              hooksconfig={},
              runtime_hooks=[],

@@ -25,7 +25,14 @@ if __name__ == '__main__':
 
 	app = QApplication(sys.argv)
 	win = DockeyMainWindow()
-
 	win.show()
 
+	#open project file from command line
+	args = app.arguments()
+	if len(args) > 1:
+		pfile = args[1]
+
+		if os.path.isfile(pfile):
+			win.create_db_connect(pfile)
+	
 	sys.exit(app.exec())

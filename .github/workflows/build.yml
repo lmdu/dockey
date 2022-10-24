@@ -17,8 +17,8 @@ jobs:
 
       - name: Install requirements
         run: |
-          pip install https://github.com/lmdu/pymol-wheel/releases/download/2.6.0.post2/pymol-2.6.0a0-cp38-cp38-win_amd64.whl
-          pip install https://github.com/lmdu/openbabel-wheel/releases/download/3.1.1.post6/openbabel-3.1.1-cp38-cp38-win_amd64.whl
+          pip install https://github.com/lmdu/pymol-wheel/releases/download/2.6.0.post3/pymol-2.6.0a0-cp38-cp38-win_amd64.whl
+          pip install https://github.com/lmdu/openbabel-wheel/releases/download/3.1.1.post7/openbabel-3.1.1-cp38-cp38-win_amd64.whl
           pip install git+https://github.com/lmdu/AutoDockTools_py3
           pip install -r requirements.txt
           pip install plip==2.2.2 --no-deps
@@ -57,8 +57,8 @@ jobs:
 
       - name: Install requirements
         run: |
-          pip3 install https://github.com/lmdu/pymol-wheel/releases/download/2.6.0.post2/pymol-2.6.0a0-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
-          pip3 install https://github.com/lmdu/openbabel-wheel/releases/download/3.1.1.post6/openbabel-3.1.1-cp38-cp38-manylinux_2_28_x86_64.whl
+          pip3 install https://github.com/lmdu/pymol-wheel/releases/download/2.6.0.post3/pymol-2.6.0a0-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
+          pip3 install https://github.com/lmdu/openbabel-wheel/releases/download/3.1.1.post7/openbabel-3.1.1-cp38-cp38-manylinux_2_28_x86_64.whl
           pip3 install git+https://github.com/lmdu/AutoDockTools_py3
           pip3 install -r requirements.txt
           pip3 install plip==2.2.2 --no-deps
@@ -103,8 +103,8 @@ jobs:
 
       - name: Install requirements
         run: |
-          pip3 install https://github.com/lmdu/pymol-wheel/releases/download/2.6.0.post2/pymol-2.6.0a0-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
-          pip3 install https://github.com/lmdu/openbabel-wheel/releases/download/3.1.1.post6/openbabel-3.1.1-cp38-cp38-manylinux_2_28_x86_64.whl         
+          pip3 install https://github.com/lmdu/pymol-wheel/releases/download/2.6.0.post3/pymol-2.6.0a0-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
+          pip3 install https://github.com/lmdu/openbabel-wheel/releases/download/3.1.1.post7/openbabel-3.1.1-cp38-cp38-manylinux_2_28_x86_64.whl         
           pip3 install git+https://github.com/lmdu/AutoDockTools_py3
           pip3 install -r requirements.txt
           pip3 install plip==2.2.2 --no-deps
@@ -137,7 +137,7 @@ jobs:
 
   build_mac:
     name: Build on Mac
-    runs-on: macos-11
+    runs-on: macos-10.15
 
     steps:
       - uses: actions/checkout@v3
@@ -152,13 +152,12 @@ jobs:
           HOMEBREW_NO_INSTALL_CLEANUP: 1
           #HOMEBREW_NO_INSTALLED_DEPENDENTS_CHECK: 1
         run: |
-          sudo pip3 install -U pip
-          sudo pip3 install https://github.com/lmdu/pymol-wheel/releases/download/2.6.0.post2/pymol-2.6.0a0-cp38-cp38-macosx_10_9_x86_64.whl
-          sudo pip3 install https://github.com/lmdu/openbabel-wheel/releases/download/3.1.1.post6/openbabel-3.1.1-cp38-cp38-macosx_10_16_x86_64.whl
-          sudo pip3 install git+https://github.com/lmdu/AutoDockTools_py3
-          sudo pip3 install -r requirements.txt
-          sudo pip3 install plip==2.2.2 --no-deps
-          sudo python3 package/slim_meeko.py
+          pip3 install https://github.com/lmdu/pymol-wheel/releases/download/2.6.0.post3/pymol-2.6.0a0-cp38-cp38-macosx_10_9_x86_64.whl
+          pip3 install https://github.com/lmdu/openbabel-wheel/releases/download/3.1.1.post7/openbabel-3.1.1-cp38-cp38-macosx_10_15_x86_64.whl
+          pip3 install git+https://github.com/lmdu/AutoDockTools_py3
+          pip3 install -r requirements.txt
+          pip3 install plip==2.2.2 --no-deps
+          python3 package/slim_meeko.py
 
       - name: Build executable
         run: pyinstaller package/build.spec

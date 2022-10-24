@@ -47,3 +47,10 @@ Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; Tasks: de
 [Run]
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent
 
+[Registry]
+Root: HKA; Subkey: "Software\Classes\.dock\OpenWithProgids"; ValueType: string; ValueName: "DockeyProjectFile.dock"; ValueData: ""; Flags: uninsdeletevalue
+Root: HKA; Subkey: "Software\Classes\DockeyProjectFile.dock"; ValueType: string; ValueName: ""; ValueData: "Dockey Project File"; Flags: uninsdeletekey
+Root: HKA; Subkey: "Software\Classes\DockeyProjectFile.dock\DefaultIcon"; ValueType: string; ValueName: ""; ValueData: "{app}\{#MyAppExeName},1"
+Root: HKA; Subkey: "Software\Classes\DockeyProjectFile.dock\shell\open\command"; ValueType: string; ValueName: ""; ValueData: """{app}\{#MyAppExeName}"" ""%1"""
+Root: HKA; Subkey: "Software\Classes\Applications\{#MyAppExeName}\SupportedTypes"; ValueType: string; ValueName: ".dock"; ValueData: ""
+
