@@ -179,8 +179,6 @@ class BaseWorker(QRunnable):
 				'spacing': grid_space
 			})
 
-			print(grid)
-
 		return AttrDict({
 			'id': job.id,
 			'rid': rep.id,

@@ -3,33 +3,45 @@
 version=$1
 #packager=$2
 
-wget https://github.com/goreleaser/nfpm/releases/download/v2.11.3/nfpm_2.11.3_Linux_x86_64.tar.gz
-tar xzvf nfpm_2.11.3_Linux_x86_64.tar.gz
-rm nfpm_2.11.3_Linux_x86_64.tar.gz
+wget https://github.com/goreleaser/nfpm/releases/download/v2.20.0/nfpm_2.20.0_Linux_x86_64.tar.gz
+tar xzvf nfpm_2.20.0_Linux_x86_64.tar.gz
+rm nfpm_2.20.0_Linux_x86_64.tar.gz
 
-desktop="[Desktop Entry]
+cat > dockey.desktop <<EOF
+[Desktop Entry]
 Version=${version}
 Name=Dockey
-Comment=a morden tool for molecular docking
+Comment=a modern tool for molecular docking
 GenericName=Molecular Docking
 Keywords=Molecular;Docking;Drug
-Exec=/usr/lib/Dockey/Dockey
-Icon=/usr/share/icons/dockey/logo.svg
+Exec=/usr/lib/Dockey/Dockey %f
+Icon=dockey.svg
 Terminal=false
 Type=Application
-Categories=Application
+Categories=Education
 StartupNotify=true
-"
-echo "$desktop" > dockey.desktop
+MimeType=application/x-dock
+EOF
 
-nfpmconfig="name: Dockey
+cat > application-x-dock.xml <<EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
+  <mime-type type="application/x-dock">
+    <comment>Dockey Project File</comment>
+    <glob pattern="*.dock"/>
+  </mime-type>
+</mime-info>
+EOF
+
+cat > nfpm.yaml <<EOF
+name: Dockey
 arch: amd64
 platform: linux
 version: v${version}
 section: default
 priority: extra
 maintainer: lmdu <adullb@qq.com>
-description: a morden tool for molecular docking
+description: a modern tool for molecular docking
 vendor: Bioinformatics and Integrative Genomics
 homepage: https://github.com/lmdu/dockey
 license: MIT
@@ -38,17 +50,21 @@ contents:
     dst: /usr/lib/Dockey
   - src: ./dockey.desktop
     dst: /usr/share/applications/dockey.desktop
+  - src: ./application-x-dock.xml
+    dst: /usr/share/mime/packages/application-x-dock.xml
   - src: ./logo.svg
-    dst: /usr/share/icons/dockey/logo.svg
+    dst: /usr/share/icons/hicolor/scalable/apps/dockey.svg
+  - src: ./dock.svg
+    dst: /usr/share/icons/hicolor/scalable/mimetypes/application-x-dock.svg
 rpm:
   compression: lzma
 deb:
   compression: xz
-"
-echo "$nfpmconfig" > nfpm.yaml
+EOF
 
 # copy logo file
 cp ../src/icons/logo.svg ./logo.svg
+cp ../src/icons/dock.svg ./dock.svg
 
 uver=$(cat /etc/issue | cut -d " " -f2)
 uver=${uver:0:5}

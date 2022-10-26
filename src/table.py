@@ -1,4 +1,5 @@
 import os
+import sys
 import csv
 import psutil
 
@@ -584,12 +585,9 @@ class JobsTableModel(DockeyTableModel):
 
 class JobsTableDelegate(QStyledItemDelegate):
 	def paint(self, painter, option, index):
-		percent = index.model().data(index, Qt.DisplayRole)
-		percent = percent if percent else 0
+		percent = index.data() or 0
 		bar = QStyleOptionProgressBar(2)
 		bar.rect = option.rect.adjusted(0, 5, 0, -5)
-		#bar.rect = QRect(option.rect.x(), option.rect.y()+5, option.rect.width(), option.rect.height()/1.5)
-		#bar.rect = option.rect
 		bar.minimum = 0
 		bar.maximum = 100
 		bar.progress = percent
@@ -598,6 +596,11 @@ class JobsTableDelegate(QStyledItemDelegate):
 		bar.textAlignment = Qt.AlignCenter
 		bar.state |= QStyle.StateFlag.State_Horizontal
 		painter.save()
+
+		#fix incorrect progressbar position on MacOS
+		if sys.platform == 'darwin':
+			painter.translate(bar.rect.x(), bar.rect.y())
+		
 		QApplication.style().drawControl(QStyle.CE_ProgressBar, bar, painter)
 		painter.restore()
 

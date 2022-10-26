@@ -1,19 +1,23 @@
-import sys
+from PyInstaller.compat import is_win, is_darwin
 
 block_cipher = None
 
-if sys.platform == 'win32':
-    icon_file = ['../src/icons/logo.ico', '../src/icons/association.ico']
-elif sys.platform == 'darwin':
+if is_win:
+    icon_file = ['../src/icons/logo.ico', '../src/icons/dock.ico']
+    datas = []
+elif is_darwin:
     icon_file = '../src/icons/logo.icns'
+    datas = [('../src/icons/dock.icns', '.')]
 else:
     icon_file = '../src/icons/logo.ico'
+    datas = []
+
 
 a = Analysis(['../src/main.py'],
              pathex=[],
              binaries=[],
-             datas=[],
-             hiddenimports=['PySide6.QtWidgets', 'PySide6.QtGui', 'PySide6.QtOpenGLWidgets'],
+             datas=datas,
+             hiddenimports=[],
              hookspath=['hooks'],
              hooksconfig={},
              runtime_hooks=[],
@@ -49,8 +53,28 @@ coll = COLLECT(exe,
                upx_exclude=[],
                name='Dockey')
 
-if sys.platform == 'darwin':
+if is_darwin:
     app = BUNDLE(coll,
                  name='Dockey.app',
                  icon=icon_file,
-                 bundle_identifier=None)
+                 bundle_identifier=None,
+                 info_plist={
+                    'CFBundleDocumentTypes': [
+                        {
+                            'CFBundleTypeName': 'Dockey Project File',
+                            'CFBundleTypeIconFile': 'dock.icns',
+                            'CFBundleTypeRole': 'Editor',
+                            'LSHandlerRank': 'Owner',
+                            'LSItemContentTypes': ['app.Dockey.dock']
+                        }
+                    ],
+                    'UTExportedTypeDeclarations': [{
+                        'UTTypeIdentifier': 'app.Dockey.dock',
+                        'UTTypeTagSpecification': {
+                            'public.filename-extension': ['dock']
+                        },
+                        'UTTypeConformsTo': ['public.data'],
+                        'UTTypeDescription': 'Dockey Project File',
+                        'UTTypeIconFile': 'dock.icns'
+                    }]
+                })

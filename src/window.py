@@ -25,7 +25,7 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 	project_ready = Signal(bool)
 
 	def __init__(self):
-		super(DockeyMainWindow, self).__init__()
+		super().__init__()
 		#self.job_query = None
 		self.job_params = None
 		self.job_engine = None
@@ -60,6 +60,8 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		self.create_pymol_menus()
 
 		self.read_settings()
+
+		self.show()
 
 	def closeEvent(self, event):
 		self.write_settings()
