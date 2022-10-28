@@ -43,9 +43,9 @@ jobs:
         with:
           files: dist/*.exe
 
-  build_ubuntu1:
-    name: Build on Ubuntu20.04
-    runs-on: ubuntu-20.04
+  build_ubuntu:
+    name: Build on Ubuntu18.04
+    runs-on: ubuntu-18.04
 
     steps:
       - uses: actions/checkout@v3
@@ -78,52 +78,6 @@ jobs:
       - uses: actions/upload-artifact@v3
         with:
           name: Dockey-ubuntu20.04
-          path: |
-            dist/*.deb
-            dist/*.tar.gz
-
-      - uses: softprops/action-gh-release@v1
-        if: startsWith(github.ref, 'refs/tags/')
-        with:
-          files: |
-            dist/*.deb
-            dist/*.tar.gz
-
-  build_ubuntu2:
-    name: Build on Ubuntu22.04
-    runs-on: ubuntu-22.04
-
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Install Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: 3.8
-
-      - name: Install requirements
-        run: |
-          pip3 install https://github.com/lmdu/pymol-wheel/releases/download/2.6.0.post3/pymol-2.6.0a0-cp38-cp38-manylinux_2_17_x86_64.manylinux2014_x86_64.whl
-          pip3 install https://github.com/lmdu/openbabel-wheel/releases/download/3.1.1.post7/openbabel-3.1.1-cp38-cp38-manylinux_2_28_x86_64.whl         
-          pip3 install git+https://github.com/lmdu/AutoDockTools_py3
-          pip3 install -r requirements.txt
-          pip3 install plip==2.2.2 --no-deps
-          python3 package/slim_meeko.py
-
-      - name: Build executable
-        run: pyinstaller package/build.spec
-
-      - name: Package installer
-        run: |
-          version=`awk '/^DOCKEY_VERSION/{print $NF}' src/config.py | sed 's/\"//g'`
-          cd dist
-          tar -czvf Dockey-v${version}-ubuntu22.04.tar.gz Dockey
-          chmod a+x ../package/build_linux_desktop.sh
-          ../package/build_linux_desktop.sh $version deb
-
-      - uses: actions/upload-artifact@v3
-        with:
-          name: Dockey-ubuntu22.04
           path: |
             dist/*.deb
             dist/*.tar.gz
