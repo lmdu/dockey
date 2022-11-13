@@ -15,7 +15,7 @@ __all__ = ['AttrDict', 'draw_gridbox', 'convert_dimension_to_coordinates',
 	'ligand_efficiency_assessment', 'get_molecule_information', 'convert_ki_to_log',
 	'time_elapse', 'generate_complex_pdb', 'get_complex_interactions',
 	'interaction_visualize', 'get_dimension_from_pdb', 'load_molecule_from_file',
-	'convert_string_to_pdb', 'memory_format'
+	'convert_string_to_pdb', 'memory_format', 'get_molecule_residues'
 ]
 
 class AttrDict(dict):
@@ -428,6 +428,15 @@ def get_molecule_information(mol_file, from_string=False, mol_name=None, mol_for
 		logp = log_p,
 		content = mol_content
 	)
+
+def get_molecule_residues(pdb_str, pdb_fmt):
+	obc = openbabel.OBConversion()
+	obc.SetInFormat(pdb_fmt)
+	mol = openbabel.OBMol()
+	obc.ReadString(mol, pdb_str)
+
+	for res in openbabel.OBResidueIter(mol):
+		yield (res.GetChain(), res.GetName(), str(res.GetNum()), str(res.GetNumAtoms()))
 
 def ligand_efficiency_assessment(pdb_str, energy, ki=None):
 	if ki is None:

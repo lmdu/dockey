@@ -19,6 +19,13 @@ DB_TABLES = {
 		('weight', 'REAL'),
 		('logp', 'REAL')
 	],
+	'flex': [
+		('id', 'INTEGER PRIMARY KEY'),
+		('rid', 'INTEGER'),
+		('chain', 'TEXT'),
+		('aa', 'TEXT'),
+		('residue', 'TEXT')
+	],
 	'grid': [
 		('id', 'INTEGER PRIMARY KEY'),
 		('rid', 'INTEGER'),

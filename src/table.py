@@ -179,47 +179,58 @@ class DockeyListView(QListView):
 	def on_custom_menu(self, pos):
 		self.current_index = self.indexAt(pos)
 
-		add_r_act = QAction("Add Receptors", self,
-			triggered = self.add_receptors
+		#add_r_act = QAction("Add Receptors", self,
+		#	triggered = self.add_receptors
+		#)
+
+		#add_l_act = QAction("Add Ligands", self,
+		#	triggered = self.add_ligands
+		#)
+
+		rep_f_act = QAction("Set Flex Residues", self,
+			enabled = self.current_index.isValid() and self.current_index.siblingAtColumn(2).data() == 1,
+			triggered = self.set_flex_residules
 		)
 
-		add_l_act = QAction("Add Ligands", self,
-			triggered = self.add_ligands
+		lig_f_act = QAction("Filter Ligands", self,
+			enabled = DB.active(),
+			triggered = self.ligand_filter
 		)
 
 		del_m_act = QAction("Delete Select", self,
+			enabled = self.current_index.isValid(),
 			triggered = self.delete_molecular
 		)
-		del_m_act.setDisabled(not self.current_index.isValid())
 
-		clr_r_act = QAction("Delete Receptors", self,
+		clr_r_act = QAction("Delete All Receptors", self,
 			enabled = DB.active(),
 			triggered = self.delete_receptors
 		)
 
-		clr_l_act = QAction("Delete Ligands", self,
+		clr_l_act = QAction("Delete All Ligands", self,
 			enabled = DB.active(),
 			triggered = self.delete_ligands
 		)
 
-		clr_m_act = QAction("Delete All", self,
+		clr_m_act = QAction("Delete All Molecules", self,
 			enabled = DB.active(),
 			triggered = self.delete_all
 		)
 
 		view_act = QAction("View Details", self,
+			enabled = self.current_index.isValid(),
 			triggered = self.view_details
 		)
-		view_act.setDisabled(not self.current_index.isValid())
 
 		menu = QMenu(self)
 		#menu.addAction(add_r_act)
 		#menu.addAction(add_l_act)
-		menu.addAction(self.parent.import_receptor_act)
-		menu.addAction(self.parent.import_ligand_act)
+		#menu.addAction(self.parent.import_receptor_act)
+		#menu.addAction(self.parent.import_ligand_act)
+		menu.addAction(rep_f_act)
+		menu.addAction(lig_f_act)
 		menu.addSeparator()
 		menu.addAction(del_m_act)
-		menu.addSeparator()
 		menu.addAction(clr_r_act)
 		menu.addAction(clr_l_act)
 		menu.addAction(clr_m_act)
@@ -236,7 +247,22 @@ class DockeyListView(QListView):
 		self.parent.import_ligands()
 
 	@Slot()
+	def set_flex_residules(self):
+		mol_id = self.current_index.siblingAtColumn(0).data()
+		self.parent.set_receptor_flexres(mol_id)
+
+	@Slot()
+	def ligand_filter(self):
+		self.parent.filter_ligands()
+
+	@Slot()
 	def delete_molecular(self):
+		ret = QMessageBox.question(self.parent, "Comfirmation",
+			"Are you sure you want to delete select moleculue?")
+
+		if ret == QMessageBox.No:
+			return
+
 		if not self.current_index.isValid():
 			return
 
@@ -245,16 +271,34 @@ class DockeyListView(QListView):
 
 	@Slot()
 	def delete_ligands(self):
+		ret = QMessageBox.question(self.parent, "Comfirmation",
+			"Are you sure you want to delete all ligands?")
+
+		if ret == QMessageBox.No:
+			return
+
 		DB.query("DELETE FROM molecular WHERE type=2")
 		self.parent.mol_model.select()
 
 	@Slot()
 	def delete_receptors(self):
+		ret = QMessageBox.question(self.parent, "Comfirmation",
+			"Are you sure you want to delete all receptors?")
+
+		if ret == QMessageBox.No:
+			return
+
 		DB.query("DELETE FROM molecular WHERE type=1")
 		self.parent.mol_model.select()
 
 	@Slot()
 	def delete_all(self):
+		ret = QMessageBox.question(self.parent, "Comfirmation",
+			"Are you sure you want to delete all moleculues?")
+
+		if ret == QMessageBox.No:
+			return
+
 		DB.query("DELETE FROM molecular")
 		self.parent.mol_model.select()
 
@@ -263,7 +307,7 @@ class DockeyListView(QListView):
 		if not self.current_index.isValid():
 			return
 
-		mid = self.current_index.siblingAtColumn(0).data(role=Qt.DisplayRole)
+		mid = self.current_index.siblingAtColumn(0).data()
 		sql = "SELECT * FROM molecular WHERE id=? LIMIT 1"
 		mol = DB.get_dict(sql, (mid,))
 

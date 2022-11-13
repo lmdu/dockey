@@ -1304,3 +1304,31 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 	def check_update(self):
 		QDesktopServices.openUrl(QUrl("https://github.com/lmdu/dockey/releases"))
 
+	def set_receptor_flexres(self, mol_id):
+		dlg = FlexResiduesDialog(self, mol_id)
+		dlg.exec()
+
+	def filter_ligands(self):
+		condition = LigandFilterDialog.filter(self)
+
+		if condition is not None:
+			sql = "SELECT COUNT(1) FROM molecular WHERE {}".format(condition)
+			count = DB.get_one(sql)
+
+			if count == 0:
+				QMessageBox.warning(self, "Warning", "No molecules match the filter.")
+
+			else:
+				if count == 1:
+					ret = QMessageBox.question(self, "Comfirmation",
+						"Are you sure you want to remove one ligand that matches the filter?")
+				else:
+					ret = QMessageBox.question(self, "Comfirmation",
+						"Are you sure you want to remove {} ligands that match the filter?".format(
+							count))
+
+				if ret == QMessageBox.Yes:
+					sql = "DELETE FROM molecular WHERE type=2 AND {}".format(condition)
+					DB.query(sql)
+					self.mol_model.select()
+

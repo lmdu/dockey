@@ -18,12 +18,12 @@ __all__ = ['BrowseInput', 'CreateProjectDialog', 'AutodockConfigDialog',
 			'PymolSettingDialog', 'DockingToolSettingDialog', 'InteractionTabWidget',
 			'JobConcurrentSettingDialog', 'DockeyConfigDialog', 'PDBDownloader',
 			'ZINCDownloader', 'QuickVinaConfigDialog', 'PoseTabWidget',
-			'MolecularPrepareDialog'
+			'MolecularPrepareDialog', 'FlexResiduesDialog', 'LigandFilterDialog'
 			]
 
 class BrowseInput(QWidget):
 	def __init__(self, parent=None, is_file=True, is_save=False, _filter=""):
-		super(BrowseInput, self).__init__(parent)
+		super().__init__(parent)
 		self.filter = _filter
 		self.input = QLineEdit(self)
 		self.input.setReadOnly(True)
@@ -76,7 +76,7 @@ class BrowseInput(QWidget):
 
 class CreateProjectDialog(QDialog):
 	def __init__(self, parent=None):
-		super(CreateProjectDialog, self).__init__(parent)
+		super().__init__(parent)
 		self.setWindowTitle("Create a New Project")
 
 		self.name_input = QLineEdit(self)
@@ -145,7 +145,7 @@ class CreateProjectDialog(QDialog):
 
 class DockingToolSettingDialog(QDialog):
 	def __init__(self, parent=None):
-		super(DockingToolSettingDialog, self).__init__(parent)
+		super().__init__(parent)
 		self.resize(QSize(550, 100))
 		self.settings = QSettings()
 		self.ad4 = self.settings.value('Tools/autodock_4', '')
@@ -204,7 +204,7 @@ class ProgramConfigDialog(QDialog):
 	progs = []
 
 	def __init__(self, parent=None):
-		super(ProgramConfigDialog, self).__init__(parent)
+		super().__init__(parent)
 		self.setWindowTitle(self.title)
 		self.resize(QSize(500, 10))
 		self.settings = QSettings()
@@ -287,7 +287,7 @@ class AutodockVinaConfigDialog(ProgramConfigDialog):
 
 class ExportImageDialog(QDialog):
 	def __init__(self, parent=None):
-		super(ExportImageDialog, self).__init__(parent)
+		super().__init__(parent)
 		self.options = None
 
 		self.setWindowTitle("Export as PNG Image")
@@ -353,7 +353,7 @@ class ExportImageDialog(QDialog):
 
 class FeedbackBrowser(QPlainTextEdit):
 	def __init__(self, parent=None):
-		super(FeedbackBrowser, self).__init__(parent)
+		super().__init__(parent)
 		self.setReadOnly(True)
 
 	def sizeHint(self):
@@ -361,7 +361,7 @@ class FeedbackBrowser(QPlainTextEdit):
 
 class GradientColorBar(QWidget):
 	def __init__(self, parent):
-		super(GradientColorBar, self).__init__(parent)
+		super().__init__(parent)
 
 	def sizeHint(self):
 		return QSize(200, 20)
@@ -375,7 +375,7 @@ class GradientColorBar(QWidget):
 
 class PymolSettingDialog(QDialog):
 	def __init__(self, parent=None):
-		super(PymolSettingDialog, self).__init__(parent)
+		super().__init__(parent)
 		self.parent = parent
 		self.settings = QSettings()
 		self.setWindowTitle("Pymol Settings")
@@ -408,7 +408,7 @@ class PymolSettingDialog(QDialog):
 
 class JobConcurrentSettingDialog(QDialog):
 	def __init__(self, parent=None):
-		super(JobConcurrentSettingDialog, self).__init__(parent)
+		super().__init__(parent)
 		self.parent = parent
 		self.setWindowTitle("Concurrent Job Setting")
 		self.settings = QSettings()
@@ -429,7 +429,7 @@ class JobConcurrentSettingDialog(QDialog):
 
 class PoseTabWidget(QTabWidget):
 	def __init__(self, parent=None):
-		super(PoseTabWidget, self).__init__(parent)
+		super().__init__(parent)
 		self.parent = parent
 
 		self.create_best_table()
@@ -498,7 +498,7 @@ class PoseTabWidget(QTabWidget):
 
 class InteractionTabWidget(QTabWidget):
 	def __init__(self, parent=None):
-		super(InteractionTabWidget, self).__init__(parent)
+		super().__init__(parent)
 		self.parent = parent
 		self.pose_id = 0
 		self.binding_site = None
@@ -658,7 +658,7 @@ class InteractionTabWidget(QTabWidget):
 
 class DockeyConfigDialog(QDialog):
 	def __init__(self, parent):
-		super(DockeyConfigDialog, self).__init__(parent)
+		super().__init__(parent)
 		self.parent = parent
 		self.setWindowTitle("Settings")
 		self.resize(QSize(550, 100))
@@ -770,7 +770,7 @@ class DockeyConfigDialog(QDialog):
 
 class MolecularPrepareDialog(QDialog):
 	def __init__(self, parent=None):
-		super(MolecularPrepareDialog, self).__init__(parent)
+		super().__init__(parent)
 		self.setWindowTitle("Molecular preparation")
 		self.settings = QSettings()
 		self.tab_widget = QTabWidget(self)
@@ -1186,7 +1186,7 @@ class DownloaderDialog(QDialog):
 	mol_fmt = 'pdb'
 
 	def __init__(self, parent=None):
-		super(DownloaderDialog, self).__init__(parent)
+		super().__init__(parent)
 		self.parent = parent
 		self.reply = None
 		self.resize(QSize(350, 10))
@@ -1325,3 +1325,182 @@ class ZINCDownloader(DownloaderDialog):
 			base_url = "https://zinc.docking.org/substances/{}.sdf"
 
 		return QUrl(base_url.format(zinc_id))
+
+class FlexResiduesDialog(QDialog):
+	def __init__(self, parent, mol_id):
+		super().__init__(parent)
+		self.mol_id = mol_id
+		self.flex_res = set()
+		self.check_click = True
+		self.select_count = 0
+		self.total_count = 0
+
+		self.setWindowTitle("Select flex residues")
+		self.tree = QTreeWidget(self)
+		self.tree.setColumnCount(4)
+		#self.tree.setSortingEnabled(True)
+		self.tree.setRootIsDecorated(False)
+		self.tree.setHeaderLabels(["Chain", "AA", "Residue", "Atoms"])
+		self.tree.itemChanged.connect(self.on_item_checked)
+		self.label = QLabel(self)
+
+		self.btns = QDialogButtonBox()
+		self.btns.addButton(QDialogButtonBox.Ok)
+		self.btns.addButton("Unselect All", QDialogButtonBox.RejectRole)
+		self.btns.rejected.connect(self.on_unselect_all)
+		self.btns.accepted.connect(self.accept)
+
+		layout = QVBoxLayout()
+		layout.addWidget(QLabel("Set residues as flexible:", self))
+		layout.addWidget(self.tree)
+		layout.addWidget(self.label)
+		layout.addWidget(self.btns)
+		self.setLayout(layout)
+
+		self.get_flex_residues()
+		self.display_molecule_residues()
+
+	def sizeHint(self):
+		return QSize(450, 250)
+
+	def change_select_message(self):
+		if self.select_count == 1:
+			self.label.setText("Total residues: {}. Select {} residue.".format(
+					self.total_count, self.select_count))
+
+		elif self.select_count > 1:
+			self.label.setText("Total residues: {}. Select {} residues".format(
+				self.total_count, self.select_count))
+
+		else:
+			self.label.setText("Total residues: {}. No selected residues.".format(
+				self.total_count))
+
+	def get_flex_residues(self):
+		sql = "SELECT * FROM flex WHERE rid=?"
+
+		for row in DB.query(sql, (self.mol_id,)):
+			self.flex_res.add('{}:{}:{}'.format(row[2], row[3], row[4]))
+
+		self.select_count = len(self.flex_res)
+		self.change_select_message()
+
+	def display_molecule_residues(self):
+		self.check_click = False
+
+		sql = "SELECT content,format FROM molecular WHERE id=? LIMIT 1"
+		mol = DB.get_row(sql, (self.mol_id,))
+
+		for res in get_molecule_residues(mol[0], mol[1]):
+			item = QTreeWidgetItem(self.tree, res)
+			item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
+			key = '{}:{}:{}'.format(res[0], res[1], res[2])
+
+			if key in self.flex_res:
+				item.setCheckState(0, Qt.Checked)
+			else:
+				item.setCheckState(0, Qt.Unchecked)
+
+			self.tree.addTopLevelItem(item)
+			self.total_count += 1
+
+		self.check_click = True
+		self.change_select_message()
+
+	@Slot()
+	def on_item_checked(self, item, column):
+		if not self.check_click:
+			return
+
+		if item.checkState(0) == Qt.Checked:
+			sql = "INSERT INTO flex VALUES (?,?,?,?,?)"
+			row = [None, self.mol_id]
+			self.select_count += 1
+		else:
+			sql = "DELETE FROM flex WHERE rid=? AND chain=? AND aa=? AND residue=?"
+			row = [self.mol_id]
+			self.select_count -= 1
+
+		for i in range(3):
+			if i == 2:
+				row.append(int(item.text(i)))
+			else:
+				row.append(item.text(i))
+
+		DB.query(sql, row)
+		self.change_select_message()
+
+	@Slot()
+	def on_unselect_all(self):
+		sql = "DELETE FROM flex WHERE rid=?"
+		DB.query(sql, (self.mol_id,))
+		self.check_click = False
+		root = self.tree.invisibleRootItem()
+
+		for i in range(root.childCount()):
+			root.child(i).setCheckState(0, Qt.Unchecked)
+
+		self.check_click = True
+		self.select_count = 0
+		self.change_select_message()
+		
+class LigandFilterDialog(QDialog):
+	def __init__(self, parent):
+		super().__init__(parent)
+		self.setWindowTitle("Filter Ligands")
+		self.weight = QDoubleSpinBox(self)
+		self.weight.setRange(0, 100000)
+		self.weight.setDecimals(3)
+		self.mwsign = QComboBox(self)
+		self.mwsign.addItems(['>', '>=', '=', '<=', '<'])
+		self.rotator = QSpinBox(self)
+		self.rotator.setRange(0, 100000)
+		self.rbsign = QComboBox(self)
+		self.rbsign.addItems(['>', '>=', '=', '<=', '<'])
+		self.josign = QComboBox(self)
+		self.josign.addItems(['AND', 'OR'])
+
+		self.btns = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+		self.btns.accepted.connect(self.accept)
+		self.btns.rejected.connect(self.reject)
+
+		grid_layout = QGridLayout()
+		grid_layout.setColumnStretch(2, 1)
+		grid_layout.addWidget(QLabel("Molecular weight", self), 0, 0)
+		grid_layout.addWidget(self.mwsign, 0, 1)
+		grid_layout.addWidget(self.weight, 0, 2)
+		grid_layout.addWidget(self.josign, 1, 1)
+		grid_layout.addWidget(QLabel("Rotatable bonds", self), 2, 0)
+		grid_layout.addWidget(self.rbsign, 2, 1)
+		grid_layout.addWidget(self.rotator, 2, 2)
+
+		main_layout = QVBoxLayout()
+		main_layout.addWidget(QLabel("Remove ligands that match the filter:", self))
+		main_layout.addLayout(grid_layout)
+		main_layout.addWidget(self.btns)
+		self.setLayout(main_layout)
+
+	def sizeHint(self):
+		return QSize(300, 100)
+
+	@classmethod
+	def filter(cls, parent):
+		dlg = cls(parent)
+
+		if dlg.exec() == QDialog.Accepted:
+			mw = dlg.weight.value()
+			ws = dlg.mwsign.currentText()
+			rb = dlg.rotator.value()
+			rs = dlg.rbsign.currentText()
+			js = dlg.josign.currentText()
+
+			conditions = []
+
+			if mw:
+				conditions.append(" weight {} {} ".format(ws, mw))
+
+			if rb:
+				conditions.append(" rotors {} {} ".format(rs, rb))
+
+			return js.join(conditions)
+
