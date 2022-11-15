@@ -1,7 +1,9 @@
 import os
 import time
 import math
+
 from pymol import cmd
+from rdkit import Chem
 from openbabel import openbabel
 from urllib.error import HTTPError
 from urllib.request import urlopen
@@ -15,7 +17,8 @@ __all__ = ['AttrDict', 'draw_gridbox', 'convert_dimension_to_coordinates',
 	'ligand_efficiency_assessment', 'get_molecule_information', 'convert_ki_to_log',
 	'time_elapse', 'generate_complex_pdb', 'get_complex_interactions',
 	'interaction_visualize', 'get_dimension_from_pdb', 'load_molecule_from_file',
-	'convert_string_to_pdb', 'memory_format', 'get_molecule_residues'
+	'convert_string_to_pdb', 'memory_format', 'get_molecule_residues', 'sdf_file_parser',
+	'get_sdf_props'
 ]
 
 class AttrDict(dict):
@@ -714,6 +717,21 @@ def interaction_visualize(plcomplex):
 	#cmd.set('label_position', (0,-1.5,0))
 	cmd.label('n. CA and AllBSRes', '"%s%s%s" % (resn,resi,chain)')
 
+def sdf_file_parser(sdf_file, name_prop):
+	suppl = Chem.SDMolSupplier(sdf_file, sanitize=False,
+		removeHs=False, strictParsing=False)
+
+	for mol in suppl:
+		if not mol:
+			continue
+
+		name = mol.GetProp(name_prop)
+		content = Chem.SDWriter.GetText(mol, kekulize=False)
+		yield (name, content)
+
+def get_sdf_props(sdf_file):
+	for mol in Chem.SDMolSupplier(sdf_file):
+		return mol.GetPropNames()
 
 if __name__ == '__main__':
 	import sys

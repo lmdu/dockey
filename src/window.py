@@ -461,6 +461,12 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		)
 		self.project_ready.connect(self.import_ligand_act.setEnabled)
 
+		self.import_ligand_sdf_act = QAction("&Import Ligands from SDF file", self,
+			disabled = True,
+			triggered = self.import_ligands_from_sdf
+		)
+		self.project_ready.connect(self.import_ligand_sdf_act.setEnabled)
+
 		self.import_ligand_dir_act = QAction("&Import Ligands from Directory", self,
 			disabled = True,
 			triggered = self.import_ligands_from_dir
@@ -659,6 +665,7 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		self.file_menu.addAction(self.import_receptor_act)
 		self.file_menu.addAction(self.import_pdb_act)
 		self.file_menu.addAction(self.import_ligand_act)
+		self.file_menu.addAction(self.import_ligand_sdf_act)
 		self.file_menu.addAction(self.import_ligand_dir_act)
 		self.file_menu.addAction(self.import_zinc_act)
 		self.file_menu.addSeparator()
@@ -935,6 +942,12 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 
 		self.mol_model.select()
 
+	def start_import_thread(self, thread):
+		thread.signals.message.connect(self.show_message)
+		thread.signals.failure.connect(self.show_error_message)
+		thread.signals.success.connect(self.mol_model.select)
+		QThreadPool.globalInstance().start(thread)
+
 	def import_receptors(self):
 		receptors, _ = QFileDialog.getOpenFileNames(self,
 			caption = "Select receptor files",
@@ -948,10 +961,8 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 			return
 
 		importor = ImportFileWorker(receptors, 1)
-		importor.signals.message.connect(self.show_message)
-		importor.signals.failure.connect(self.show_error_message)
-		importor.signals.success.connect(self.mol_model.select)
-		QThreadPool.globalInstance().start(importor)
+		self.start_import_thread(importor)
+		
 
 	def import_receptor_from_pdb(self):
 		#pdb_url = PDBDownloader.get_url(self)
@@ -974,10 +985,26 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 			return
 
 		importor = ImportFileWorker(ligands, 2)
-		importor.signals.message.connect(self.show_message)
-		importor.signals.failure.connect(self.show_error_message)
-		importor.signals.success.connect(self.mol_model.select)
-		QThreadPool.globalInstance().start(importor)
+		self.start_import_thread(importor)
+
+	def import_ligands_from_sdf(self):
+		sdf_file, _ = QFileDialog.getOpenFileName(self,
+			caption = "Select a SDF file",
+			filter = ("SDF (*.sdf);;All files (*.*)")
+		)
+
+		if not sdf_file:
+			return
+
+		props = get_sdf_props(sdf_file)
+		prop, ret = QInputDialog.getItem(self, "Select property", 
+			"Select a property as molecular name", props)
+
+		if not ret:
+			return
+
+		importor = ImportSDFWorker([sdf_file, prop], 2)
+		self.start_import_thread(importor)
 
 	def import_ligands_from_dir(self):
 		folder = QFileDialog.getExistingDirectory(self)
@@ -986,10 +1013,7 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 			return
 
 		importor = ImportFolderWorker(folder, 2)
-		importor.signals.message.connect(self.show_message)
-		importor.signals.failure.connect(self.show_error_message)
-		importor.signals.success.connect(self.mol_model.select)
-		QThreadPool.globalInstance().start(importor)
+		self.start_import_thread(importor)
 
 	def import_ligand_from_zinc(self):
 		#zinc_url = ZincDownloader.get_url(self)
@@ -1311,7 +1335,7 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 	def filter_ligands(self):
 		condition = LigandFilterDialog.filter(self)
 
-		if condition is not None:
+		if condition:
 			sql = "SELECT COUNT(1) FROM molecular WHERE {}".format(condition)
 			count = DB.get_one(sql)
 

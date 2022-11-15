@@ -5,10 +5,12 @@ import MolKit.protein
 
 from rdkit import Chem
 from MolKit import Read
+from MolKit.molecule import BondSet
+from MolKit.protein import ProteinSet, ResidueSet, AtomSet
 from meeko.preparation import MoleculePreparation
-#from meeko.utils.obutils import OBMolSupplier
 from AutoDockTools.MoleculePreparation import AD4LigandPreparation
 from AutoDockTools.MoleculePreparation import AD4ReceptorPreparation
+from AutoDockTools.MoleculePreparation import AD4FlexibleReceptorPreparation
 
 from utils import load_molecule_from_file
 
@@ -151,6 +153,44 @@ def prepare_autodock_receptor(receptor_file, receptor_pdbqt, params):
 	if mol.returnCode != 0:
 		raise Exception(mol.returnMsg)
 
+#modified from prepare_flexreceptor4.py
+def prepare_flex_receptor(receptor_pdbqt, res_dict):
+	#mol.chains.get(lambda x: x.id == chainID)
+	rigid_file = receptor_pdbqt.replace('.pdbqt', '_rigid.pdbqt')
+	flex_file = receptor_pdbqt.replace('.pdbqt', '_flex.pdbqt')
+
+	rec = Read(receptor_pdbqt)[0]
+	bnds = rec.buildBondsByDistance()
+	all_res = ResidueSet()
+
+	for chain_id, res_names in res_dict.items():
+		chains = rec.chains.get(lambda x: x.id == chain_id)
+		res = ResidueSet()
+		for res_name in res_names:
+			matched = chains.residues.get(lambda x: x.name == res_name)
+
+			if matched.__class__ == AtomSet:
+				res = matched.parent.uniq()
+
+			if len(res):
+				all_res += res
+
+	#check for duplicates
+	d = {res: 1 for res in all_res}
+	all_res = list(d.keys())
+	all_res = ResidueSet(all_res).uniq()
+	all_res.sort()
+
+	all_bnds = BondSet()
+
+	AD4FlexibleReceptorPreparation(rec,
+		residues = all_res,
+		rigid_filename = rigid_file, 
+		flexres_filename = flex_file,
+		non_rotatable_bonds = all_bnds,
+		mode = 'automatic'
+	)
+
 def prepare_meeko_ligand(ligand_file, ligand_pdbqt, params):
 	rigid_macrocycles = params['rigid_macrocycles']
 	keep_chorded_rings = params['keep_chorded_rings']
@@ -223,3 +263,6 @@ def prepare_ligand(ligand_file, ligand_pdbqt, params):
 		prepare_autodock_ligand(ligand_file, ligand_pdbqt, params)
 	elif tool == 'meeko':
 		prepare_meeko_ligand(ligand_file, ligand_pdbqt, params)
+
+if __name__ == '__main__':
+	prepare_flex_receptor('las2.pdbqt', {'A': ['LYS16', 'GLY126']})

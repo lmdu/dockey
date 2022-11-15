@@ -17,7 +17,8 @@ from prepare import *
 
 __all__ = ['AutodockWorker', 'AutodockVinaWorker', 'QuickVinaWorker',
 	'ImportFileWorker', 'ImportFolderWorker', 'JobListGenerator',
-	'PoseInteractionExportWorker', 'BestInteractionExportWorker'
+	'PoseInteractionExportWorker', 'BestInteractionExportWorker',
+	'ImportSDFWorker'
 ]
 
 class ImportSignals(QObject):
@@ -60,7 +61,7 @@ class ImportWorker(QRunnable):
 
 				elif data['action'] == 'failure':
 					self.signals.failure.emit(data['message'])
-					self.delete_imported_molecules()
+					#self.delete_imported_molecules()
 
 			except EOFError:
 				break
@@ -74,6 +75,9 @@ class ImportWorker(QRunnable):
 
 class ImportFileWorker(ImportWorker):
 	processer = ImportFileProcess
+
+class ImportSDFWorker(ImportWorker):
+	processer = ImportSDFProcess
 
 class ImportFolderWorker(ImportWorker):
 	processer = ImportFolderProcess
@@ -179,6 +183,15 @@ class BaseWorker(QRunnable):
 				'spacing': grid_space
 			})
 
+		# get receptor flex residues
+		residues = {}
+		for row in Db.query("SELECT * FROM flex WHERE rid=?", (job.rid,)):
+			if row[2] not in residues:
+				residues[row[2]] = []
+
+			residues[row[2]].append("{}{}".format(row[3], row[4]))
+
+
 		return AttrDict({
 			'id': job.id,
 			'rid': rep.id,
@@ -195,7 +208,8 @@ class BaseWorker(QRunnable):
 			'cx': grid.cx,
 			'cy': grid.cy,
 			'cz': grid.cy,
-			'spacing': grid.spacing
+			'spacing': grid.spacing,
+			'flex': residues
 		})
 
 	@Slot()

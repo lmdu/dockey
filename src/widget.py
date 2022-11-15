@@ -1453,10 +1453,12 @@ class LigandFilterDialog(QDialog):
 		self.weight.setDecimals(3)
 		self.mwsign = QComboBox(self)
 		self.mwsign.addItems(['>', '>=', '=', '<=', '<'])
+		self.mcheck = QCheckBox(self)
 		self.rotator = QSpinBox(self)
 		self.rotator.setRange(0, 100000)
 		self.rbsign = QComboBox(self)
 		self.rbsign.addItems(['>', '>=', '=', '<=', '<'])
+		self.rcheck = QCheckBox(self)
 		self.josign = QComboBox(self)
 		self.josign.addItems(['AND', 'OR'])
 
@@ -1465,18 +1467,21 @@ class LigandFilterDialog(QDialog):
 		self.btns.rejected.connect(self.reject)
 
 		grid_layout = QGridLayout()
-		grid_layout.setColumnStretch(2, 1)
-		grid_layout.addWidget(QLabel("Molecular weight", self), 0, 0)
-		grid_layout.addWidget(self.mwsign, 0, 1)
-		grid_layout.addWidget(self.weight, 0, 2)
-		grid_layout.addWidget(self.josign, 1, 1)
-		grid_layout.addWidget(QLabel("Rotatable bonds", self), 2, 0)
-		grid_layout.addWidget(self.rbsign, 2, 1)
-		grid_layout.addWidget(self.rotator, 2, 2)
+		grid_layout.setColumnStretch(3, 1)
+		grid_layout.addWidget(self.mcheck, 0, 0)
+		grid_layout.addWidget(QLabel("Molecular weight", self), 0, 1)
+		grid_layout.addWidget(self.mwsign, 0, 2)
+		grid_layout.addWidget(self.weight, 0, 3)
+		grid_layout.addWidget(self.josign, 1, 2)
+		grid_layout.addWidget(self.rcheck, 2, 0)
+		grid_layout.addWidget(QLabel("Rotatable bonds", self), 2, 1)
+		grid_layout.addWidget(self.rbsign, 2, 2)
+		grid_layout.addWidget(self.rotator, 2, 3)
 
 		main_layout = QVBoxLayout()
 		main_layout.addWidget(QLabel("Remove ligands that match the filter:", self))
 		main_layout.addLayout(grid_layout)
+		main_layout.addSpacing(10)
 		main_layout.addWidget(self.btns)
 		self.setLayout(main_layout)
 
@@ -1496,10 +1501,10 @@ class LigandFilterDialog(QDialog):
 
 			conditions = []
 
-			if mw:
+			if dlg.mcheck.isChecked():
 				conditions.append(" weight {} {} ".format(ws, mw))
 
-			if rb:
+			if dlg.rcheck.isChecked():
 				conditions.append(" rotors {} {} ".format(rs, rb))
 
 			return js.join(conditions)

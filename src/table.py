@@ -217,9 +217,14 @@ class DockeyListView(QListView):
 			triggered = self.delete_all
 		)
 
-		view_act = QAction("View Details", self,
+		view_act = QAction("View Molecule Details", self,
 			enabled = self.current_index.isValid(),
 			triggered = self.view_details
+		)
+
+		stat_act = QAction("View Molecule Stats", self,
+			enabled = DB.active(),
+			triggered = self.view_stats
 		)
 
 		menu = QMenu(self)
@@ -236,6 +241,7 @@ class DockeyListView(QListView):
 		menu.addAction(clr_m_act)
 		menu.addSeparator()
 		menu.addAction(view_act)
+		menu.addAction(stat_act)
 		menu.popup(self.mapToGlobal(pos))
 
 	@Slot()
@@ -301,6 +307,24 @@ class DockeyListView(QListView):
 
 		DB.query("DELETE FROM molecular")
 		self.parent.mol_model.select()
+
+	@Slot()
+	def view_stats(self):
+		sql = "SELECT COUNT(1) FROM molecular WHERE type=1 LIMIT 1"
+		rep_count = DB.get_one(sql)
+		sql = "SELECT COUNT(1) FROM molecular WHERE type=2 LIMIT 1"
+		lig_count = DB.get_one(sql)
+
+		info = (
+			"<table cellspacing='10'>"
+			"<tr><td>Number of Receptors: </td><td>{}</td></tr>"
+			"<tr><td>Number of Ligands: </td><td>{}</td></tr>"
+			"</table>"
+		)
+
+		dlg = MoleculeDetailDialog(self.parent, info.format(
+			rep_count, lig_count))
+		dlg.exec()
 
 	@Slot()
 	def view_details(self):
@@ -395,7 +419,7 @@ class DockeyTableModel(QAbstractTableModel):
 		self.read_count = 0
 
 		#number of readed rows once time
-		self._reads = 100
+		self._reads = 200
 
 	def rowCount(self, parent=QModelIndex()):
 		if parent.isValid():

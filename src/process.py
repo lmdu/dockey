@@ -13,7 +13,8 @@ from prepare import *
 from backend import *
 
 __all__ = ['ImportFileProcess', 'ImportFolderProcess', 'JobListProcess',
-	'AutodockProcess', 'AutodockVinaProcess', 'QuickVinaProcess'
+	'AutodockProcess', 'AutodockVinaProcess', 'QuickVinaProcess',
+	'ImportSDFProcess'
 ]
 
 class ImportProcess(multiprocessing.Process):
@@ -25,6 +26,15 @@ class ImportProcess(multiprocessing.Process):
 		self.producer = producer
 		self.mol_list = []
 		self.mol_count = 0
+
+	def add(self, m):
+		self.mol_list.append([None, m.name, self.mol_type, m.content, m.format,
+			m.atoms, m.bonds, m.hvyatoms, m.residues, m.rotors, m.formula,
+			m.energy, m.weight, m.logp
+		])
+
+		if len(self.mol_list) == 200:
+			self.write()
 
 	def write(self):
 		mol_type = ['', 'receptors', 'ligands'][self.mol_type]
@@ -67,13 +77,26 @@ class ImportFileProcess(ImportProcess):
 				})
 				return
 
-			self.mol_list.append([None, m.name, self.mol_type, m.content, m.format,
-				m.atoms, m.bonds, m.hvyatoms, m.residues, m.rotors, m.formula,
-				m.energy, m.weight, m.logp
-			])
+			self.add(m)
 
-			if len(self.mol_list) == 200:
-				self.write()
+		self.write()
+
+class ImportSDFProcess(ImportProcess):
+	def process(self):
+		sdf_file, name_prop = self.mol_files
+		mols = sdf_file_parser(sdf_file, name_prop)
+
+		for mol_name, mol_str in mols:
+			m = get_molecule_information(mol_str, True, mol_name, 'sdf')
+
+			if 'error' in m:
+				self.producer.send({
+					'action': 'failure',
+					'message': "{}: {}".format(mol_file, m.error)
+				})
+				return
+
+			self.add(m)
 
 		self.write()
 
@@ -93,13 +116,7 @@ class ImportFolderProcess(ImportProcess):
 				})
 				return
 
-			self.mol_list.append([None, m.name, self.mol_type, m.content, m.format,
-				m.atoms, m.bonds, m.hvyatoms, m.residues, m.rotors, m.formula,
-				m.energy, m.weight, m.logp
-			])
-
-			if len(self.mol_list) == 200:
-				self.write()
+			self.add(m)
 
 		self.write()
 
@@ -166,6 +183,11 @@ class BaseProcess(multiprocessing.Process):
 		else:
 			self.creationflags = 0
 
+		if self.job.flex:
+			self.flex_docking = True
+		else:
+			self.flex_docking = False
+
 	def send_result(self, poses):
 		interactions = get_complex_interactions(poses)
 
@@ -224,6 +246,10 @@ class BaseProcess(multiprocessing.Process):
 			fw.write(content)
 
 		prepare_autodock_receptor(rfile, rpdbqt, self.repp_params)
+
+		#prepare flexible residues
+		if self.flex_docking:
+			prepare_flex_receptor(rpdbqt, self.job.flex)
 
 		return rpdbqt
 
