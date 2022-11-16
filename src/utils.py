@@ -432,11 +432,11 @@ def get_molecule_information(mol_file, from_string=False, mol_name=None, mol_for
 		content = mol_content
 	)
 
-def get_molecule_residues(pdb_str, pdb_fmt):
+def get_molecule_residues(mol_str, mol_fmt):
 	obc = openbabel.OBConversion()
-	obc.SetInFormat(pdb_fmt)
+	obc.SetInFormat(mol_fmt)
 	mol = openbabel.OBMol()
-	obc.ReadString(mol, pdb_str)
+	obc.ReadString(mol, mol_str)
 
 	for res in openbabel.OBResidueIter(mol):
 		yield (res.GetChain(), res.GetName(), str(res.GetNum()), str(res.GetNumAtoms()))
