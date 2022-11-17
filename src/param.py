@@ -713,12 +713,16 @@ class AutodockParameter(Parameter):
 
 		return params
 
-	def make_dpf_file(self, receptor_file, ligand_file):
+	def make_dpf_file(self, receptor_file, ligand_file, flex=False):
 		ligand_types = get_atom_types_from_pdbqt(ligand_file)
 		self.ligand_types.value = ligand_types
 
 		receptor_name = QFileInfo(receptor_file).baseName()
 		ligand_name = QFileInfo(ligand_file).fileName()
+
+		if flex:
+			self.flexres.value = '{}_flex.pdbqt'.format(receptor_name)
+			receptor_name = '{}_rigid'.format(receptor_name)
 
 		self.fld.value = "{}.maps.fld".format(receptor_name)
 		self.map.value = ["{}.{}.map".format(receptor_name, ligand_type) for ligand_type in ligand_types]

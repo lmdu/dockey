@@ -275,6 +275,11 @@ class BaseProcess(multiprocessing.Process):
 
 		return lpdbqt
 
+	def get_flex_names(self, pdbqt):
+		rigid_file = pdbqt.replace('.pdbqt', '_rigid.pdbqt')
+		flex_file = pdbqt.replace('.pdbqt', '_flex.pdbqt')
+		return (rigid_file, flex_file)
+
 	def run(self):
 		self.update_started()
 
@@ -299,8 +304,13 @@ class AutodockProcess(BaseProcess):
 		rpdbqt = self.prepare_receptor()
 		lpdbqt = self.prepare_ligand()
 
+		if self.flex_docking:
+			rigid_file, flex_file = self.get_flex_names(rpdbqt)
+		else:
+			rigid_file = rpdbqt
+
 		#set autogrid parameter and create gpf parameter file
-		ag_param = AutogridParameter(rpdbqt, lpdbqt, (self.job.x, self.job.y, self.job.z),
+		ag_param = AutogridParameter(rigid_file, lpdbqt, (self.job.x, self.job.y, self.job.z),
 			(self.job.cx, self.job.cy, self.job.cz), self.job.spacing
 		)
 		gpf_file = ag_param.make_gpf_file()
@@ -346,7 +356,7 @@ class AutodockProcess(BaseProcess):
 		#self.save_log('glg_file', glg_file)
 
 		#set autodock4 parameters and make dpf parameter file
-		dpf_file = self.dock_params.make_dpf_file(rpdbqt, lpdbqt)
+		dpf_file = self.dock_params.make_dpf_file(rpdbqt, lpdbqt, self.flex_docking)
 		dlg_file = dpf_file.replace('.dpf', '.dlg')
 
 		#run autodock4
@@ -440,13 +450,18 @@ class AutodockVinaProcess(BaseProcess):
 		rpdbqt = self.prepare_receptor()
 		lpdbqt = self.prepare_ligand()
 
+		if self.flex_docking:
+			rigid_file, flex_file = self.get_flex_names(rpdbqt)
+		else:
+			rigid_file = rpdbqt
+
 		#get commands
 		vina, autogrid = self.cmds
 
 		#if use autodock scoring function
 		#set autogrid parameter and create gpf parameter file
 		if self.dock_params.scoring.value == 'ad4':
-			ag_param = AutogridParameter(rpdbqt, lpdbqt, (self.job.x, self.job.y, self.job.z),
+			ag_param = AutogridParameter(rigid_file, lpdbqt, (self.job.x, self.job.y, self.job.z),
 				(self.job.cx, self.job.cy, self.job.cz), self.job.spacing
 			)
 			gpf_file = ag_param.make_gpf_file()
@@ -489,11 +504,19 @@ class AutodockVinaProcess(BaseProcess):
 				raise Exception(proc.stderr.read())
 
 			#self.save_log('glg_file', glg_file)
+			if self.flex_docking:
+				map_rn = '{}_rigid'.format(self.job.rn)
+			else:
+				map_rn = self.job.rn
+			self.dock_params.maps.value = map_rn
 
-			self.dock_params.maps.value = self.job.rn
 		else:
 			#using autodock score function no need --receptor arg
-			self.dock_params.receptor.value = os.path.basename(rpdbqt)
+			self.dock_params.receptor.value = os.path.basename(rigid_file)
+
+		#flex docking provide flex part
+		if self.flex_docking:
+			self.dock_params.flex.value = os.path.basename(flex_file)
 
 		#set autodock vina parameters and make config file
 		config_file = os.path.join(self.work_dir, "config.txt".format(self.job.rn))
@@ -606,9 +629,16 @@ class QuickVinaProcess(BaseProcess):
 		rpdbqt = self.prepare_receptor()
 		lpdbqt = self.prepare_ligand()
 
+		if self.flex_docking:
+			rigid_file, flex_file = self.get_flex_names(rpdbqt)
+			self.dock_params.flex.value = os.path.basename(flex_file)
+		else:
+			rigid_file = rpdbqt
+
+		self.dock_params.receptor.value = os.path.basename(rigid_file)
+
 		#get commands
 		vina = self.cmds
-		self.dock_params.receptor.value = os.path.basename(rpdbqt)
 
 		#set autodock vina parameters and make config file
 		config_file = os.path.join(self.work_dir, "config.txt".format(self.job.rn))

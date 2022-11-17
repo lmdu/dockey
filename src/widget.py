@@ -1365,11 +1365,11 @@ class FlexResiduesDialog(QDialog):
 
 	def change_select_message(self):
 		if self.select_count == 1:
-			self.label.setText("Total residues: {}. Select {} residue.".format(
+			self.label.setText("Total residues: {}. Selected {} residue.".format(
 					self.total_count, self.select_count))
 
 		elif self.select_count > 1:
-			self.label.setText("Total residues: {}. Select {} residues".format(
+			self.label.setText("Total residues: {}. Selected {} residues.".format(
 				self.total_count, self.select_count))
 
 		else:
@@ -1481,7 +1481,7 @@ class LigandFilterDialog(QDialog):
 		main_layout = QVBoxLayout()
 		main_layout.addWidget(QLabel("Remove ligands that match the filter:", self))
 		main_layout.addLayout(grid_layout)
-		main_layout.addSpacing(10)
+		main_layout.addSpacing(20)
 		main_layout.addWidget(self.btns)
 		self.setLayout(main_layout)
 
@@ -1501,10 +1501,10 @@ class LigandFilterDialog(QDialog):
 
 			conditions = []
 
-			if dlg.mcheck.isChecked():
+			if mw:
 				conditions.append(" weight {} {} ".format(ws, mw))
 
-			if dlg.rcheck.isChecked():
+			if rb:
 				conditions.append(" rotors {} {} ".format(rs, rb))
 
 			return js.join(conditions)

@@ -185,7 +185,7 @@ class BaseWorker(QRunnable):
 
 		# get receptor flex residues
 		residues = {}
-		for row in Db.query("SELECT * FROM flex WHERE rid=?", (job.rid,)):
+		for row in DB.query("SELECT * FROM flex WHERE rid=?", (job.rid,)):
 			if row[2] not in residues:
 				residues[row[2]] = []
 

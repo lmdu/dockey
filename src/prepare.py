@@ -15,7 +15,7 @@ from AutoDockTools.MoleculePreparation import AD4FlexibleReceptorPreparation
 from utils import load_molecule_from_file
 
 __all__ = ['prepare_autodock_ligand', 'prepare_autodock_receptor',
-	'prepare_meeko_ligand', 'prepare_ligand'
+	'prepare_meeko_ligand', 'prepare_ligand', 'prepare_flex_receptor'
 ]
 
 def prepare_autodock_ligand(ligand_file, ligand_pdbqt, params):
