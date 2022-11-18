@@ -18,7 +18,7 @@ __all__ = ['AttrDict', 'draw_gridbox', 'convert_dimension_to_coordinates',
 	'time_elapse', 'generate_complex_pdb', 'get_complex_interactions',
 	'interaction_visualize', 'get_dimension_from_pdb', 'load_molecule_from_file',
 	'convert_string_to_pdb', 'memory_format', 'get_molecule_residues', 'sdf_file_parser',
-	'get_sdf_props'
+	'get_sdf_props', 'get_residue_bonds'
 ]
 
 class AttrDict(dict):
@@ -439,7 +439,30 @@ def get_molecule_residues(mol_str, mol_fmt):
 	obc.ReadString(mol, mol_str)
 
 	for res in openbabel.OBResidueIter(mol):
-		yield (res.GetChain(), res.GetName(), str(res.GetNum()), str(res.GetNumAtoms()))
+		yield (str(res.GetIdx()), res.GetChain(), res.GetName(),
+			str(res.GetNum()), str(res.GetNumAtoms()))
+
+def get_residue_bonds(mol_str, mol_fmt, res_idx):
+	obc = openbabel.OBConversion()
+	obc.SetInFormat(mol_fmt)
+	mol = openbabel.OBMol()
+	obc.ReadString(mol, mol_str)
+
+	for bond in openbabel.OBMolBondIter(mol):
+		begin_atom = bond.GetBeginAtom()
+		end_atom = bond.GetEndAtom()
+		begin_res = begin_atom.GetResidue()
+		end_res = end_atom.GetResidue()
+		begin_idx = begin_res.GetIdx()
+		end_idx = end_res.GetIdx()
+
+		if res_idx == begin_idx or res_idx == end_idx:
+			begin_aid = begin_res.GetAtomID(begin_atom).strip()
+			end_aid = end_res.GetAtomID(end_atom).strip()
+			atom = "{}-{}".format(begin_aid, end_aid)
+
+			yield (atom, str(round(bond.GetLength(), 3)), 'Y' if bond.IsAromatic() else 'N',
+				'Y' if bond.IsRotor() else 'N', 'Y' if bond.IsAmide() else 'N')
 
 def ligand_efficiency_assessment(pdb_str, energy, ki=None):
 	if ki is None:

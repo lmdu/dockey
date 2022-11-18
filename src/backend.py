@@ -22,9 +22,11 @@ DB_TABLES = {
 	'flex': [
 		('id', 'INTEGER PRIMARY KEY'),
 		('rid', 'INTEGER'),
+		('idx', 'INTEGER'),
 		('chain', 'TEXT'),
 		('aa', 'TEXT'),
-		('residue', 'TEXT')
+		('residue', 'TEXT'),
+		('bonds', 'TEXT')
 	],
 	'grid': [
 		('id', 'INTEGER PRIMARY KEY'),

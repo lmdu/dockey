@@ -1330,120 +1330,159 @@ class FlexResiduesDialog(QDialog):
 	def __init__(self, parent, mol_id):
 		super().__init__(parent)
 		self.mol_id = mol_id
-		self.flex_res = set()
-		self.check_click = True
-		self.select_count = 0
-		self.total_count = 0
+		self.residue_checked = True
+		self.bond_checked = True
+		self.flex_residues = {}
 
 		self.setWindowTitle("Select flex residues")
-		self.tree = QTreeWidget(self)
-		self.tree.setColumnCount(4)
-		#self.tree.setSortingEnabled(True)
-		self.tree.setRootIsDecorated(False)
-		self.tree.setHeaderLabels(["Chain", "AA", "Residue", "Atoms"])
-		self.tree.itemChanged.connect(self.on_item_checked)
-		self.label = QLabel(self)
 
-		self.btns = QDialogButtonBox()
-		self.btns.addButton(QDialogButtonBox.Ok)
-		self.btns.addButton("Unselect All", QDialogButtonBox.RejectRole)
-		self.btns.rejected.connect(self.on_unselect_all)
-		self.btns.accepted.connect(self.accept)
+		self.residue_tree = QTreeWidget(self)
+		self.residue_tree.setColumnCount(5)
+		self.residue_tree.setRootIsDecorated(False)
+		self.residue_tree.setHeaderLabels(["Index", "Chain", "AA", "Residue", "Atoms"])
+		self.residue_tree.itemChanged.connect(self.on_residue_checked)
+		self.residue_tree.itemClicked.connect(self.on_residue_clicked)
+
+		self.bond_tree = QTreeWidget(self)
+		self.bond_tree.setColumnCount(5)
+		self.bond_tree.setRootIsDecorated(False)
+		self.bond_tree.setVisible(False)
+		self.bond_tree.setHeaderLabels(["Atoms", "Length", "Aromatic", "Rotatable", "Amide"])
+		self.bond_tree.itemChanged.connect(self.on_bond_checked)
+
+		self.bond_check = QCheckBox("Select bonds to disallowed", self)
+		self.bond_check.stateChanged.connect(self.bond_tree.setVisible)
+
+		self.btns = QDialogButtonBox( QDialogButtonBox.Cancel | QDialogButtonBox.Ok)
+		self.btns.accepted.connect(self.on_accept_clicked)
+		self.btns.rejected.connect(self.reject)
 
 		layout = QVBoxLayout()
 		layout.addWidget(QLabel("Set residues as flexible:", self))
-		layout.addWidget(self.tree)
-		layout.addWidget(self.label)
+		layout.addWidget(self.residue_tree, 2)
+		layout.addWidget(self.bond_check)
+		layout.addWidget(self.bond_tree, 1)
 		layout.addWidget(self.btns)
 		self.setLayout(layout)
 
-		self.get_flex_residues()
+		self.get_molecule_and_flexres()
 		self.display_molecule_residues()
 
 	def sizeHint(self):
-		return QSize(450, 250)
+		return QSize(550, 350)
 
-	def change_select_message(self):
-		if self.select_count == 1:
-			self.label.setText("Total residues: {}. Selected {} residue.".format(
-					self.total_count, self.select_count))
+	def get_molecule_and_flexres(self):
+		sql = "SELECT content,format FROM molecular WHERE id=? LIMIT 1"
+		self.mol = DB.get_dict(sql, (self.mol_id,))
 
-		elif self.select_count > 1:
-			self.label.setText("Total residues: {}. Selected {} residues.".format(
-				self.total_count, self.select_count))
-
-		else:
-			self.label.setText("Total residues: {}. No selected residues.".format(
-				self.total_count))
-
-	def get_flex_residues(self):
 		sql = "SELECT * FROM flex WHERE rid=?"
-
 		for row in DB.query(sql, (self.mol_id,)):
-			self.flex_res.add('{}:{}:{}'.format(row[2], row[3], row[4]))
-
-		self.select_count = len(self.flex_res)
-		self.change_select_message()
+			self.flex_residues[row[2]] = AttrDict({
+				'checked': True,
+				'data': list(row),
+				'bonds': set(row[-1].split(','))
+			})
 
 	def display_molecule_residues(self):
-		self.check_click = False
-
-		sql = "SELECT content,format FROM molecular WHERE id=? LIMIT 1"
-		mol = DB.get_row(sql, (self.mol_id,))
-
-		for res in get_molecule_residues(mol[0], mol[1]):
-			item = QTreeWidgetItem(self.tree, res)
+		self.residue_checked = False
+		for res in get_molecule_residues(self.mol.content, self.mol.format):
+			item = QTreeWidgetItem(self.residue_tree, res)
 			item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
-			key = '{}:{}:{}'.format(res[0], res[1], res[2])
 
-			if key in self.flex_res:
+			idx = int(res[0])
+			
+			if idx in self.flex_residues:
 				item.setCheckState(0, Qt.Checked)
 			else:
 				item.setCheckState(0, Qt.Unchecked)
 
-			self.tree.addTopLevelItem(item)
-			self.total_count += 1
-
-		self.check_click = True
-		self.change_select_message()
+			self.residue_tree.addTopLevelItem(item)
+		self.residue_checked = True
 
 	@Slot()
-	def on_item_checked(self, item, column):
-		if not self.check_click:
+	def on_residue_checked(self, item, column):
+		if not self.residue_checked:
+			return
+
+		idx = int(item.text(0))
+		chain = item.text(1)
+		aa = item.text(2)
+		res = item.text(3)
+		if item.checkState(0) == Qt.Checked:
+			if idx in self.flex_residues:
+				self.flex_residues[idx].checked = True
+				self.flex_residues[idx].bonds = set()
+			else:
+				self.flex_residues[idx] = AttrDict({
+					'checked': True,
+					'data': [None, self.mol_id, idx, chain, aa, res, ''],
+					'bonds': set()
+				})
+		else:
+			if idx in self.flex_residues:
+				self.flex_residues[idx].checked = False
+
+	@Slot()
+	def on_residue_clicked(self, item, column):
+		self.bond_checked = False
+		self.bond_tree.clear()
+		idx = int(item.text(0))
+		for bond in get_residue_bonds(self.mol.content, self.mol.format, idx):
+			item = QTreeWidgetItem(self.bond_tree, bond)
+			item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
+
+			if idx in self.flex_residues and bond[0] in self.flex_residues[idx].bonds:
+				item.setCheckState(0, Qt.Checked)
+			else:
+				item.setCheckState(0, Qt.Unchecked)
+
+			self.bond_tree.addTopLevelItem(item)
+		self.bond_checked = True
+
+	@Slot()
+	def on_bond_checked(self, item, column):
+		if not self.bond_checked:
+			return
+
+		res_idx = int(self.residue_tree.currentItem().text(0))
+
+		if res_idx not in self.flex_residues:
+			return
+
+		if not self.flex_residues[res_idx].checked:
 			return
 
 		if item.checkState(0) == Qt.Checked:
-			sql = "INSERT INTO flex VALUES (?,?,?,?,?)"
-			row = [None, self.mol_id]
-			self.select_count += 1
+			self.flex_residues[res_idx].bonds.add(item.text(0))
 		else:
-			sql = "DELETE FROM flex WHERE rid=? AND chain=? AND aa=? AND residue=?"
-			row = [self.mol_id]
-			self.select_count -= 1
-
-		for i in range(3):
-			if i == 2:
-				row.append(int(item.text(i)))
-			else:
-				row.append(item.text(i))
-
-		DB.query(sql, row)
-		self.change_select_message()
+			if item.text(0) in self.flex_residues[res_idx].bonds:
+				self.flex_residues[res_idx].bonds.remove(item.text(0))
 
 	@Slot()
-	def on_unselect_all(self):
-		sql = "DELETE FROM flex WHERE rid=?"
-		DB.query(sql, (self.mol_id,))
-		self.check_click = False
-		root = self.tree.invisibleRootItem()
+	def on_accept_clicked(self):
+		for idx, flexres in self.flex_residues.items():
 
-		for i in range(root.childCount()):
-			root.child(i).setCheckState(0, Qt.Unchecked)
+			#if bond checkbox is not check, clear bonds
+			if not self.bond_check.isChecked():
+				flexres.bonds = set()
 
-		self.check_click = True
-		self.select_count = 0
-		self.change_select_message()
-		
+			if flexres.checked:
+				flexres.data[-1] = ','.join(flexres.bonds)
+
+				if flexres.data[0] is None:
+					sql = "INSERT INTO flex VALUES (?,?,?,?,?,?,?)"
+					DB.query(sql, flexres.data)
+				else:
+					sql = "UPDATE flex SET bonds=? WHERE id=?"
+					DB.query(sql, (flexres.data[-1], flexres.data[0]))
+
+			else:
+				if flexres.data[0] is not None:
+					sql = "DELETE FROM flex WHERE id=?"
+					DB.query(sql, (flexres.data[0],))
+
+		self.accept()
+
 class LigandFilterDialog(QDialog):
 	def __init__(self, parent):
 		super().__init__(parent)
