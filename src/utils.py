@@ -461,8 +461,8 @@ def get_residue_bonds(mol_str, mol_fmt, res_idx):
 			end_aid = end_res.GetAtomID(end_atom).strip()
 			atom = "{}-{}".format(begin_aid, end_aid)
 
-			yield (atom, str(round(bond.GetLength(), 3)), 'Y' if bond.IsAromatic() else 'N',
-				'Y' if bond.IsRotor() else 'N', 'Y' if bond.IsAmide() else 'N')
+			yield (atom, str(round(bond.GetLength(), 3)), bond.IsAromatic(),
+				bond.IsRotor(), bond.IsAmide())
 
 def ligand_efficiency_assessment(pdb_str, energy, ki=None):
 	if ki is None:

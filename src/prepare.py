@@ -163,10 +163,12 @@ def prepare_flex_receptor(receptor_pdbqt, res_dict):
 	bnds = rec.buildBondsByDistance()
 	all_res = ResidueSet()
 
+	all_bonds = []
+
 	for chain_id, res_names in res_dict.items():
 		chains = rec.chains.get(lambda x: x.id == chain_id)
 		res = ResidueSet()
-		for res_name in res_names:
+		for res_name, bonds in res_names.items():
 			matched = chains.residues.get(lambda x: x.name == res_name)
 
 			if matched.__class__ == AtomSet:
@@ -175,6 +177,9 @@ def prepare_flex_receptor(receptor_pdbqt, res_dict):
 			if len(res):
 				all_res += res
 
+			for bond in bonds:
+				all_bonds.append(bond.split('-'))
+
 	#check for duplicates
 	d = {res: 1 for res in all_res}
 	all_res = list(d.keys())
@@ -182,6 +187,13 @@ def prepare_flex_receptor(receptor_pdbqt, res_dict):
 	all_res.sort()
 
 	all_bnds = BondSet()
+
+	for bond in all_bonds:
+		bnds = all_res.atoms.bonds[0].get(
+			lambda x: x.atom1.name in bond and x.atom2.name in bond)
+
+		if len(bnds):
+			all_bnds += bnds
 
 	AD4FlexibleReceptorPreparation(rec,
 		residues = all_res,

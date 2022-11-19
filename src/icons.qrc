@@ -22,5 +22,7 @@
 	<file>icons/share.svg</file>
 	<file>icons/image.svg</file>
 	<file>icons/queue.svg</file>
+	<file>icons/yes.svg</file>
+	<file>icons/no.svg</file>
 </qresource>
 </RCC>

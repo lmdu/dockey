@@ -1436,6 +1436,12 @@ class FlexResiduesDialog(QDialog):
 			else:
 				item.setCheckState(0, Qt.Unchecked)
 
+			for i in range(2, 5):
+				if bond[i]:
+					item.setIcon(i, QIcon(':/icons/yes.svg'))
+				else:
+					item.setIcon(i, QIcon(':/icons/no.svg'))
+
 			self.bond_tree.addTopLevelItem(item)
 		self.bond_checked = True
 

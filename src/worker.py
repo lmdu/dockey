@@ -186,11 +186,12 @@ class BaseWorker(QRunnable):
 		# get receptor flex residues
 		residues = {}
 		for row in DB.query("SELECT * FROM flex WHERE rid=?", (job.rid,)):
-			if row[2] not in residues:
-				residues[row[2]] = []
+			if row[3] not in residues:
+				residues[row[3]] = {}
 
-			residues[row[2]].append("{}{}".format(row[3], row[4]))
+			aa = "{}{}".format(row[4], row[5])
 
+			residues[row[3]][aa] = row[6].split(',')
 
 		return AttrDict({
 			'id': job.id,
