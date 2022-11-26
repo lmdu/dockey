@@ -753,8 +753,12 @@ def sdf_file_parser(sdf_file, name_prop):
 		yield (name, content)
 
 def get_sdf_props(sdf_file):
-	for mol in Chem.SDMolSupplier(sdf_file):
-		return mol.GetPropNames()
+	suppl = Chem.SDMolSupplier(sdf_file, sanitize=False,
+		removeHs=False, strictParsing=False)
+
+	for mol in suppl:
+		if mol:
+			return mol.GetPropNames()
 
 if __name__ == '__main__':
 	import sys

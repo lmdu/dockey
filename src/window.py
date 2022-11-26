@@ -946,6 +946,7 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		thread.signals.message.connect(self.show_message)
 		thread.signals.failure.connect(self.show_error_message)
 		thread.signals.success.connect(self.mol_model.select)
+		thread.signals.finished.connect(self.show_popup_message)
 		QThreadPool.globalInstance().start(thread)
 
 	def import_receptors(self):

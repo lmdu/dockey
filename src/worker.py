@@ -25,6 +25,7 @@ class ImportSignals(QObject):
 	success = Signal()
 	failure = Signal(str)
 	message = Signal(str)
+	finished = Signal(str)
 
 class ImportWorker(QRunnable):
 	processer = None
@@ -35,6 +36,7 @@ class ImportWorker(QRunnable):
 		self.signals = ImportSignals()
 		self.mol_files = mol_files
 		self.mol_type = mol_type
+		self.mol_count = 0
 		self.consumer, self.producer = multiprocessing.Pipe(duplex=False)
 
 	def delete_imported_molecules(self):
@@ -58,10 +60,11 @@ class ImportWorker(QRunnable):
 
 				if data['action'] == 'insert':
 					self.write_molecules(data)
+					self.mol_count = data['total']
 
 				elif data['action'] == 'failure':
 					self.signals.failure.emit(data['message'])
-					#self.delete_imported_molecules()
+					self.mol_count = 0
 
 			except EOFError:
 				break
@@ -71,7 +74,19 @@ class ImportWorker(QRunnable):
 				break
 
 			else:
-				self.signals.success.emit()
+				#self.signals.success.emit()
+				pass
+
+		if self.mol_count > 0:
+			if self.mol_count > 1:
+				mol_type = ['', 'receptors', 'ligands'][self.mol_type]
+			else:
+				mol_type = ['', 'receptor', 'ligand'][self.mol_type]
+
+			self.signals.finished.emit("Successfully imported {} {}".format(
+				self.mol_count, mol_type))
+
+		self.signals.success.emit()
 
 class ImportFileWorker(ImportWorker):
 	processer = ImportFileProcess
@@ -129,9 +144,11 @@ class JobListGenerator(QRunnable):
 				break
 
 			else:
-				self.signals.success.emit()
+				#self.signals.success.emit()
+				pass
 
 		self.signals.finished.emit()
+		self.signals.success.emit()
 
 class WorkerSignals(QObject):
 	finished = Signal()
