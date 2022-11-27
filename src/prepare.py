@@ -247,7 +247,8 @@ def prepare_meeko_ligand(ligand_file, ligand_pdbqt, params):
 
 	elif ligand_format == '.sdf':
 		#only get the first mol in sdf file
-		for mol in Chem.SDMolSupplier(ligand_file, removeHs=False):
+		for mol in Chem.SDMolSupplier(ligand_file,
+			sanitize=False, removeHs=False, strictParsing=False):
 			break
 
 	preparator = MoleculePreparation(

@@ -187,12 +187,12 @@ class DockeyListView(QListView):
 		#	triggered = self.add_ligands
 		#)
 
-		rep_f_act = QAction("Set Flex Residues", self,
+		rep_f_act = QAction("Set Flexible Residues", self,
 			enabled = self.current_index.isValid() and self.current_index.siblingAtColumn(2).data() == 1,
 			triggered = self.set_flex_residules
 		)
 
-		lig_f_act = QAction("Filter Ligands", self,
+		lig_f_act = QAction("Perform Ligand Filter", self,
 			enabled = DB.active(),
 			triggered = self.ligand_filter
 		)
@@ -222,7 +222,7 @@ class DockeyListView(QListView):
 			triggered = self.view_details
 		)
 
-		stat_act = QAction("View Molecule Stats", self,
+		stat_act = QAction("View Molecule Counts", self,
 			enabled = DB.active(),
 			triggered = self.view_stats
 		)
@@ -956,7 +956,7 @@ class JobTableView(QTableView):
 		)
 		view_detail_act.setEnabled(self.current_index.isValid())
 
-		view_status_act = QAction("View Job Statuses", self,
+		view_status_act = QAction("View Job Counts", self,
 			disabled = not DB.active(),
 			triggered = self.view_job_statuses
 		)

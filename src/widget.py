@@ -1492,65 +1492,92 @@ class FlexResiduesDialog(QDialog):
 class LigandFilterDialog(QDialog):
 	def __init__(self, parent):
 		super().__init__(parent)
-		self.setWindowTitle("Filter Ligands")
+		self.setWindowTitle("Perform Ligand Filter")
 		self.weight = QDoubleSpinBox(self)
 		self.weight.setRange(0, 100000)
 		self.weight.setDecimals(3)
 		self.mwsign = QComboBox(self)
 		self.mwsign.addItems(['>', '>=', '=', '<=', '<'])
-		self.mcheck = QCheckBox(self)
+		self.mcheck = QCheckBox("Molecular weight", self)
+
 		self.rotator = QSpinBox(self)
 		self.rotator.setRange(0, 100000)
 		self.rbsign = QComboBox(self)
 		self.rbsign.addItems(['>', '>=', '=', '<=', '<'])
-		self.rcheck = QCheckBox(self)
-		self.josign = QComboBox(self)
-		self.josign.addItems(['AND', 'OR'])
+		self.rcheck = QCheckBox("Rotatable bonds", self)
+		self.rbjoin = QComboBox(self)
+		self.rbjoin.addItems(['AND', 'OR'])
+
+		self.pcheck = QCheckBox("Calculated logP", self)
+		self.clogp = QDoubleSpinBox(self)
+		self.clogp.setRange(0, 100000)
+		self.clogp.setDecimals(3)
+		self.cpsign = QComboBox(self)
+		self.cpsign.addItems(['>', '>=', '=', '<=', '<'])
+		self.cpjoin = QComboBox(self)
+		self.cpjoin.addItems(['AND', 'OR'])
 
 		self.btns = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
 		self.btns.accepted.connect(self.accept)
 		self.btns.rejected.connect(self.reject)
 
 		grid_layout = QGridLayout()
-		grid_layout.setColumnStretch(3, 1)
-		grid_layout.addWidget(self.mcheck, 0, 0)
-		grid_layout.addWidget(QLabel("Molecular weight", self), 0, 1)
+		grid_layout.setColumnStretch(2, 1)
+		grid_layout.setColumnStretch(3, 2)
+		grid_layout.addWidget(self.mcheck, 0, 1)
 		grid_layout.addWidget(self.mwsign, 0, 2)
 		grid_layout.addWidget(self.weight, 0, 3)
-		grid_layout.addWidget(self.josign, 1, 2)
-		grid_layout.addWidget(self.rcheck, 2, 0)
-		grid_layout.addWidget(QLabel("Rotatable bonds", self), 2, 1)
-		grid_layout.addWidget(self.rbsign, 2, 2)
-		grid_layout.addWidget(self.rotator, 2, 3)
+		grid_layout.addWidget(self.rbjoin, 1, 0)
+		grid_layout.addWidget(self.rcheck, 1, 1)
+		grid_layout.addWidget(self.rbsign, 1, 2)
+		grid_layout.addWidget(self.rotator, 1, 3)
+		grid_layout.addWidget(self.cpjoin, 2, 0)
+		grid_layout.addWidget(self.pcheck, 2, 1)
+		grid_layout.addWidget(self.cpsign, 2, 2)
+		grid_layout.addWidget(self.clogp, 2, 3)
 
 		main_layout = QVBoxLayout()
-		main_layout.addWidget(QLabel("Remove ligands that match the filter:", self))
+		main_layout.addWidget(QLabel("<b>Remove ligands that match the filter:</b>", self))
 		main_layout.addLayout(grid_layout)
 		main_layout.addSpacing(20)
 		main_layout.addWidget(self.btns)
 		self.setLayout(main_layout)
 
 	def sizeHint(self):
-		return QSize(300, 100)
+		return QSize(400, 100)
 
 	@classmethod
 	def filter(cls, parent):
 		dlg = cls(parent)
 
 		if dlg.exec() == QDialog.Accepted:
-			mw = dlg.weight.value()
-			ws = dlg.mwsign.currentText()
-			rb = dlg.rotator.value()
-			rs = dlg.rbsign.currentText()
-			js = dlg.josign.currentText()
+			mwt = dlg.weight.value()
+			mws = dlg.mwsign.currentText()
+
+			rbn = dlg.rotator.value()
+			rbs = dlg.rbsign.currentText()
+			rbj = dlg.rbjoin.currentText()
+
+			cpv = dlg.clogp.value()
+			cps = dlg.cpsign.currentText()
+			cpj = dlg.cpjoin.currentText()
 
 			conditions = []
 
-			if mw:
-				conditions.append(" weight {} {} ".format(ws, mw))
+			if dlg.mcheck.isChecked():
+				conditions.append(" weight {} {} ".format(mws, mwt))
 
-			if rb:
-				conditions.append(" rotors {} {} ".format(rs, rb))
+			if dlg.rcheck.isChecked():
+				if conditions:
+					conditions.append(rbj)
 
-			return js.join(conditions)
+				conditions.append(" rotors {} {} ".format(rbs, rbn))
+
+			if dlg.pcheck.isChecked():
+				if conditions:
+					conditions.append(cpj)
+
+				conditions.append(" logp {} {} ".format(cps, cpv))
+
+			return ''.join(conditions)
 
