@@ -8,6 +8,7 @@ from PySide6.QtCore import *
 from PySide6.QtWidgets import *
 
 from pymol._gui import PyMOLDesktopGUI
+from pymol.importing import read_mol2str
 
 from view import *
 from table import *
@@ -282,8 +283,9 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 			self.cmd.read_molstr(mol_content, mol_name)
 
 		elif mol_format == 'mol2':
-			content = convert_string_to_pdb(mol_content, mol_format)
-			self.cmd.read_pdbstr(content, mol_name)
+			#content = convert_string_to_pdb(mol_content, mol_format)
+			#self.cmd.read_pdbstr(content, mol_name)
+			read_mol2str(mol_content, mol_name)
 
 		elif mol_format == 'sdf':
 			self.cmd.read_sdfstr(mol_content, mol_name)
@@ -1072,17 +1074,20 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 	def pymol_opaque_background(self, checked):
 		self.cmd.set('ray_opaque_background', checked)
 
-	def pymol_auto_save_pdb(self):
+	def pymol_auto_save_mol(self):
 		index = self.mol_viewer.currentIndex()
-		name = index.data()
+		mol_id = index.siblingAtColumn(0).data()
+		mol_name = index.siblingAtColumn(1).data()
+		sql = "SELECT format FROM molecular WHERE id=? LIMIT 1"
+		mol_format = DB.get_one(sql, (mol_id,))
 
-		if name not in self.cmd.get_names('all'):
+		if mol_name not in self.cmd.get_names('all'):
 			return
 
-		pdb = self.cmd.get_pdbstr(name)
+		content = self.cmd.get_str(mol_format, mol_name)
 
-		sql = "UPDATE molecular SET content=? WHERE name=?"
-		DB.query(sql, (pdb, name))
+		sql = "UPDATE molecular SET content=? WHERE id=?"
+		DB.query(sql, (content, mol_id))
 
 	def pymol_add_all_hydrogens(self):
 		if not self.cmd.get_object_list():
@@ -1090,7 +1095,7 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 
 		self.cmd.h_add("(all)")
 		#self.cmd.sort("(all) extend 1")
-		self.pymol_auto_save_pdb()
+		self.pymol_auto_save_mol()
 
 	def pymol_add_polar_hydrogens(self):
 		if not self.cmd.get_object_list():
@@ -1098,19 +1103,19 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 
 		self.cmd.h_add("(all) & (don.|acc.)")
 		#self.cmd.sort("(all) extend 1")
-		self.pymol_auto_save_pdb()
+		self.pymol_auto_save_mol()
 
 	def pymol_remove_water(self):
 		self.cmd.remove('resn hoh')
-		self.pymol_auto_save_pdb()
+		self.pymol_auto_save_mol()
 
 	def pymol_remove_solvent(self):
 		self.cmd.remove('solvent')
-		self.pymol_auto_save_pdb()
+		self.pymol_auto_save_mol()
 
 	def pymol_remove_organic(self):
 		self.cmd.remove('organic')
-		self.pymol_auto_save_pdb()
+		self.pymol_auto_save_mol()
 
 	def pymol_remove_chain(self):
 		chains = self.cmd.get_chains("(all)")
@@ -1118,14 +1123,23 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		if not chains:
 			return
 
-		chain, ok = QInputDialog.getItem(self, "Remove Chain",
-			"Select a chain to remove",
-			chains, 0, False
-		)
+		#chain, ok = QInputDialog.getItem(self, "Remove Chain",
+		#	"Select a chain to remove",
+		#	chains, 0, False
+		#)
 
-		if ok:
+		dlg = QInputDialog(self)
+		dlg.setWindowTitle("Remove chain")
+		dlg.setLabelText("Select a chain:")
+		dlg.setComboBoxItems(chains)
+		dlg.textValueChanged.connect(lambda c: self.cmd.select('chain {}'.format(c)))
+
+		self.cmd.select('chain {}'.format(chains[0]))
+
+		if dlg.exec() == QDialog.Accepted:
+			chain = dlg.textValue()
 			self.cmd.remove('chain {}'.format(chain))
-			self.pymol_auto_save_pdb()
+			self.pymol_auto_save_mol()
 
 	def get_current_receptor(self):
 		objs = self.cmd.get_names('objects')

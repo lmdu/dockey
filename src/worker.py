@@ -42,6 +42,30 @@ class ImportWorker(QRunnable):
 	def delete_imported_molecules(self):
 		DB.query("DELETE FROM molecular")
 
+	def update_molecule_count(self):
+		if self.mol_type == 1:
+			option = 'receptor_count'
+		else:
+			option = 'ligand_count'
+
+		count = DB.get_option(option)
+
+		if count:
+			count = int(count) + self.mol_count
+		else:
+			count = self.mol_count
+
+		DB.set_option(option, count)
+
+		total = DB.get_option('molecule_count')
+
+		if total:
+			total = int(total) + self.mol_count
+		else:
+			total = self.mol_count
+
+		DB.set_option('molecule_count', total)
+
 	def write_molecules(self, data):
 		mol_type = ['', 'receptors', 'ligands'][self.mol_type]
 		sql = "INSERT INTO molecular VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
@@ -78,13 +102,13 @@ class ImportWorker(QRunnable):
 				pass
 
 		if self.mol_count > 0:
+			self.update_molecule_count()
+
 			if self.mol_count > 1:
 				mol_type = ['', 'receptors', 'ligands'][self.mol_type]
-			else:
-				mol_type = ['', 'receptor', 'ligand'][self.mol_type]
 
-			self.signals.finished.emit("Successfully imported {} {}".format(
-				self.mol_count, mol_type))
+				self.signals.finished.emit("Successfully imported {} {}".format(
+					self.mol_count, mol_type))
 
 		self.signals.success.emit()
 

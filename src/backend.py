@@ -347,9 +347,9 @@ class DataBackend:
 	def set_option(self, name, val):
 		if self.get_option(name) is not None:
 			sql = "UPDATE option SET value=? WHERE name=?"
-			self.query(sql, (val, name))
+			self.query(sql, (str(val), name))
 		else:
 			sql = "INSERT INTO option VALUES (?,?,?)"
-			self.query(sql, (None, name, val))
+			self.query(sql, (None, name, str(val)))
 
 DB = DataBackend()
