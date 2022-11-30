@@ -26,6 +26,7 @@ class ImportSignals(QObject):
 	failure = Signal(str)
 	message = Signal(str)
 	finished = Signal(str)
+	progress = Signal(int)
 
 class ImportWorker(QRunnable):
 	processer = None
@@ -73,6 +74,9 @@ class ImportWorker(QRunnable):
 		self.signals.message.emit("Imported {} {}".format(data['total'], mol_type))
 
 	def run(self):
+		self.signals.message.emit("Starting import molecules ...")
+		self.signals.progress.emit(0)
+
 		proc = self.processer(self.mol_files, self.mol_type, self.producer)
 		proc.start()
 
@@ -85,6 +89,9 @@ class ImportWorker(QRunnable):
 				if data['action'] == 'insert':
 					self.write_molecules(data)
 					self.mol_count = data['total']
+
+					if data['progress'] > 0:
+						self.signals.progress.emit(data['progress'])
 
 				elif data['action'] == 'failure':
 					self.signals.failure.emit(data['message'])
@@ -110,6 +117,7 @@ class ImportWorker(QRunnable):
 				self.signals.finished.emit("Successfully imported {} {}".format(
 					self.mol_count, mol_type))
 
+		self.signals.progress.emit(100)
 		self.signals.success.emit()
 
 class ImportFileWorker(ImportWorker):
@@ -126,6 +134,7 @@ class JobListSignals(QObject):
 	message = Signal(str)
 	success = Signal()
 	finished = Signal()
+	progress = Signal(int)
 
 class JobListGenerator(QRunnable):
 	def __init__(self):
@@ -137,11 +146,18 @@ class JobListGenerator(QRunnable):
 	def write_jobs(self, data):
 		sql = "INSERT INTO jobs VALUES (?,?,?,?,?,?,?,?)"
 		DB.insert_rows(sql, data['rows'])
-		self.signals.message.emit("Generate {} jobs".format(data['total']))
+		self.signals.message.emit("Generated {} jobs".format(data['total']))
+
+		if data['progress']:
+			self.signals.progress.emit(data['progress'])
 
 	def run(self):
+		self.signals.progress.emit(0)
+
 		rids = DB.get_column("SELECT id FROM molecular WHERE type=1")
 		lids = DB.get_column("SELECT id FROM molecular WHERE type=2")
+
+		total_jobs = len(rids) * len(lids)
 
 		proc = JobListProcess(rids, lids, self.producer)
 		proc.start()
@@ -164,15 +180,16 @@ class JobListGenerator(QRunnable):
 			except:
 				error = traceback.format_exc()
 				self.signals.failure.emit(error)
-				print(error)
 				break
 
 			else:
 				#self.signals.success.emit()
 				pass
 
+		DB.set_option('job_count', total_jobs)
 		self.signals.finished.emit()
 		self.signals.success.emit()
+		self.signals.progress.emit(100)
 
 class WorkerSignals(QObject):
 	finished = Signal()
@@ -181,6 +198,7 @@ class WorkerSignals(QObject):
 	failure = Signal(str)
 	threads = Signal(int)
 	stopjob = Signal(int)
+	progress = Signal(int)
 
 class BaseWorker(QRunnable):
 	processer = None
@@ -197,6 +215,9 @@ class BaseWorker(QRunnable):
 		self.signals.threads.connect(self.change_job_numbers)
 		self.signals.stopjob.connect(self.stop_job)
 		self.setAutoDelete(True)
+		self.progress = 0
+		self.job_total = 0
+		self.job_finish = 0
 
 	def exit(self):
 		self.job_query = None
@@ -279,6 +300,12 @@ class BaseWorker(QRunnable):
 		self.signals.refresh.emit(data['job'])
 		self.signals.finished.emit()
 
+		self.job_finish += 1
+		p = int(self.job_finish/self.job_total*100)
+		if p > self.progress:
+			self.signals.progress.emit(p)
+			self.progress = p
+
 	def update_success(self, data):
 		sql = "UPDATE jobs SET status=?,message=? WHERE id=?"
 		DB.query(sql, (1, data['message'], data['job']))
@@ -358,6 +385,13 @@ class BaseWorker(QRunnable):
 
 		best_sql = "INSERT INTO best VALUES (?,?)"
 		DB.query(best_sql, (None, pose_ids[best]))
+
+		best_count = DB.get_option('best_count')
+		if best_count:
+			best_count = int(best_count) + 1
+		else:
+			best_count = 1
+		DB.set_option('best_count', best_count)
 
 		site_sql = "INSERT INTO binding_site VALUES (?,?,?)"
 		sites = interactions['binding_site']
@@ -466,7 +500,9 @@ class BaseWorker(QRunnable):
 
 	@Slot()
 	def run(self):
+		self.job_total = int(DB.get_option('job_count'))
 		self.job_query = DB.query("SELECT id FROM jobs")
+		self.signals.progress.emit(0)
 
 		try:
 			for i in range(self.job_num):
@@ -514,6 +550,7 @@ class BaseWorker(QRunnable):
 				self.jobs[job].tempdir.remove()
 
 			self.signals.finished.emit()
+			#self.signals.progress.emit(100)
 
 class AutodockWorker(BaseWorker):
 	processer = AutodockProcess

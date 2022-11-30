@@ -957,16 +957,17 @@ class AutodockParameterWizard(QWizard):
 		self.addPage(self.finish_page)
 		self.finish_layout = QVBoxLayout()
 		self.finish_page.setLayout(self.finish_layout)
-		rnum = DB.get_one("SELECT COUNT(1) FROM molecular WHERE type=1 LIMIT 1")
-		lnum = DB.get_one("SELECT COUNT(1) FROM molecular WHERE type=2 LIMIT 1")
+		rnum = int(DB.get_option('receptor_count'))
+		lnum = int(Db.get_option('ligand_count'))
 		info_wdg = QLabel((
 			"<p>Everything is ready, please confirm the docking jobs<p>"
 			"<p>The number of receptors: <b>{}</b></p>"
 			"<p>The number of ligands: <b>{}</b></p>"
 			"<p>The number of jobs will be generated: <b>{}</b></p>"
 			"<p>Selected search algorithm: <b>{}</b></p>"
+			"<p>Selected ligand preparation tool: <b>{}</b></p>"
 			"<p>Click <b>Finish</b> button to submit and start docking jobs</p>".format(
-				rnum, lnum, rnum*lnum, self.algorithms[self.params.algorithm]
+				rnum, lnum, rnum*lnum, self.algorithms[self.params.algorithm], lig_tool
 			)
 		), self)
 		self.finish_layout.addWidget(info_wdg)
@@ -1222,16 +1223,18 @@ class AutodockVinaParameterWizard(QWizard):
 		self.addPage(self.finish_page)
 		self.finish_layout = QVBoxLayout()
 		self.finish_page.setLayout(self.finish_layout)
-		rnum = DB.get_one("SELECT COUNT(1) FROM molecular WHERE type=1 LIMIT 1")
-		lnum = DB.get_one("SELECT COUNT(1) FROM molecular WHERE type=2 LIMIT 1")
+		rnum = int(DB.get_option('receptor_count'))
+		lnum = int(DB.get_option('ligand_count'))
+		lig_tool = QSettings().value('Ligand/prepare_tool', 'prepare_ligand4')
 		info_wdg = QLabel((
 			"<p>Everything is ready, please confirm the docking jobs<p>"
 			"<p>The number of receptors: <b>{}</b></p>"
 			"<p>The number of ligands: <b>{}</b></p>"
 			"<p>The number of jobs will be generated: <b>{}</b></p>"
 			"<p>Selected scoring function: <b>{}</b></p>"
+			"<p>Selected ligand preparation tool: <b>{}</b></p>"
 			"<p>Click <b>Finish</b> button to submit and start docking jobs</p>".format(
-				rnum, lnum, rnum*lnum, self.params.scoring.value
+				rnum, lnum, rnum*lnum, self.params.scoring.value, lig_tool
 			)
 		), self)
 		self.finish_layout.addWidget(info_wdg)
@@ -1425,15 +1428,17 @@ class QuickVinaParameterWizard(QWizard):
 		self.addPage(self.finish_page)
 		self.finish_layout = QVBoxLayout()
 		self.finish_page.setLayout(self.finish_layout)
-		rnum = DB.get_one("SELECT COUNT(1) FROM molecular WHERE type=1 LIMIT 1")
-		lnum = DB.get_one("SELECT COUNT(1) FROM molecular WHERE type=2 LIMIT 1")
+		rnum = int(get_option('receptor_count'))
+		lnum = int(get_option('ligand_count'))
+		lig_tool = QSettings().value('Ligand/prepare_tool', 'prepare_ligand4')
 		info_wdg = QLabel((
 			"<p>Everything is ready, please confirm the docking jobs<p>"
 			"<p>The number of receptors: <b>{}</b></p>"
 			"<p>The number of ligands: <b>{}</b></p>"
 			"<p>The number of jobs will be generated: <b>{}</b></p>"
+			"<p>Selected ligand preparation tool: <b>{}</b></p>"
 			"<p>Click <b>Finish</b> button to submit and start docking jobs</p>".format(
-				rnum, lnum, rnum*lnum
+				rnum, lnum, rnum*lnum, lig_tool
 			)
 		), self)
 		self.finish_layout.addWidget(info_wdg)

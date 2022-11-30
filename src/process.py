@@ -5,6 +5,7 @@ import traceback
 import subprocess
 import multiprocessing
 
+from rdkit import Chem
 from PySide6.QtCore import *
 
 from utils import *
@@ -26,6 +27,8 @@ class ImportProcess(multiprocessing.Process):
 		self.producer = producer
 		self.mol_list = []
 		self.mol_count = 0
+		self.mol_total = 0
+		self.progress = 0
 
 	def add(self, m):
 		self.mol_list.append([None, m.name, self.mol_type, m.content, m.format,
@@ -42,10 +45,19 @@ class ImportProcess(multiprocessing.Process):
 
 		if self.mol_list:
 			self.mol_count += len(self.mol_list)
+
+			p = int(self.mol_count/self.mol_total*100)
+
+			if p > self.progress:
+				self.progress = p
+			else:
+				p = 0
+
 			self.producer.send({
 				'action': 'insert',
 				'rows': self.mol_list,
-				'total': self.mol_count
+				'total': self.mol_count,
+				'progress': p
 			})		
 			self.mol_list = []
 
@@ -67,6 +79,8 @@ class ImportProcess(multiprocessing.Process):
 
 class ImportFileProcess(ImportProcess):
 	def process(self):
+		self.mol_total = len(self.mol_files)
+
 		for mol_file in self.mol_files:
 			m = get_molecule_information(mol_file)
 
@@ -84,9 +98,16 @@ class ImportFileProcess(ImportProcess):
 class ImportSDFProcess(ImportProcess):
 	def process(self):
 		sdf_file, name_prop = self.mol_files
-		mols = sdf_file_parser(sdf_file, name_prop)
 
-		for mol_name, mol_str in mols:
+		suppl = Chem.SDMolSupplier(sdf_file, sanitize=False,
+			removeHs=False, strictParsing=False)
+
+		self.mol_total = len(suppl)
+
+		for mol in suppl:
+			mol_name = mol.GetProp(name_prop)
+			mol_str = Chem.SDWriter.GetText(mol, kekulize=False)
+
 			m = get_molecule_information(mol_str, True, mol_name, 'sdf')
 
 			if 'error' in m:
@@ -103,6 +124,7 @@ class ImportSDFProcess(ImportProcess):
 class ImportFolderProcess(ImportProcess):
 	def process(self):
 		mol_files = QDirIterator(self.mol_files, QDir.Files)
+		self.mol_total = QDir(self.mol_files, filter=QDir.Files).count()
 
 		while mol_files.hasNext():
 			mol_file = mol_files.next()
@@ -128,19 +150,32 @@ class JobListProcess(multiprocessing.Process):
 		self.lids = lids
 		self.job_list = []
 		self.job_count = 0
+		self.job_total = 0
 		self.producer = producer
+		self.progress = 0
 
 	def write(self):
 		if self.job_list:
 			self.job_count += len(self.job_list)
+
+			p = int(self.job_count/self.job_total*100)
+
+			if p > self.progress:
+				self.progress = p
+			else:
+				p = 0
+
 			self.producer.send({
 				'action': 'insert',
 				'rows': self.job_list,
-				'total': self.job_count
+				'total': self.job_count,
+				'progress': p
 			})
 			self.job_list = []
 
 	def process(self):
+		self.job_total = len(self.rids) * len(self.lids)
+
 		for r in self.rids:
 			for l in self.lids:
 				self.job_list.append((None, r, l, 3, 0, 0, 0, ''))

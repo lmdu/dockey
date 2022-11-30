@@ -272,7 +272,24 @@ class DockeyListView(QListView):
 		if not self.current_index.isValid():
 			return
 
-		mid = self.current_index.siblingAtColumn(0)
+		mol_id = self.current_index.siblingAtColumn(0).data()
+		mol_type = self.current_index.siblingAtColumn(2).data()
+
+		DB.query("DELETE FROM molecular WHERE id=?", (mol_id,))
+
+		if mol_type == 1:
+			option = 'receptor_count'
+		else:
+			option = 'ligand_count'
+
+		count = int(DB.get_option(option))
+		count -= 1
+		DB.set_option(option, count)
+
+		total = int(DB.get_option('molecule_count'))
+		total -= 1
+		DB.set_option('molecule_count', total)
+
 		self.parent.mol_model.remove(self.current_index.row())
 
 	@Slot()
@@ -284,7 +301,16 @@ class DockeyListView(QListView):
 			return
 
 		DB.query("DELETE FROM molecular WHERE type=2")
-		self.parent.mol_model.select()
+
+		count = DB.get_option('ligand_count')
+
+		if count:
+			count = int(count)
+			total = int(DB.get_option('molecule_count'))
+			total -= count
+			DB.set_option('ligand_count', 0)
+			DB.set_option('molecule_count', total)
+			self.parent.mol_model.select()
 
 	@Slot()
 	def delete_receptors(self):
@@ -295,7 +321,15 @@ class DockeyListView(QListView):
 			return
 
 		DB.query("DELETE FROM molecular WHERE type=1")
-		self.parent.mol_model.select()
+		count = DB.get_option('receptor_count')
+
+		if count:
+			count = int(count)
+			total = int(DB.get_option('molecule_count'))
+			total -= count
+			DB.set_option('receptor_count', 0)
+			DB.set_option('molecule_count', total)
+			self.parent.mol_model.select()
 
 	@Slot()
 	def delete_all(self):
@@ -306,24 +340,28 @@ class DockeyListView(QListView):
 			return
 
 		DB.query("DELETE FROM molecular")
+		DB.set_option('receptor_count', 0)
+		DB.set_option('ligand_count', 0)
+		DB.set_option('molecule_count', 0)
+
 		self.parent.mol_model.select()
 
 	@Slot()
 	def view_stats(self):
-		sql = "SELECT COUNT(1) FROM molecular WHERE type=1 LIMIT 1"
-		rep_count = DB.get_one(sql)
-		sql = "SELECT COUNT(1) FROM molecular WHERE type=2 LIMIT 1"
-		lig_count = DB.get_one(sql)
+		rep_count = DB.get_option('receptor_count') or 0
+		lig_count = DB.get_option('ligand_count') or 0
+		total_count = DB.get_option('molecule_count') or 0
 
 		info = (
 			"<table cellspacing='10'>"
 			"<tr><td>Number of Receptors: </td><td>{}</td></tr>"
 			"<tr><td>Number of Ligands: </td><td>{}</td></tr>"
+			"<tr><td>Total Number of Molecules: </td><td>{}</td></tr>"
 			"</table>"
 		)
 
 		dlg = MoleculeDetailDialog(self.parent, info.format(
-			rep_count, lig_count))
+			rep_count, lig_count, total_count))
 		dlg.exec()
 
 	@Slot()
@@ -507,10 +545,13 @@ class DockeyTableModel(QAbstractTableModel):
 		self.cache_row[0] = row
 		self.cache_row[1] = DB.get_row(self.get_sql, (_id,))
 
+	def get_total(self):
+		return DB.get_one(self.count_sql)
+
 	def select(self):
 		self.beginResetModel()
 		self.read_count = 0
-		self.total_count = DB.get_one(self.count_sql)
+		self.total_count = self.get_total()
 		self.displayed = DB.get_column(self.read_sql)
 		self.read_count = len(self.displayed)
 		self.cache_row = [-1, None]
@@ -531,15 +572,22 @@ class DockeyTableModel(QAbstractTableModel):
 
 	def remove(self, row):
 		self.beginRemoveRows(QModelIndex(), row, row)
-		real_id = self.displayed.pop(row)
+		self.displayed.pop(row)
 		self.total_count -= 1
 		self.read_count -= 1
-		DB.query("DELETE FROM {} WHERE id=?".format(self.table),(real_id,))
 		self.endRemoveRows()
 
 class MolecularTableModel(DockeyTableModel):
 	table = 'molecular'
 	custom_headers = ['ID', 'Name', 'Type']
+
+	def get_total(self):
+		total = DB.get_option('molecule_count')
+
+		if total:
+			return int(total)
+		else:
+			return DB.get_one(self.count_sql)
 
 	@property
 	def read_sql(self):
@@ -590,6 +638,14 @@ class JobsTableModel(DockeyTableModel):
 		3: QIcon(':/icons/pend.svg'),
 		4: QIcon(':/icons/queue.svg')
 	}
+
+	def get_total(self):
+		total = DB.get_option('job_count')
+
+		if total:
+			return int(total)
+		else:
+			return DB.get_one(self.count_sql)
 
 	@property
 	def get_sql(self):
@@ -745,6 +801,14 @@ class BestTableModel(PoseTableModel):
 	table = 'best'
 	sorter = ''
 	custom_headers = ['', 'PID', 'Job']
+
+	def get_total(self):
+		total = DB.get_option('best_count')
+
+		if total:
+			return int(total)
+		else:
+			return DB.get_one(self.count_sql)
 
 	@property
 	def count_sql(self):

@@ -226,9 +226,8 @@ class DataBackend:
 		#self.query("PRAGMA synchronous=normal")
 		#self.query("PRAGMA temp_store=memory")
 		#self.query("PRAGMA mmap_size=3000000000")
-		#self.query("PRAGMA synchronous=OFF")
+		self.query("PRAGMA synchronous=OFF")
 		#self.query("BEGIN")
-		pass
 
 	def begin(self):
 		self.query("BEGIN")

@@ -759,6 +759,18 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		self.statusbar = self.statusBar()
 		self.statusbar.showMessage("Welcome to Dockey")
 
+		self.progressbar = QProgressBar(self)
+		self.progressbar.setStyleSheet("""
+			QProgressBar {
+				text-align: right;
+				max-width: 100px;
+				min-width: 100px;
+				max-height: 15px;
+				min-height: 15px;
+			}
+		""")
+		self.statusbar.addPermanentWidget(self.progressbar)
+
 	def show_message(self, msg):
 		self.statusbar.showMessage(msg)
 
@@ -949,6 +961,7 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		thread.signals.failure.connect(self.show_error_message)
 		thread.signals.success.connect(self.mol_model.select)
 		thread.signals.finished.connect(self.show_popup_message)
+		thread.signals.progress.connect(self.progressbar.setValue)
 		QThreadPool.globalInstance().start(thread)
 
 	def import_receptors(self):
@@ -1193,6 +1206,7 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		thread.signals.message.connect(self.show_message)
 		thread.signals.success.connect(self.job_model.select)
 		thread.signals.finished.connect(self.start_jobs)
+		thread.signals.progress.connect(self.progressbar.setValue)
 		QThreadPool.globalInstance().start(thread)
 
 	def stop_job(self, job):
@@ -1229,12 +1243,13 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		self.job_worker.signals.refresh.connect(self.job_model.update_row)
 		self.job_worker.signals.failure.connect(self.show_error_message)
 		self.job_worker.signals.finished.connect(self.pose_tab.select)
+		self.job_worker.signals.progress.connect(self.progressbar.setValue)
 
 		QThreadPool.globalInstance().start(self.job_worker)
 
 	def check_mols(self):
-		receptors = DB.get_one("SELECT 1 FROM molecular WHERE type=1 LIMIT 1")
-		ligands = DB.get_one("SELECT 1 FROM molecular WHERE type=2 LIMIT 1")
+		receptors = int(DB.get_option('receptor_count'))
+		ligands = int(DB.get_option('ligand_count'))
 
 		if not (receptors and ligands):
 			QMessageBox.critical(self, "Error", "There are no receptors and ligands")
@@ -1251,7 +1266,7 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		return True
 
 	def check_jobs(self):
-		jobs = DB.get_one("SELECT COUNT(1) FROM jobs LIMIT 1")
+		jobs = int(DB.get_option("job_count") or 0)
 
 		if jobs:
 			ret = QMessageBox.warning(self, "Warning",
@@ -1270,6 +1285,8 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		DB.query("DELETE FROM logs")
 		#delete tool option
 		DB.set_option('tool', '')
+		DB.set_option('job_count', 0)
+		DB.set_option('best_count', 0)
 
 		return True
 
@@ -1351,23 +1368,26 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		condition = LigandFilterDialog.filter(self)
 
 		if condition:
-			sql = "SELECT COUNT(1) FROM molecular WHERE {}".format(condition)
+			sql = "SELECT COUNT(1) FROM molecular WHERE type=2 AND {}".format(condition)
 			count = DB.get_one(sql)
 
 			if count == 0:
 				QMessageBox.warning(self, "Warning", "No molecules match the filter.")
 
 			else:
-				if count == 1:
-					ret = QMessageBox.question(self, "Comfirmation",
-						"Are you sure you want to remove one ligand that matches the filter?")
-				else:
-					ret = QMessageBox.question(self, "Comfirmation",
-						"Are you sure you want to remove {} ligands that match the filter?".format(
-							count))
+				ret = QMessageBox.question(self, "Comfirmation",
+					"Are you sure you want to remove {} ligand(s) that match the filter?".format(count))
 
 				if ret == QMessageBox.Yes:
-					sql = "DELETE FROM molecular WHERE type=2 AND {}".format(condition)
-					DB.query(sql)
+					DB.query("DELETE FROM molecular WHERE type=2 AND {}".format(condition))
+
+					ligand_count = int(DB.get_option('ligand_count'))
+					ligand_count -= count
+					DB.set_option('ligand_count', ligand_count)
+
+					total_count = int(DB.get_option('molecule_count'))
+					total_count -= count
+					DB.set_option('molecule_count', total_count)
+
 					self.mol_model.select()
 
