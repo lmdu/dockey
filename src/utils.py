@@ -646,13 +646,15 @@ def get_complex_interactions(poses):
 					mc.location
 				])
 
-	#remove plip temp file
-	if 'pdbcomplex' in mol.sourcefiles:
-		temp_file = mol.sourcefiles['pdbcomplex']
+		#remove plip temp file
+		if 'pdbcomplex' in mol.sourcefiles:
+			temp_file = mol.sourcefiles['pdbcomplex']
 
-		if temp_file and temp_file.startswith('plipfixed.'):
-			if os.path.isfile(temp_file):
-				os.remove(temp_file)
+			print(temp_file)
+
+			if temp_file and temp_file.startswith('plipfixed.'):
+				if os.path.isfile(temp_file):
+					os.remove(temp_file)
 
 	return interactions
 

@@ -958,7 +958,8 @@ class AutodockParameterWizard(QWizard):
 		self.finish_layout = QVBoxLayout()
 		self.finish_page.setLayout(self.finish_layout)
 		rnum = int(DB.get_option('receptor_count'))
-		lnum = int(Db.get_option('ligand_count'))
+		lnum = int(DB.get_option('ligand_count'))
+		lig_tool = QSettings().value('Ligand/prepare_tool', 'prepare_ligand4')
 		info_wdg = QLabel((
 			"<p>Everything is ready, please confirm the docking jobs<p>"
 			"<p>The number of receptors: <b>{}</b></p>"
