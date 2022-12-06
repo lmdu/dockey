@@ -507,7 +507,7 @@ def ligand_efficiency_assessment(pdb_str, energy, ki=None):
 	else:
 		return (logki, None, None, None, None, None, ki)
 
-def get_complex_interactions(poses):
+def get_complex_interactions(poses, work_dir):
 	interactions = {
 		'binding_site': [],
 		'hydrogen_bond': [],
@@ -527,6 +527,7 @@ def get_complex_interactions(poses):
 			continue
 
 		mol = PDBComplex()
+		mol.output_path = work_dir
 		mol.load_pdb(compound, as_string=True)
 		mol.analyze()
 
@@ -647,14 +648,14 @@ def get_complex_interactions(poses):
 				])
 
 		#remove plip temp file
-		if 'pdbcomplex' in mol.sourcefiles:
-			temp_file = mol.sourcefiles['pdbcomplex']
+		#if 'pdbcomplex' in mol.sourcefiles:
+		#	temp_file = mol.sourcefiles['pdbcomplex']
 
-			print(temp_file)
+		#	print(temp_file)
 
-			if temp_file and temp_file.startswith('plipfixed.'):
-				if os.path.isfile(temp_file):
-					os.remove(temp_file)
+		#	if temp_file and temp_file.startswith('plipfixed.'):
+		#		if os.path.isfile(temp_file):
+		#			os.remove(temp_file)
 
 	return interactions
 

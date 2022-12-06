@@ -224,7 +224,7 @@ class BaseProcess(multiprocessing.Process):
 			self.flex_docking = False
 
 	def send_result(self, poses):
-		interactions = get_complex_interactions(poses)
+		interactions = get_complex_interactions(poses, self.work_dir)
 
 		#get min energy
 		e = 0

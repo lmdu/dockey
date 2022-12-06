@@ -631,13 +631,27 @@ class InteractionTabWidget(QTabWidget):
 
 		if site != self.binding_site:
 			self.binding_site = site
-			mol = PDBComplex()
-			mol.load_pdb(self.complex_pdb, as_string=True)
+			temp_dir = QTemporaryDir()
+			temp_dir.setAutoRemove(False)
 
-			for ligand in mol.ligands:
-				mol.characterize_complex(ligand)
+			if not temp_dir.isValid():
+				self.parent.show_error_message(
+					"Could not create temporary work directory, {}".format(
+					temp_dir.errorString()
+				))
+				return
 
-			self.complex_vis = VisualizerData(mol, self.binding_site)
+			try:
+				mol = PDBComplex()
+				mol.output_path = temp_dir.path()
+				mol.load_pdb(self.complex_pdb, as_string=True)
+
+				for ligand in mol.ligands:
+					mol.characterize_complex(ligand)
+
+				self.complex_vis = VisualizerData(mol, self.binding_site)
+			finally:
+				temp_dir.remove()
 
 	@Slot()
 	def on_interaction_changed(self):
