@@ -647,16 +647,6 @@ def get_complex_interactions(poses, work_dir):
 					mc.location
 				])
 
-		#remove plip temp file
-		#if 'pdbcomplex' in mol.sourcefiles:
-		#	temp_file = mol.sourcefiles['pdbcomplex']
-
-		#	print(temp_file)
-
-		#	if temp_file and temp_file.startswith('plipfixed.'):
-		#		if os.path.isfile(temp_file):
-		#			os.remove(temp_file)
-
 	return interactions
 
 #https://github.com/pharmai/plip/blob/master/plip/visualization/visualize.py
