@@ -258,6 +258,9 @@ def prepare_meeko_ligand(ligand_file, ligand_pdbqt, params):
 			Chem.SanitizeMol(mol)
 			break
 
+	#add hydrogens and 3D coords
+	mol = Chem.AddHs(mol, addCoords=True)
+
 	preparator = MoleculePreparation(
 		keep_nonpolar_hydrogens = keep_nonpolar_hydrogens,
 		hydrate = hydrate,
