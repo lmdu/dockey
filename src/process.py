@@ -277,7 +277,7 @@ class BaseProcess(multiprocessing.Process):
 			content = convert_string_to_pdb(self.job.rc, self.job.rf)
 			rfile = os.path.join(self.work_dir, "{}.pdb".format(self.job.rn))
 
-		with open(rfile, 'w') as fw:
+		with open(rfile, 'w', encoding='utf-8') as fw:
 			fw.write(content)
 
 		prepare_autodock_receptor(rfile, rpdbqt, self.repp_params)
@@ -303,7 +303,7 @@ class BaseProcess(multiprocessing.Process):
 			content = self.job.lc
 			lfile = os.path.join(self.work_dir, "{}.{}".format(self.job.ln, self.job.lf))
 
-		with open(lfile, 'w') as fw:
+		with open(lfile, 'w', encoding='utf-8') as fw:
 			fw.write(content)
 
 		prepare_ligand(lfile, lpdbqt, self.ligp_params)

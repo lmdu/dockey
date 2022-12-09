@@ -3,11 +3,16 @@ import os
 import MolKit.molecule
 import MolKit.protein
 
-from rdkit import Chem
 from MolKit import Read
 from MolKit.molecule import BondSet
 from MolKit.protein import ProteinSet, ResidueSet, AtomSet
+
+from rdkit import Chem
+from rdkit.Chem import rdDistGeom
+from rdkit.Chem import rdForceFieldHelpers
+
 from meeko.preparation import MoleculePreparation
+
 from AutoDockTools.MoleculePreparation import AD4LigandPreparation
 from AutoDockTools.MoleculePreparation import AD4ReceptorPreparation
 from AutoDockTools.MoleculePreparation import AD4FlexibleReceptorPreparation
@@ -259,7 +264,10 @@ def prepare_meeko_ligand(ligand_file, ligand_pdbqt, params):
 			break
 
 	#add hydrogens and 3D coords
-	mol = Chem.AddHs(mol, addCoords=True)
+	mol = Chem.AddHs(mol)
+	etkdgv3 = rdDistGeom.ETKDGv3()
+	rdDistGeom.EmbedMolecule(mol, etkdgv3)
+	rdForceFieldHelpers.UFFOptimizeMolecule(mol)
 
 	preparator = MoleculePreparation(
 		keep_nonpolar_hydrogens = keep_nonpolar_hydrogens,
