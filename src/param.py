@@ -1429,8 +1429,8 @@ class QuickVinaParameterWizard(QWizard):
 		self.addPage(self.finish_page)
 		self.finish_layout = QVBoxLayout()
 		self.finish_page.setLayout(self.finish_layout)
-		rnum = int(get_option('receptor_count'))
-		lnum = int(get_option('ligand_count'))
+		rnum = int(DB.get_option('receptor_count'))
+		lnum = int(DB.get_option('ligand_count'))
 		lig_tool = QSettings().value('Ligand/prepare_tool', 'prepare_ligand4')
 		info_wdg = QLabel((
 			"<p>Everything is ready, please confirm the docking jobs<p>"

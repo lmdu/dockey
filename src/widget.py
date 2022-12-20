@@ -1044,6 +1044,7 @@ class MolecularPrepareDialog(QDialog):
 		meeko_page.setLayout(meeko_layout)
 		stack_widget.addWidget(meeko_page)
 
+		ahc_check = QCheckBox("Add hydrogens and 3D coordinates", self)
 		rmc_check = QCheckBox("Keep macrocycles rigid in input conformation", self)
 		kcr_check = QCheckBox("Return all rings from exhaustive perception", self)
 		ker_check = QCheckBox("Equivalent rings have the same size and neighbors", self)
@@ -1053,6 +1054,7 @@ class MolecularPrepareDialog(QDialog):
 		aim_check = QCheckBox("Write map of atom indices from input to pdbqt", self)
 		rms_check = QCheckBox("Do not write smiles as remark to pdbqt", self)
 
+		self.register_widget(ahc_check, 'check', 'Meeko/add_h_3d', True, bool)
 		self.register_widget(rmc_check, 'check', 'Meeko/rigid_macrocycles', False, bool)
 		self.register_widget(kcr_check, 'check', 'Meeko/keep_chorded_rings', False, bool)
 		self.register_widget(ker_check, 'check', 'Meeko/keep_equivalent_rings', False, bool)
@@ -1062,6 +1064,7 @@ class MolecularPrepareDialog(QDialog):
 		self.register_widget(aim_check, 'check', 'Meeko/add_index_map', False, bool)
 		self.register_widget(rms_check, 'check', 'Meeko/remove_smiles', False, bool)
 
+		meeko_layout.addWidget(ahc_check)
 		meeko_layout.addWidget(rmc_check)
 		meeko_layout.addWidget(kcr_check)
 		meeko_layout.addWidget(ker_check)

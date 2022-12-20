@@ -339,6 +339,7 @@ class BaseWorker(QRunnable):
 			self.settings.beginGroup('Meeko')
 			lig_params = dict(
 				tool = 'meeko',
+				add_h_3d = self.settings.value('add_h_3d', True, bool),
 				rigid_macrocycles = self.settings.value('rigid_macrocycles', False, bool),
 				keep_chorded_rings = self.settings.value('keep_chorded_rings', False, bool),
 				keep_equivalent_rings = self.settings.value('keep_equivalent_rings', False, bool),

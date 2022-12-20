@@ -3,6 +3,7 @@ import apsw
 import numpy
 import rdkit
 import pymol
+import meeko
 import psutil
 import openbabel
 from PySide6.QtCore import __version__ as pyside_version
@@ -10,9 +11,9 @@ from plip.basic.config import __version__ as plip_version
 
 __all__ = ['DOCKEY_VERSION', 'DOCKEY_BUILD', 'DOCKEY_ABOUT']
 
-DOCKEY_VERSION = "0.7.0"
+DOCKEY_VERSION = "0.8.0"
 
-DOCKEY_BUILD = "221130"
+DOCKEY_BUILD = "221220"
 
 DOCKEY_ABOUT = """
 <p>Dockey - Molecular Docking and Virtual Screening</p>
@@ -159,7 +160,7 @@ DOCKEY_ABOUT = """
 	pymol = pymol.cmd.get_version()[0],
 	babel = openbabel.__version__,
 	rdkit = rdkit.__version__,
-	meeko = '0.3.3',
+	meeko = meeko.__version__,
 	plip = plip_version,
 	psutil = psutil.__version__,
 	numpy = numpy.__version__,

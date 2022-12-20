@@ -209,6 +209,7 @@ def prepare_flex_receptor(receptor_pdbqt, res_dict):
 	)
 
 def prepare_meeko_ligand(ligand_file, ligand_pdbqt, params):
+	add_h_3d = params['add_h_3d']
 	rigid_macrocycles = params['rigid_macrocycles']
 	keep_chorded_rings = params['keep_chorded_rings']
 	keep_equivalent_rings = params['keep_equivalent_rings']
@@ -264,10 +265,11 @@ def prepare_meeko_ligand(ligand_file, ligand_pdbqt, params):
 			break
 
 	#add hydrogens and 3D coords
-	mol = Chem.AddHs(mol)
-	etkdgv3 = rdDistGeom.ETKDGv3()
-	rdDistGeom.EmbedMolecule(mol, etkdgv3)
-	rdForceFieldHelpers.UFFOptimizeMolecule(mol)
+	if add_h_3d:
+		mol = Chem.AddHs(mol)
+		etkdgv3 = rdDistGeom.ETKDGv3()
+		rdDistGeom.EmbedMolecule(mol, etkdgv3)
+		rdForceFieldHelpers.UFFOptimizeMolecule(mol)
 
 	preparator = MoleculePreparation(
 		keep_nonpolar_hydrogens = keep_nonpolar_hydrogens,
