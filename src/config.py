@@ -13,7 +13,7 @@ __all__ = ['DOCKEY_VERSION', 'DOCKEY_BUILD', 'DOCKEY_ABOUT']
 
 DOCKEY_VERSION = "0.8.0"
 
-DOCKEY_BUILD = "221220"
+DOCKEY_BUILD = "221222"
 
 DOCKEY_ABOUT = """
 <p>Dockey - Molecular Docking and Virtual Screening</p>
@@ -160,7 +160,8 @@ DOCKEY_ABOUT = """
 	pymol = pymol.cmd.get_version()[0],
 	babel = openbabel.__version__,
 	rdkit = rdkit.__version__,
-	meeko = meeko.__version__,
+	#meeko = meeko.__version__,
+	meeko = '0.3.3',
 	plip = plip_version,
 	psutil = psutil.__version__,
 	numpy = numpy.__version__,
