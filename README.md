@@ -58,3 +58,5 @@ The documentation is available here: [https://dockey.readthedocs.io/en/latest](h
 ## Download
 
 You can download the latest installer for Windows, Linux and MacOS from [https://github.com/lmdu/dockey/releases](https://github.com/lmdu/dockey/releases)
+
+中国镜像下载地址: [http://big.cdu.edu.cn/post/dockey.html](http://big.cdu.edu.cn/post/dockey.html)
