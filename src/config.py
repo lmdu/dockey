@@ -3,7 +3,7 @@ import apsw
 import numpy
 import rdkit
 import pymol
-import meeko
+#import meeko
 import psutil
 import openbabel
 from PySide6.QtCore import __version__ as pyside_version
