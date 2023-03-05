@@ -1032,10 +1032,6 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		self.start_import_thread(importor)
 
 	def import_ligand_from_zinc(self):
-		#zinc_url = ZincDownloader.get_url(self)
-		
-		#if zinc_url:
-		#	self.import_moleculars([zinc_url], 2)
 		dlg = ZINCDownloader(self)
 		dlg.exec()
 

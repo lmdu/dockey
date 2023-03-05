@@ -1288,6 +1288,30 @@ class DownloaderDialog(QDialog):
 		]
 		DB.query(sql, row)
 		mol_type = ['', 'receptor', 'ligand'][self.mol_type]
+
+		if self.mol_type == 1:
+			option = 'receptor_count'
+		else:
+			option = 'ligand_count'
+
+		count = DB.get_option(option)
+
+		if count:
+			count = int(count) + 1
+		else:
+			count = 1
+
+		DB.set_option(option, count)
+
+		total = DB.get_option('molecule_count')
+
+		if total:
+			total = int(total) + 1
+		else:
+			total = 1
+
+		DB.set_option('molecule_count', total)
+
 		self.parent.show_message("Import {} {}".format(mol_type, row[1]))
 		self.parent.mol_model.select()
 
@@ -1318,7 +1342,7 @@ class ZINCDownloader(DownloaderDialog):
 	def create_widgets(self):
 		self.text_widget = QLineEdit(self)
 		self.version_widget = QComboBox(self)
-		self.version_widget.addItems(['zinc15', 'zinc20'])
+		self.version_widget.addItems(['zinc20', 'zinc15'])
 		self.layout.addRow("ZINC ID:", self.text_widget)
 		self.layout.addRow("ZINC Version:", self.version_widget)
 
@@ -1339,7 +1363,7 @@ class ZINCDownloader(DownloaderDialog):
 		if ver == 'zinc20':
 			base_url = "https://zinc20.docking.org/substances/{}.sdf"
 		else:
-			base_url = "https://zinc.docking.org/substances/{}.sdf"
+			base_url = "https://zinc15.docking.org/substances/{}.sdf"
 
 		return QUrl(base_url.format(zinc_id))
 
