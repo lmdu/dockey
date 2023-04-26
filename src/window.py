@@ -451,7 +451,7 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		)
 		self.project_ready.connect(self.import_receptor_act.setEnabled)
 
-		self.import_pdb_act = QAction("&Import Receptor from PDB", self,
+		self.import_pdb_act = QAction("&PDB", self,
 			disabled = True,
 			triggered = self.import_receptor_from_pdb
 		)
@@ -463,7 +463,7 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		)
 		self.project_ready.connect(self.import_ligand_act.setEnabled)
 
-		self.import_ligand_sdf_act = QAction("&Import Ligands from SDF file", self,
+		self.import_ligand_sdf_act = QAction("&SDF file", self,
 			disabled = True,
 			triggered = self.import_ligands_from_sdf
 		)
@@ -475,11 +475,29 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		)
 		self.project_ready.connect(self.import_ligand_dir_act.setEnabled)
 
-		self.import_zinc_act = QAction("&Import Ligand from ZINC", self,
+		self.import_zinc_act = QAction("&ZINC", self,
 			disabled = True,
 			triggered = self.import_ligand_from_zinc
 		)
 		self.project_ready.connect(self.import_zinc_act.setEnabled)
+
+		self.import_pubchem_act = QAction("&PubChem", self,
+			disabled = True,
+			triggered = self.import_ligand_from_pubchem
+		)
+		self.project_ready.connect(self.import_ligand_from_pubchem.setEnabled)
+
+		self.import_coconut_act = QAction("&COCONUT", self,
+			disabled = True,
+			triggered = self.import_ligand_from_coconut
+		) 
+		self.project_ready.connect(self.import_ligand_from_coconut.setEnabled)
+
+		self.import_chembl_act = QAction("&ChEMBL", self,
+			disabled = True,
+			triggered = self.import_ligand_from_chembl
+		) 
+		self.project_ready.connect(self.import_ligand_from_chembl.setEnabled)
 
 		self.export_image_act = QAction(QIcon(':/icons/image.svg'), "&Export As Image", self,
 			triggered = self.export_as_image
@@ -665,7 +683,10 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		self.file_menu.addAction(self.close_project_act)
 		self.file_menu.addSeparator()
 		self.file_menu.addAction(self.import_receptor_act)
-		self.file_menu.addAction(self.import_pdb_act)
+		receptor_menu = self.file_menu.addMenu("&Import Receptors from Database")
+		receptor_menu.addAction(self.import_pdb_act)
+		#self.file_menu.addAction(self.import_receptors_act)
+		#self.file_menu.addAction(self.import_pdb_act)
 		self.file_menu.addAction(self.import_ligand_act)
 		self.file_menu.addAction(self.import_ligand_sdf_act)
 		self.file_menu.addAction(self.import_ligand_dir_act)
