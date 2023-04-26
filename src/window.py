@@ -485,19 +485,19 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 			disabled = True,
 			triggered = self.import_ligand_from_pubchem
 		)
-		self.project_ready.connect(self.import_ligand_from_pubchem.setEnabled)
+		self.project_ready.connect(self.import_pubchem_act.setEnabled)
 
 		self.import_coconut_act = QAction("&COCONUT", self,
 			disabled = True,
 			triggered = self.import_ligand_from_coconut
 		) 
-		self.project_ready.connect(self.import_ligand_from_coconut.setEnabled)
+		self.project_ready.connect(self.import_coconut_act.setEnabled)
 
 		self.import_chembl_act = QAction("&ChEMBL", self,
 			disabled = True,
 			triggered = self.import_ligand_from_chembl
 		) 
-		self.project_ready.connect(self.import_ligand_from_chembl.setEnabled)
+		self.project_ready.connect(self.import_chembl_act.setEnabled)
 
 		self.export_image_act = QAction(QIcon(':/icons/image.svg'), "&Export As Image", self,
 			triggered = self.export_as_image
@@ -688,8 +688,14 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		#self.file_menu.addAction(self.import_receptors_act)
 		#self.file_menu.addAction(self.import_pdb_act)
 		self.file_menu.addAction(self.import_ligand_act)
-		self.file_menu.addAction(self.import_ligand_sdf_act)
 		self.file_menu.addAction(self.import_ligand_dir_act)
+		ligand_menu = self.file_menu.addMenu("&Import Ligands from Database")
+		ligand_menu.addAction(self.import_ligand_sdf_act)
+		ligand_menu.addAction(self.import_zinc_act)
+		ligand_menu.addAction(self.import_pubchem_act)
+		ligand_menu.addAction(self.import_chembl_act)
+		#ligand_menu.addAction(self.import_coconut_act)
+		
 		self.file_menu.addAction(self.import_zinc_act)
 		self.file_menu.addSeparator()
 		self.file_menu.addAction(self.export_image_act)
@@ -1055,6 +1061,17 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 	def import_ligand_from_zinc(self):
 		dlg = ZINCDownloader(self)
 		dlg.exec()
+
+	def import_ligand_from_pubchem(self):
+		dlg = PubchemDownloader(self)
+		dlg.exec()
+
+	def import_ligand_from_chembl(self):
+		dlg = ChemblDownloader(self)
+		dlg.exec()
+
+	def import_ligand_from_coconut(self):
+		pass
 
 	def export_as_image(self):
 		opt = ExportImageDialog.save_to_png(self)

@@ -29,7 +29,6 @@ class DockeyApplication(QApplication):
 
 if __name__ == '__main__':
 	multiprocessing.freeze_support()
-	QSettings.setDefaultFormat(QSettings.IniFormat)
 
 	#fix incorrect icon display in taskbar on Windows
 	if os.name == 'nt':
@@ -39,6 +38,8 @@ if __name__ == '__main__':
 
 	app = DockeyApplication(sys.argv)
 	win = DockeyMainWindow()
+
+	QSettings.setDefaultFormat(QSettings.IniFormat)
 
 	#support for macos open with when associated with dock file
 	app.osx_open_with.connect(win.create_db_connect)

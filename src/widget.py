@@ -18,7 +18,8 @@ __all__ = ['BrowseInput', 'CreateProjectDialog', 'AutodockConfigDialog',
 			'PymolSettingDialog', 'DockingToolSettingDialog', 'InteractionTabWidget',
 			'JobConcurrentSettingDialog', 'DockeyConfigDialog', 'PDBDownloader',
 			'ZINCDownloader', 'QuickVinaConfigDialog', 'PoseTabWidget',
-			'MolecularPrepareDialog', 'FlexResiduesDialog', 'LigandFilterDialog'
+			'MolecularPrepareDialog', 'FlexResiduesDialog', 'LigandFilterDialog',
+			'PubchemDownloader', 'ChemblDownloader'
 			]
 
 class BrowseInput(QWidget):
@@ -1201,18 +1202,22 @@ class DownloaderDialog(QDialog):
 	mol_id = ''
 	mol_type = 1
 	mol_fmt = 'pdb'
+	id_label = ''
 
 	def __init__(self, parent=None):
 		super().__init__(parent)
 		self.parent = parent
 		self.reply = None
-		self.resize(QSize(350, 10))
+		self.resize(QSize(450, 10))
 		self.setWindowTitle(self.title)
 		self.layout = QFormLayout()
+		self.layout.setVerticalSpacing(20)
 		self.setLayout(self.layout)
+		
 
 		self.manager = QNetworkAccessManager(self.parent)
 
+		self.add_logo()
 		self.create_widgets()
 
 		self.progress_bar = QProgressBar(self)
@@ -1228,10 +1233,22 @@ class DownloaderDialog(QDialog):
 		self.abort_btn.clicked.connect(self.on_abort)
 
 	def create_widgets(self):
-		pass
+		self.text_widget = QLineEdit(self)
+		self.layout.addRow(self.id_label, self.text_widget)
 
 	def get_url(self):
-		pass
+		self.mol_id = self.text_widget.text().strip().lower()
+
+		if not self.mol_id:
+			return None
+
+		return QUrl(self.base_url.format(self.mol_id))
+
+	def add_logo(self):
+		logo_label = QLabel(self)
+		logo_image = QPixmap(self.logo)
+		logo_label.setPixmap(logo_image)
+		self.layout.addRow(logo_label)
 
 	@Slot()
 	def on_start(self):
@@ -1317,33 +1334,21 @@ class DownloaderDialog(QDialog):
 
 class PDBDownloader(DownloaderDialog):
 	title = "Import Receptor from PDB"
-
-	def create_widgets(self):
-		self.text_widget = QLineEdit(self)
-		self.layout.addRow("PDB ID:", self.text_widget)
-
-	def get_url(self):
-		base_url = "https://files.rcsb.org/download/{}.pdb"
-
-		pdb_id = self.text_widget.text().strip().lower()
-
-		if not pdb_id:
-			return None
-
-		self.mol_id = pdb_id
-
-		return QUrl(base_url.format(pdb_id))
+	logo = 'icons/pdb.png'
+	id_label = "PDB ID:"
+	base_url = "https://files.rcsb.org/download/{}.pdb"
 
 class ZINCDownloader(DownloaderDialog):
 	title = "Import Ligand from ZINC"
+	logo = "icons/zinc.png"
+	id_label = "ZINC ID:"
 	mol_type = 2
 	mol_fmt = 'sdf'
 
 	def create_widgets(self):
-		self.text_widget = QLineEdit(self)
+		super().create_widgets()
 		self.version_widget = QComboBox(self)
 		self.version_widget.addItems(['zinc20', 'zinc15'])
-		self.layout.addRow("ZINC ID:", self.text_widget)
 		self.layout.addRow("ZINC Version:", self.version_widget)
 
 	def get_url(self):
@@ -1366,6 +1371,23 @@ class ZINCDownloader(DownloaderDialog):
 			base_url = "https://zinc15.docking.org/substances/{}.sdf"
 
 		return QUrl(base_url.format(zinc_id))
+
+class PubchemDownloader(DownloaderDialog):
+	title = "Import Ligand from PubChem"
+	logo = "icons/pubchem.png"
+	id_label = "PubChem CID:"
+	mol_type = 2
+	mol_fmt = 'sdf'
+	base_url = "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/{}/sdf"
+
+class ChemblDownloader(DownloaderDialog):
+	title = "Import Ligand from ChEMBL"
+	logo = "icons/chembl.png"
+	id_label = "ChEMBL ID:"
+	mol_type = 2
+	mol_fmt = 'sdf'
+	base_url = "https://www.ebi.ac.uk/chembl/api/data/molecule/{}.sdf"
+
 
 class FlexResiduesDialog(QDialog):
 	def __init__(self, parent, mol_id):
