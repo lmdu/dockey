@@ -463,7 +463,7 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		)
 		self.project_ready.connect(self.import_ligand_act.setEnabled)
 
-		self.import_ligand_sdf_act = QAction("&SDF file", self,
+		self.import_ligand_sdf_act = QAction("&SDF", self,
 			disabled = True,
 			triggered = self.import_ligands_from_sdf
 		)
@@ -695,8 +695,7 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		ligand_menu.addAction(self.import_pubchem_act)
 		ligand_menu.addAction(self.import_chembl_act)
 		#ligand_menu.addAction(self.import_coconut_act)
-		
-		self.file_menu.addAction(self.import_zinc_act)
+
 		self.file_menu.addSeparator()
 		self.file_menu.addAction(self.export_image_act)
 		self.file_menu.addAction(self.export_file_act)
