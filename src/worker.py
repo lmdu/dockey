@@ -444,6 +444,8 @@ class BaseWorker(QRunnable):
 				)
 			)
 
+		print(temp_dir.path())
+
 		return temp_dir
 
 	def start_process(self, jid):

@@ -3,13 +3,14 @@ import os
 import MolKit.molecule
 import MolKit.protein
 
+#from pdbfixer import PDBFixer
+
 from MolKit import Read
 from MolKit.molecule import BondSet
 from MolKit.protein import ProteinSet, ResidueSet, AtomSet
 
 from rdkit import Chem
-from rdkit.Chem import rdDistGeom
-from rdkit.Chem import rdForceFieldHelpers
+from rdkit.Chem import AllChem
 
 from meeko.preparation import MoleculePreparation
 
@@ -22,6 +23,19 @@ from utils import load_molecule_from_file
 __all__ = ['prepare_autodock_ligand', 'prepare_autodock_receptor',
 	'prepare_meeko_ligand', 'prepare_ligand', 'prepare_flex_receptor'
 ]
+
+
+def fix_receptor_pdb(receptor_file):
+	fixer = PDBFixer(receptor_file)
+	fixer.findMissingResidues()
+	fixer.findNonstandardResidues()
+	fixer.replaceNonstandardResidues()
+	fixer.removeHeterogens(True)
+	fixer.findMissingAtoms()
+	fixer.addMissingAtoms()
+	fixer.addMissingHydrogens(7.0)
+	fixer.addSolvent(fixer.topology.getUnitCellDimensions())
+
 
 def prepare_autodock_ligand(ligand_file, ligand_pdbqt, params):
 	repairs = params['repairs']
@@ -209,7 +223,7 @@ def prepare_flex_receptor(receptor_pdbqt, res_dict):
 	)
 
 def prepare_meeko_ligand(ligand_file, ligand_pdbqt, params):
-	add_h_3d = params['add_h_3d']
+	#add_h_3d = params['add_h_3d']
 	rigid_macrocycles = params['rigid_macrocycles']
 	keep_chorded_rings = params['keep_chorded_rings']
 	keep_equivalent_rings = params['keep_equivalent_rings']
@@ -265,11 +279,14 @@ def prepare_meeko_ligand(ligand_file, ligand_pdbqt, params):
 			break
 
 	#add hydrogens and 3D coords
-	if add_h_3d:
-		mol = Chem.AddHs(mol)
-		etkdgv3 = rdDistGeom.ETKDGv3()
-		rdDistGeom.EmbedMolecule(mol, etkdgv3)
-		rdForceFieldHelpers.UFFOptimizeMolecule(mol)
+	#if add_h_3d:
+	#	mol = Chem.AddHs(mol)
+	#	etkdgv3 = rdDistGeom.ETKDGv3()
+	#	rdDistGeom.EmbedMolecule(mol, etkdgv3)
+	#	rdForceFieldHelpers.UFFOptimizeMolecule(mol)
+	mol = Chem.AddHs(mol)
+	AllChem.EmbedMolecule(mol, AllChem.ETKDGv3())
+	AllChem.UFFOptimizeMolecule(mol)
 
 	preparator = MoleculePreparation(
 		keep_nonpolar_hydrogens = keep_nonpolar_hydrogens,
@@ -294,6 +311,7 @@ def prepare_ligand(ligand_file, ligand_pdbqt, params):
 
 	if tool == 'prepare_ligand4':
 		prepare_autodock_ligand(ligand_file, ligand_pdbqt, params)
+
 	elif tool == 'meeko':
 		prepare_meeko_ligand(ligand_file, ligand_pdbqt, params)
 

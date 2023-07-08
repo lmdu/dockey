@@ -574,8 +574,16 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 			triggered = self.open_settings_dialog
 		)
 
-		self.prepare_act = QAction("Molecular Preparation Settings", self,
-			triggered = self.open_prepare_dialog
+		self.repprep_act = QAction("Receptor Preprocessing Settings", self,
+			triggered = self.open_receptor_preprocess_dialog
+		)
+
+		self.recprep_act = QAction("Receptor Preparation Settings", self,
+			triggered = self.open_receptor_prepare_dialog
+		)
+
+		self.ligprep_act = QAction("Ligand Preparation Settings", self,
+			triggered = self.open_ligand_prepare_dialog
 		)
 
 		#view actions
@@ -721,7 +729,9 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		#self.edit_menu.addAction(self.dock_tool_act)
 		#self.edit_menu.addAction(self.job_num_act)
 		self.edit_menu.addAction(self.setting_act)
-		self.edit_menu.addAction(self.prepare_act)
+		self.edit_menu.addAction(self.repprep_act)
+		self.edit_menu.addAction(self.recprep_act)
+		self.edit_menu.addAction(self.ligprep_act)
 
 		self.view_menu = self.menuBar().addMenu("&View")
 		#self.view_menu.addAction(self.open_project_dir_act)
@@ -860,9 +870,15 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 				num = settings.value('Job/concurrent', 1, int)
 				self.job_worker.signals.threads.emit(num)
 
-	def open_prepare_dialog(self):
+	def open_receptor_prepare_dialog(self):
 		dlg = MolecularPrepareDialog(self)
 		dlg.exec()
+
+	def open_receptor_preprocess_dialog(self):
+		pass
+
+	def open_ligand_prepare_dialog(self):
+		pass
 
 	def new_project(self):
 		if DB.active():

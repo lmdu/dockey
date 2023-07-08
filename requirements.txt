@@ -1,7 +1,8 @@
-apsw==3.39.2.0
+apsw==3.42.0.0
 numpy==1.21.4
-psutil==5.9.1
-meeko==0.3.3
-rdkit==2022.3.5
-PySide6==6.2.4
-pyinstaller==5.7.0
+psutil==5.9.5
+meeko==0.4.0
+rdkit==2023.3.2
+pdb2pqr==3.6.1
+PySide6-Essentials==6.5.1.1
+pyinstaller==5.13.0

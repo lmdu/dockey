@@ -3,17 +3,20 @@ import apsw
 import numpy
 import rdkit
 import pymol
-#import meeko
+import meeko
+import openmm
 import psutil
+import pdb2pqr
+import pdbfixer
 import openbabel
 from PySide6.QtCore import __version__ as pyside_version
 from plip.basic.config import __version__ as plip_version
 
 __all__ = ['DOCKEY_VERSION', 'DOCKEY_BUILD', 'DOCKEY_ABOUT']
 
-DOCKEY_VERSION = "0.8.2"
+DOCKEY_VERSION = "0.9.0"
 
-DOCKEY_BUILD = "230305"
+DOCKEY_BUILD = "230730"
 
 DOCKEY_ABOUT = """
 <p>Dockey - Molecular Docking and Virtual Screening</p>
@@ -112,6 +115,33 @@ DOCKEY_ABOUT = """
 		</td>
 	</tr>
 	<tr>
+		<td>OpenMM</td>
+		<td>v{openmm}</td>
+		<td>
+			<a href="https://openmm.org/">
+				https://openmm.org
+			</a>
+		</td>
+	</tr>
+	<tr>
+		<td>PDBFixer</td>
+		<td>v{pdbfixer}</td>
+		<td>
+			<a href="https://github.com/openmm/pdbfixer">
+				https://github.com/openmm/pdbfixer
+			</a>
+		</td>
+	</tr>
+	<tr>
+		<td>PDB2PQR</td>
+		<td>v{pdb2pqr}</td>
+		<td>
+			<a href="https://www.poissonboltzmann.org/">
+				https://www.poissonboltzmann.org
+			</a>
+		</td>
+	</tr>
+	<tr>
 		<td>Icons</td>
 		<td>v{icon}</td>
 		<td>
@@ -160,10 +190,12 @@ DOCKEY_ABOUT = """
 	pymol = pymol.cmd.get_version()[0],
 	babel = openbabel.__version__,
 	rdkit = rdkit.__version__,
-	#meeko = meeko.__version__,
-	meeko = '0.3.3',
+	meeko = meeko.__version__,
 	plip = plip_version,
 	psutil = psutil.__version__,
+	openmm = openmm.__version__,
+	pdbfixer = pdbfixer.pdbfixer.__version__,
+	pdb2pqr = pdb2pqr.__version__,
 	numpy = numpy.__version__,
 	icon = '1.7.0'
 )
