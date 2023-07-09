@@ -142,8 +142,6 @@ jobs:
         with:
           name: Dockey-ubuntu22.04
           path: |
-          #  dist/*.deb
-          #  dist/*.tar.gz
             dist/*.AppImage
 
       - uses: softprops/action-gh-release@v1
