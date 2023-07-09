@@ -492,6 +492,7 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 
 		self.exit_act = QAction("&Exit", self)
 		self.exit_act.setShortcut(QKeySequence.StandardKey.Quit)
+		self.exit_act.triggered.connect(self.close)
 		#triggered = lambda : print(GridBoxSettingPanel.params.spacing),
 
 		#edit actions
