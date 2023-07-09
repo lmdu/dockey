@@ -17,14 +17,14 @@ jobs:
 
       - name: Install requirements
         run: |
+          pip install -r requirements.txt
+          python package\slim_meeko.py
+          pip install plip==2.2.2 --no-deps
+          pip install git+https://github.com/lmdu/AutoDockTools_py3
           pip install https://github.com/lmdu/pymol-wheel/releases/download/2.6.0.post4/pymol-2.6.0a0-cp310-cp310-win_amd64.whl
           pip install https://github.com/lmdu/openbabel-wheel/releases/download/3.1.1.post8/openbabel-3.1.1-cp310-cp310-win_amd64.whl
           pip install https://github.com/lmdu/openmm-wheel/releases/download/8.0.0.post1/OpenMM-8.0.0-cp310-cp310-win_amd64.whl
           pip install https://github.com/openmm/pdbfixer/archive/refs/tags/1.9.tar.gz
-          pip install git+https://github.com/lmdu/AutoDockTools_py3
-          pip install -r requirements.txt
-          pip install plip==2.2.2 --no-deps
-          python package\slim_meeko.py
 
       - name: Build executable
         run: pyinstaller package/build.spec
@@ -59,14 +59,14 @@ jobs:
 
       - name: Install requirements
         run: |
+          pip3 install -r requirements.txt
+          pip3 install plip==2.2.2 --no-deps
+          python3 package/slim_meeko.py
+          pip3 install git+https://github.com/lmdu/AutoDockTools_py3
           pip3 install https://github.com/lmdu/pymol-wheel/releases/download/2.6.0.post4/pymol-2.6.0a0-cp310-cp310-manylinux_2_28_x86_64.whl
           pip3 install https://github.com/lmdu/openbabel-wheel/releases/download/3.1.1.post8/openbabel-3.1.1-cp310-cp310-manylinux_2_28_x86_64.whl
           pip3 install https://github.com/lmdu/openmm-wheel/releases/download/8.0.0.post1/OpenMM-8.0.0-cp310-cp310-manylinux_2_28_x86_64.whl
           pip3 install https://github.com/openmm/pdbfixer/archive/refs/tags/1.9.tar.gz
-          pip3 install git+https://github.com/lmdu/AutoDockTools_py3
-          pip3 install -r requirements.txt
-          pip3 install plip==2.2.2 --no-deps
-          python3 package/slim_meeko.py
 
       - name: Build executable
         run: pyinstaller package/build.spec
@@ -75,9 +75,8 @@ jobs:
         run: |
           version=`awk '/^DOCKEY_VERSION/{print $NF}' src/config.py | sed 's/\"//g'`
           cd dist
-          tar -czvf Dockey-v${version}-ubuntu20.04.tar.gz Dockey
           chmod a+x ../package/build_linux_desktop.sh
-          ../package/build_linux_desktop.sh $version deb
+          ../package/build_linux_desktop.sh $version
 
       - uses: actions/upload-artifact@v3
         with:
@@ -85,6 +84,7 @@ jobs:
           path: |
             dist/*.deb
             dist/*.tar.gz
+            dist/*.AppImage
 
       - uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
@@ -92,6 +92,56 @@ jobs:
           files: |
             dist/*.deb
             dist/*.tar.gz
+            dist/*.AppImage
+
+  build_modern:
+    name: Build on Ubuntu22.04
+    runs-on: ubuntu-22.04
+
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Install Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10.x'
+
+      - name: Install requirements
+        run: |
+          pip3 install -r requirements.txt
+          pip3 install plip==2.2.2 --no-deps
+          python3 package/slim_meeko.py
+          pip3 install git+https://github.com/lmdu/AutoDockTools_py3
+          pip3 install https://github.com/lmdu/pymol-wheel/releases/download/2.6.0.post4/pymol-2.6.0a0-cp310-cp310-manylinux_2_28_x86_64.whl
+          pip3 install https://github.com/lmdu/openbabel-wheel/releases/download/3.1.1.post8/openbabel-3.1.1-cp310-cp310-manylinux_2_28_x86_64.whl
+          pip3 install https://github.com/lmdu/openmm-wheel/releases/download/8.0.0.post1/OpenMM-8.0.0-cp310-cp310-manylinux_2_28_x86_64.whl
+          pip3 install https://github.com/openmm/pdbfixer/archive/refs/tags/1.9.tar.gz
+
+      - name: Build executable
+        run: pyinstaller package/build.spec
+
+      - name: Package installer
+        run: |
+          version=`awk '/^DOCKEY_VERSION/{print $NF}' src/config.py | sed 's/\"//g'`
+          cd dist
+          chmod a+x ../package/build_linux_desktop.sh
+          ../package/build_linux_desktop.sh $version
+
+      - uses: actions/upload-artifact@v3
+        with:
+          name: Dockey-ubuntu20.04
+          path: |
+            dist/*.deb
+            dist/*.tar.gz
+            dist/*.AppImage
+
+      - uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/')
+        with:
+          files: |
+            dist/*.deb
+            dist/*.tar.gz
+            dist/*.AppImage
 
   build_mac:
     name: Build on Mac
@@ -107,14 +157,14 @@ jobs:
 
       - name: Install requirements
         run: |
+          pip3 install -r requirements.txt
+          pip3 install plip==2.2.2 --no-deps
+          python3 package/slim_meeko.py
+          pip3 install git+https://github.com/lmdu/AutoDockTools_py3
           pip3 install https://github.com/lmdu/pymol-wheel/releases/download/2.6.0.post4/pymol-2.6.0a0-cp310-cp310-macosx_10_9_x86_64.whl
           pip3 install https://github.com/lmdu/openbabel-wheel/releases/download/3.1.1.post8/openbabel-3.1.1-cp310-cp310-macosx_11_0_x86_64.whl
           pip3 install https://github.com/lmdu/openmm-wheel/releases/download/8.0.0.post1/OpenMM-8.0.0-cp310-cp310-macosx_10_9_x86_64.whl
           pip3 install https://github.com/openmm/pdbfixer/archive/refs/tags/1.9.tar.gz
-          pip3 install git+https://github.com/lmdu/AutoDockTools_py3
-          pip3 install -r requirements.txt
-          pip3 install plip==2.2.2 --no-deps
-          python3 package/slim_meeko.py
 
       - name: Build executable
         run: pyinstaller package/build.spec

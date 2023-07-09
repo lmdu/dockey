@@ -1,5 +1,5 @@
 apsw==3.42.0.0
-numpy==1.21.4
+numpy==1.25.1
 psutil==5.9.5
 meeko==0.4.0
 rdkit==2023.3.2

@@ -14,7 +14,7 @@ Name=Dockey
 Comment=a modern tool for molecular docking
 GenericName=Molecular Docking
 Keywords=Molecular;Docking;Drug
-Exec=/usr/lib/Dockey/Dockey %f
+Exec=/usr/lib/Dockey/Dockey %F
 Icon=dockey.svg
 Terminal=false
 Type=Application
@@ -66,10 +66,42 @@ EOF
 cp ../src/icons/logo.svg ./logo.svg
 cp ../src/icons/dock.svg ./dock.svg
 
-uver=$(cat /etc/issue | cut -d " " -f2)
-uver=${uver:0:5}
+uver=$(cat /etc/issue | cut -d " " -f2 | cut -d "." -f1)
 
-./nfpm pkg -t Dockey-v${version}-ubuntu${uver}.deb
+if [ "$uver" = "20" ]
+then
+  linux="linux"
+else
+  linux="linux-modern"
+fi
+
+./nfpm pkg -t Dockey-v$version-$linux.deb
+tar -czvf Dockey-v$version-$linux.tar.gz Dockey
+
+#build appimage
+wget --no-check-certificate --quiet https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage -O appimagetool
+chmod +x appimagetool
+
+mkdir AppDir
+cp dockey.desktop AppDir
+cp logo.svg AppDir/dockey.svg
+
+mkdir -p AppDir/usr/lib
+mv Dockey AppDir/usr/lib
+
+mkdir -p AppDir/usr/share/icons/hicolor/scalable/apps
+cp logo.svg AppDir/usr/share/icons/hicolor/scalable/apps
+
+cat > AppRun <<EOF
+#!/bin/bash
+appdir=$(dirname $0)
+$appdir/usr/lib/Dockey/Dockey "$@"
+EOF
+
+chmod 755 AppRun
+
+appimagetool --appimage-extract-and-run AppDir Dockey-v$version-$linux.AppImage
+
 #./nfpm pkg -t Dockey-v${version}-amd64.rpm
 
 #if [ "$packager" = "deb" ]
