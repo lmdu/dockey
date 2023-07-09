@@ -129,7 +129,7 @@ jobs:
 
       - uses: actions/upload-artifact@v3
         with:
-          name: Dockey-ubuntu20.04
+          name: Dockey-ubuntu22.04
           path: |
             dist/*.deb
             dist/*.tar.gz
