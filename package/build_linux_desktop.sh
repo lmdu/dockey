@@ -79,8 +79,8 @@ fi
 tar -czvf Dockey-v$version-$linux.tar.gz Dockey
 
 #build appimage
-wget --no-check-certificate --quiet https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage -O appimagetool
-chmod +x appimagetool
+wget --no-check-certificate --quiet https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage
+chmod +x appimagetool-x86_64.AppImage
 
 mkdir AppDir
 cp dockey.desktop AppDir
@@ -100,7 +100,7 @@ EOF
 
 chmod 755 AppRun
 
-appimagetool --appimage-extract-and-run AppDir Dockey-v$version-$linux.AppImage
+./appimagetool-x86_64.AppImage --appimage-extract-and-run AppDir Dockey-v$version-$linux.AppImage
 
 #./nfpm pkg -t Dockey-v${version}-amd64.rpm
 
