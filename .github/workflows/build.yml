@@ -57,6 +57,11 @@ jobs:
         with:
           python-version: '3.10.x'
 
+      - name: Install gcc10
+        run: |
+          sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-10 10
+          sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-10 10
+
       - name: Install requirements
         run: |
           pip3 install -r requirements.txt
@@ -105,6 +110,12 @@ jobs:
         uses: actions/setup-python@v4
         with:
           python-version: '3.10.x'
+
+      - name: Install gcc12
+        run: |
+          sudo apt install g++-12 gcc-12 -y
+          sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-12 12
+          sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-12 12
 
       - name: Install requirements
         run: |

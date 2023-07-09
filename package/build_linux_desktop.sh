@@ -82,30 +82,28 @@ tar -czvf Dockey-v$version-$linux.tar.gz Dockey
 wget --no-check-certificate --quiet https://github.com/AppImage/AppImageKit/releases/download/continuous/appimagetool-x86_64.AppImage
 chmod +x appimagetool-x86_64.AppImage
 
-mkdir AppDir
-cp dockey.desktop AppDir
-cp logo.svg AppDir/dockey.svg
+cp dockey.desktop Dockey
+cp logo.svg Dockey/dockey.svg
 
-mkdir -p AppDir/usr/lib
-mv Dockey AppDir/usr/lib
+mkdir -p Dockey/usr/share/icons/hicolor/scalable/apps
+cp logo.svg Dockey/usr/share/icons/hicolor/scalable/apps
 
-mkdir -p AppDir/usr/share/icons/hicolor/scalable/apps
-cp logo.svg AppDir/usr/share/icons/hicolor/scalable/apps
-
-cat > AppRun <<EOF
+cat > Dockey/AppRun <<EOF
 #!/bin/bash
 appdir=$(dirname $0)
-$appdir/usr/lib/Dockey/Dockey "$@"
+
+exec "$appdir/Dockey" "$@"
+
 EOF
 chmod 755 AppRun
 
-cat > AppDir/dockey.desktop <<EOF
+cat > Dockey/dockey.desktop <<EOF
 [Desktop Entry]
 Name=Dockey
 Comment=a modern tool for molecular docking
 GenericName=Molecular Docking
 Keywords=Molecular;Docking;Drug
-Exec=usr/lib/Dockey/Dockey %F
+Exec=Dockey %F
 Icon=dockey
 Terminal=false
 Type=Application
@@ -114,7 +112,30 @@ MimeType=application/x-dock
 X-AppImage-Version=${version}
 EOF
 
-./appimagetool-x86_64.AppImage --appimage-extract-and-run AppDir Dockey-v$version-$linux.AppImage
+mkdir -p Dockey/usr/share/metainfo
+cat > Dockey/usr/share/metainfo/dockey.appdata.xml <<EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+<id>com.big.dockey</id>
+<metadata_license>CC0-1.0</metadata_license>
+<project_license>MIT</project_license>
+<name>Dockey</name>
+<summary>molecular docking tool</summary>
+<description>
+  <p>Dockey is an integrated tool for molecular docking and virtual screening</p>
+</description>
+<screenshots>
+  <screenshot type="default">
+    <caption>Dockey</caption>
+    <image>https://raw.githubusercontent.com/lmdu/dockey/main/src/icons/logo.svg</image>
+  </screenshot>
+</screenshots>
+<url type="homepage">https://github.com/lmdu/dockey</url>
+</component>
+EOF
+
+./appimagetool-x86_64.AppImage --appimage-extract-and-run Dockey Dockey-v$version-$linux.AppImage
+rm appimagetool-x86_64.AppImage
 
 #./nfpm pkg -t Dockey-v${version}-amd64.rpm
 
