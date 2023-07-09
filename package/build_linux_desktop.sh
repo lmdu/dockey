@@ -14,7 +14,7 @@ Name=Dockey
 Comment=a modern tool for molecular docking
 GenericName=Molecular Docking
 Keywords=Molecular;Docking;Drug
-Exec=/usr/lib/Dockey/Dockey %F
+Exec=/usr/lib/Dockey/Dockey %f
 Icon=dockey.svg
 Terminal=false
 Type=Application
@@ -97,8 +97,22 @@ cat > AppRun <<EOF
 appdir=$(dirname $0)
 $appdir/usr/lib/Dockey/Dockey "$@"
 EOF
-
 chmod 755 AppRun
+
+cat > AppDir/dockey.desktop <<EOF
+[Desktop Entry]
+Name=Dockey
+Comment=a modern tool for molecular docking
+GenericName=Molecular Docking
+Keywords=Molecular;Docking;Drug
+Exec=usr/lib/Dockey/Dockey %F
+Icon=dockey.svg
+Terminal=false
+Type=Application
+Categories=Education
+MimeType=application/x-dock
+X-AppImage-Version=${version}
+EOF
 
 ./appimagetool-x86_64.AppImage --appimage-extract-and-run AppDir Dockey-v$version-$linux.AppImage
 
