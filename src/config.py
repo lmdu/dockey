@@ -9,7 +9,7 @@ import psutil
 import pdb2pqr
 import pdbfixer
 import openbabel
-from PySide6.QtCore import __version__ as pyside_version
+from PyQt6.QtCore import PYQT_VERSION_STR as pyqt_version
 from plip.basic.config import __version__ as plip_version
 
 __all__ = ['DOCKEY_VERSION', 'DOCKEY_BUILD', 'DOCKEY_ABOUT']
@@ -43,8 +43,8 @@ DOCKEY_ABOUT = """
 		</td>
 	</tr>
 	<tr>
-		<td>PySide</td>
-		<td>v{pyside}</td>
+		<td>PyQt</td>
+		<td>v{pyqt}</td>
 		<td>
 			<a href="https://doc.qt.io/qtforpython/">
 				https://doc.qt.io/qtforpython
@@ -186,7 +186,7 @@ DOCKEY_ABOUT = """
 	build = DOCKEY_BUILD,
 	python = sys.version.split()[0],
 	apsw = apsw.apswversion(),
-	pyside = pyside_version,
+	pyqt = pyqt_version,
 	pymol = pymol.cmd.get_version()[0],
 	babel = openbabel.__version__,
 	rdkit = rdkit.__version__,

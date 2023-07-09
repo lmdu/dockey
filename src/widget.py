@@ -2,10 +2,10 @@ import os
 import json
 import psutil
 
-from PySide6.QtGui import *
-from PySide6.QtCore import *
-from PySide6.QtNetwork import *
-from PySide6.QtWidgets import *
+from PyQt6.QtGui import *
+from PyQt6.QtCore import *
+from PyQt6.QtNetwork import *
+from PyQt6.QtWidgets import *
 from plip.basic.remote import VisualizerData
 from plip.structure.preparation import PDBComplex
 
@@ -48,21 +48,21 @@ class BrowseInput(QWidget):
 
 		self.setLayout(layout)
 
-	@Slot()
+	@pyqtSlot()
 	def select_save(self):
 		exe, _ = QFileDialog.getSaveFileName(self, filter=self.filter)
 
 		if exe:
 			self.input.setText(exe)
 
-	@Slot()
+	@pyqtSlot()
 	def select_file(self):
 		exe, _ = QFileDialog.getOpenFileName(self, filter=self.filter)
 
 		if exe:
 			self.input.setText(exe)
 
-	@Slot()
+	@pyqtSlot()
 	def select_folder(self):
 		folder = QFileDialog.getExistingDirectory(self)
 
@@ -103,7 +103,7 @@ class CreateProjectDialog(QDialog):
 
 		self.setLayout(layout)
 
-	@Slot()
+	@pyqtSlot()
 	def check_input_name(self):
 		name = self.name_input.text()
 		folder = self.location_input.get_text()
@@ -178,7 +178,7 @@ class DockingToolSettingDialog(QDialog):
 		self.layout.addWidget(btn_box)
 		self.setLayout(self.layout)
 
-	@Slot()
+	@pyqtSlot()
 	def save_settings(self):
 		self.settings = QSettings()
 		ad4 = self.autodock_input.get_text()
@@ -232,7 +232,7 @@ class ProgramConfigDialog(QDialog):
 
 		layout.addWidget(action_box)
 
-	@Slot()
+	@pyqtSlot()
 	def save_config(self):
 		for put in self.inputs:
 			if put is None:
@@ -328,7 +328,7 @@ class ExportImageDialog(QDialog):
 
 		layout.addRow(action_box)
 
-	@Slot()
+	@pyqtSlot()
 	def save_image(self):
 		image = self.file_input.get_text()
 
@@ -370,8 +370,8 @@ class GradientColorBar(QWidget):
 	def paintEvent(self, event):
 		painter = QPainter(self)
 		gradient = QLinearGradient(event.rect().topLeft(), event.rect().topRight())
-		gradient.setColorAt(0, Qt.white)
-		gradient.setColorAt(1, Qt.black)
+		gradient.setColorAt(0, Qt.GlobalColor.white)
+		gradient.setColorAt(1, Qt.GlobalColor.black)
 		painter.fillRect(event.rect(), gradient)
 
 class PymolSettingDialog(QDialog):
@@ -382,7 +382,7 @@ class PymolSettingDialog(QDialog):
 		self.setWindowTitle("Pymol Settings")
 		self.resize(QSize(400, 100))
 		self.bar = GradientColorBar(self)
-		self.slider = QSlider(Qt.Horizontal, self)
+		self.slider = QSlider(Qt.Orientation.Horizontal, self)
 		self.slider.setRange(0, 100)
 		self.slider.valueChanged.connect(self.on_color_changed)
 		self.layout = QVBoxLayout()
@@ -393,7 +393,7 @@ class PymolSettingDialog(QDialog):
 		val = self.settings.value('Pymol/background', 100, int)
 		self.slider.setValue(val)
 
-	@Slot()
+	@pyqtSlot()
 	def on_color_changed(self):
 		val = self.slider.value()
 
@@ -424,7 +424,7 @@ class JobConcurrentSettingDialog(QDialog):
 		self.layout.addWidget(self.number)
 		self.setLayout(self.layout)
 
-	@Slot()
+	@pyqtSlot()
 	def on_job_number_changed(self, num):
 		self.settings.setValue('Job/concurrent', num)
 
@@ -447,9 +447,9 @@ class PoseTabWidget(QTabWidget):
 		self.best_table.hideColumn(1)
 		self.best_table.hideColumn(2)
 		self.best_table.verticalHeader().hide()
-		self.best_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-		self.best_table.setSelectionBehavior(QAbstractItemView.SelectRows)
-		self.best_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
+		self.best_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+		self.best_table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+		self.best_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
 		self.addTab(self.best_table, "Best poses")
 
 	def create_pose_table(self):
@@ -459,9 +459,9 @@ class PoseTabWidget(QTabWidget):
 		self.pose_table.hideColumn(0)
 		self.pose_table.hideColumn(1)
 		self.pose_table.verticalHeader().hide()
-		self.pose_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-		self.pose_table.setSelectionBehavior(QAbstractItemView.SelectRows)
-		self.pose_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
+		self.pose_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+		self.pose_table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+		self.pose_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
 		self.addTab(self.pose_table, "Task poses")
 		self.setTabVisible(1, False)
 
@@ -554,7 +554,7 @@ class InteractionTabWidget(QTabWidget):
 		self.salt_table.setModel(self.salt_model)
 		self.addTab(self.salt_table, "Salt bridges")
 		self.salt_model.row_count.connect(lambda x: self.setTabVisible(3, x))
-		self.salt_table.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
+		self.salt_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
 		self.salt_table.horizontalHeader().setStretchLastSection(True)
 
 	def create_water_table(self):
@@ -570,7 +570,7 @@ class InteractionTabWidget(QTabWidget):
 		self.stacking_table.setModel(self.stacking_model)
 		self.addTab(self.stacking_table, "π-stacking")
 		self.stacking_model.row_count.connect(lambda x: self.setTabVisible(5, x))
-		self.stacking_table.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
+		self.stacking_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
 		self.stacking_table.horizontalHeader().setStretchLastSection(True)
 
 	def create_cation_table(self):
@@ -579,7 +579,7 @@ class InteractionTabWidget(QTabWidget):
 		self.cation_table.setModel(self.cation_model)
 		self.addTab(self.cation_table, "π-cation")
 		self.cation_model.row_count.connect(lambda x: self.setTabVisible(6, x))
-		self.cation_table.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
+		self.cation_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
 		self.cation_table.horizontalHeader().setStretchLastSection(True)
 
 	def create_metal_table(self):
@@ -591,9 +591,9 @@ class InteractionTabWidget(QTabWidget):
 
 	def create_site_select(self):
 		layout = QHBoxLayout()
-		layout.setAlignment(Qt.AlignTop)
+		layout.setAlignment(Qt.AlignmentFlag.AlignTop)
 		layout.setContentsMargins(0,0,0,0)
-		spacer = QSpacerItem(10, 1, QSizePolicy.Expanding, QSizePolicy.Minimum)
+		spacer = QSpacerItem(10, 1, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
 		layout.addItem(spacer)
 		self.site_select = QComboBox(self)
 		self.site_model = BindingSiteModel()
@@ -622,7 +622,7 @@ class InteractionTabWidget(QTabWidget):
 			self.parent.cmd.color('blue', 'elem N and organic')
 			self.parent.cmd.color('yellow', 'elem S and organic')
 
-	@Slot()
+	@pyqtSlot(str)
 	def on_binding_site_changed(self, site):
 		sql = "SELECT id FROM binding_site WHERE pid=? AND site=? LIMIT 1"
 		site_id = DB.get_one(sql, (self.pose_id, site))
@@ -654,7 +654,7 @@ class InteractionTabWidget(QTabWidget):
 			finally:
 				temp_dir.remove()
 
-	@Slot()
+	@pyqtSlot()
 	def on_interaction_changed(self):
 		if self.complex_vis:
 			interaction_visualize(self.complex_vis)
@@ -1134,10 +1134,10 @@ class MolecularPrepareDialog(QDialog):
 					val = self.settings.value(i.option, i.default, i.convert)
 
 				if val:
-					i.widget.setCheckState(Qt.Checked)
+					i.widget.setCheckState(Qt.CheckState.Checked)
 
 				else:
-					i.widget.setCheckState(Qt.Unchecked)
+					i.widget.setCheckState(Qt.CheckState.Unchecked)
 
 			elif i.wgtype == 'edit':
 				val = self.settings.value(i.option, i.default)
@@ -1221,7 +1221,7 @@ class DownloaderDialog(QDialog):
 		self.create_widgets()
 
 		self.progress_bar = QProgressBar(self)
-		self.progress_bar.setAlignment(Qt.AlignCenter)
+		self.progress_bar.setAlignment(Qt.AlignmentFlag.AlignCenter)
 		self.layout.addRow("Progress", self.progress_bar)
 
 		btn_box = QDialogButtonBox()
@@ -1250,7 +1250,7 @@ class DownloaderDialog(QDialog):
 		logo_label.setPixmap(logo_image)
 		self.layout.addRow(logo_label)
 
-	@Slot()
+	@pyqtSlot()
 	def on_start(self):
 		url = self.get_url()
 
@@ -1261,7 +1261,7 @@ class DownloaderDialog(QDialog):
 			self.reply.finished.connect(self.on_finished)
 			self.reply.errorOccurred.connect(self.on_error)
 
-	@Slot()
+	@pyqtSlot()
 	def on_abort(self):
 		if self.reply:
 			self.reply.abort()
@@ -1271,7 +1271,7 @@ class DownloaderDialog(QDialog):
 
 		self.start_btn.setDisabled(False)
 
-	@Slot()
+	@pyqtSlot()
 	def on_finished(self):
 		if self.reply:
 			if self.reply.error() == QNetworkReply.NoError:
@@ -1284,12 +1284,12 @@ class DownloaderDialog(QDialog):
 		self.start_btn.setDisabled(False)
 		self.accept()
 
-	@Slot(int, int)
+	@pyqtSlot(int, int)
 	def on_progress(self, received_bytes, total_bytes):
 		self.progress_bar.setRange(0, total_bytes)
 		self.progress_bar.setValue(received_bytes)
 
-	@Slot(QNetworkReply.NetworkError)
+	@pyqtSlot(QNetworkReply.NetworkError)
 	def on_error(self, code):
 		self.reject()
 
@@ -1450,19 +1450,19 @@ class FlexResiduesDialog(QDialog):
 		self.residue_checked = False
 		for res in get_molecule_residues(self.mol.content, self.mol.format):
 			item = QTreeWidgetItem(self.residue_tree, res)
-			item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
+			item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
 
 			idx = int(res[0])
 			
 			if idx in self.flex_residues:
-				item.setCheckState(0, Qt.Checked)
+				item.setCheckState(0, Qt.CheckState.Checked)
 			else:
-				item.setCheckState(0, Qt.Unchecked)
+				item.setCheckState(0, Qt.CheckState.Unchecked)
 
 			self.residue_tree.addTopLevelItem(item)
 		self.residue_checked = True
 
-	@Slot()
+	@pyqtSlot(QTreeWidgetItem, int)
 	def on_residue_checked(self, item, column):
 		if not self.residue_checked:
 			return
@@ -1471,7 +1471,7 @@ class FlexResiduesDialog(QDialog):
 		chain = item.text(1)
 		aa = item.text(2)
 		res = item.text(3)
-		if item.checkState(0) == Qt.Checked:
+		if item.checkState(0) == Qt.CheckState.Checked:
 			if idx in self.flex_residues:
 				self.flex_residues[idx].checked = True
 				self.flex_residues[idx].bonds = set()
@@ -1485,19 +1485,19 @@ class FlexResiduesDialog(QDialog):
 			if idx in self.flex_residues:
 				self.flex_residues[idx].checked = False
 
-	@Slot()
+	@pyqtSlot(QTreeWidgetItem, int)
 	def on_residue_clicked(self, item, column):
 		self.bond_checked = False
 		self.bond_tree.clear()
 		idx = int(item.text(0))
 		for bond in get_residue_bonds(self.mol.content, self.mol.format, idx):
 			item = QTreeWidgetItem(self.bond_tree, bond)
-			item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
+			item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
 
 			if idx in self.flex_residues and bond[0] in self.flex_residues[idx].bonds:
-				item.setCheckState(0, Qt.Checked)
+				item.setCheckState(0, Qt.CheckState.Checked)
 			else:
-				item.setCheckState(0, Qt.Unchecked)
+				item.setCheckState(0, Qt.CheckState.Unchecked)
 
 			for i in range(2, 5):
 				if bond[i]:
@@ -1508,7 +1508,7 @@ class FlexResiduesDialog(QDialog):
 			self.bond_tree.addTopLevelItem(item)
 		self.bond_checked = True
 
-	@Slot()
+	@pyqtSlot(QTreeWidgetItem, int)
 	def on_bond_checked(self, item, column):
 		if not self.bond_checked:
 			return
@@ -1521,13 +1521,13 @@ class FlexResiduesDialog(QDialog):
 		if not self.flex_residues[res_idx].checked:
 			return
 
-		if item.checkState(0) == Qt.Checked:
+		if item.checkState(0) == Qt.CheckState.Checked:
 			self.flex_residues[res_idx].bonds.add(item.text(0))
 		else:
 			if item.text(0) in self.flex_residues[res_idx].bonds:
 				self.flex_residues[res_idx].bonds.remove(item.text(0))
 
-	@Slot()
+	@pyqtSlot()
 	def on_accept_clicked(self):
 		for idx, flexres in self.flex_residues.items():
 

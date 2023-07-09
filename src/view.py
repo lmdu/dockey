@@ -1,11 +1,10 @@
-import sys
-
+#import sys
 import pymol
 from pymol2 import SingletonPyMOL as PyMOL
 
-from PySide6.QtGui import *
-from PySide6.QtCore import *
-from PySide6.QtOpenGLWidgets import *
+from PyQt6.QtGui import *
+from PyQt6.QtCore import *
+from PyQt6.QtOpenGLWidgets import *
 
 #install plugins
 import plugins
@@ -20,38 +19,37 @@ __all__ = ['PymolGLWidget']
 
 #Module for translating Qt key codes to PyMOL key and "special" codes
 keyMap = {
-	Qt.Key_Escape: 27,
-	Qt.Key_Tab: 9,
-	Qt.Key_Backspace: 8,
-	Qt.Key_Return: 13,
-	Qt.Key_Enter: 13,
-	Qt.Key_Delete: 127,
+	Qt.Key.Key_Escape: 27,
+	Qt.Key.Key_Tab: 9,
+	Qt.Key.Key_Backspace: 8,
+	Qt.Key.Key_Return: 13,
+	Qt.Key.Key_Enter: 13,
+	Qt.Key.Key_Delete: 127,
 }
 
 specialMap = {
-	Qt.Key_Left: 100,
-	Qt.Key_Up: 101,
-	Qt.Key_Right: 102,
-	Qt.Key_Down: 103,
-	Qt.Key_PageUp: 104,
-	Qt.Key_PageDown: 105,
-	Qt.Key_Home: 106,
-	Qt.Key_End: 107,
-	Qt.Key_Insert: 108,
-	Qt.Key_F1: 1,
-	Qt.Key_F2: 2,
-	Qt.Key_F3: 3,
-	Qt.Key_F4: 4,
-	Qt.Key_F5: 5,
-	Qt.Key_F6: 6,
-	Qt.Key_F7: 7,
-	Qt.Key_F8: 8,
-	Qt.Key_F9: 9,
-	Qt.Key_F10: 10,
-	Qt.Key_F11: 11,
-	Qt.Key_F12: 12,
+	Qt.Key.Key_Left: 100,
+	Qt.Key.Key_Up: 101,
+	Qt.Key.Key_Right: 102,
+	Qt.Key.Key_Down: 103,
+	Qt.Key.Key_PageUp: 104,
+	Qt.Key.Key_PageDown: 105,
+	Qt.Key.Key_Home: 106,
+	Qt.Key.Key_End: 107,
+	Qt.Key.Key_Insert: 108,
+	Qt.Key.Key_F1: 1,
+	Qt.Key.Key_F2: 2,
+	Qt.Key.Key_F3: 3,
+	Qt.Key.Key_F4: 4,
+	Qt.Key.Key_F5: 5,
+	Qt.Key.Key_F6: 6,
+	Qt.Key.Key_F7: 7,
+	Qt.Key.Key_F8: 8,
+	Qt.Key.Key_F9: 9,
+	Qt.Key.Key_F10: 10,
+	Qt.Key.Key_F11: 11,
+	Qt.Key.Key_F12: 12,
 }
-
 
 def get_modifiers(ev):
 	'''Get modifers from event and translate into PyMOL modifier mask'''
@@ -59,10 +57,10 @@ def get_modifiers(ev):
 	qtmodifiers = ev.modifiers()
 
 	for mask, qtm in [
-		(0x1, Qt.ShiftModifier),
-		(0x2, Qt.MetaModifier),  # CTRL on Mac
-		(0x2, Qt.ControlModifier),
-		(0x4, Qt.AltModifier)
+		(0x1, Qt.KeyboardModifier.ShiftModifier),
+		(0x2, Qt.KeyboardModifier.MetaModifier),  # CTRL on Mac
+		(0x2, Qt.KeyboardModifier.ControlModifier),
+		(0x4, Qt.KeyboardModifier.AltModifier)
 	]:
 		if qtmodifiers & qtm:
 			pymolmod |= mask
@@ -126,7 +124,7 @@ def get_wheel_delta(ev):
 
 	if abs(delta_y) < abs(delta_x):
 		# Shift+Wheel emulates horizontal scrolling
-		if not (ev.modifiers() & Qt.ShiftModifier):
+		if not (ev.modifiers() & Qt.KeyboardModifier.ShiftModifier):
 			return 0
 		return delta_x
 
@@ -172,9 +170,9 @@ class PymolGLWidget(QOpenGLWidget):
 
 	# mouse button map
 	_buttonMap = {
-		Qt.LeftButton: 0,
-		Qt.MiddleButton: 1,
-		Qt.RightButton: 2,
+		Qt.MouseButton.LeftButton: 0,
+		Qt.MouseButton.MiddleButton: 1,
+		Qt.MouseButton.RightButton: 2,
 	}
 
 	def __enter__(self):
@@ -183,14 +181,14 @@ class PymolGLWidget(QOpenGLWidget):
 		Fixes depth-buffer issue with QOpenGLWidget
 		https://github.com/schrodinger/pymol-open-source/issues/25
 		'''
-		self.makeCurrent()
 		pymol._cmd._pushValidContext(self.cmd._COb)
 
 	def __exit__(self, exc_type, exc_value, traceback):
 		pymol._cmd._popValidContext(self.cmd._COb)
 
 	def __init__(self, parent):
-		self.gui = parent
+		super().__init__(parent=parent)
+		#self.gui = parent
 		self.fb_scale = 1.0
 
 		# OpenGL context setup
@@ -208,11 +206,10 @@ class PymolGLWidget(QOpenGLWidget):
 		options.external_gui = 0
 		options.internal_gui = 0
 		options.internal_feedback = 0
-		options.no_quit = 1	
+		options.no_quit = 1
 		
-		super(PymolGLWidget, self).__init__(parent=parent)
 		self.setFormat(f)
-		self.setUpdateBehavior(QOpenGLWidget.PartialUpdate)
+		self.setUpdateBehavior(QOpenGLWidget.UpdateBehavior.PartialUpdate)
 
 		# pymol instance
 		self.pymol = PyMOL()
@@ -229,7 +226,7 @@ class PymolGLWidget(QOpenGLWidget):
 		self.setMouseTracking(True)
 
 		# for accepting keyboard input (command line, shortcuts)
-		self.setFocusPolicy(Qt.ClickFocus)
+		self.setFocusPolicy(Qt.FocusPolicy.ClickFocus)
 
 		# for idle rendering
 		self._timer = QTimer(self)
@@ -240,7 +237,7 @@ class PymolGLWidget(QOpenGLWidget):
 		self.setAcceptDrops(True)
 
 		# pinch-zoom
-		self.grabGesture(Qt.PinchGesture)
+		self.grabGesture(Qt.GestureType.PinchGesture)
 
 		self.receptor = None
 
@@ -253,7 +250,7 @@ class PymolGLWidget(QOpenGLWidget):
 	##########################
 
 	def event(self, ev):
-		if ev.type() == QEvent.Gesture:
+		if ev.type() == QEvent.Type.Gesture:
 			return self.gestureEvent(ev)
 
 		return super(PymolGLWidget, self).event(ev)

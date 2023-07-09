@@ -3,9 +3,9 @@ import sys
 import csv
 import psutil
 
-from PySide6.QtGui import *
-from PySide6.QtCore import *
-from PySide6.QtWidgets import *
+from PyQt6.QtGui import *
+from PyQt6.QtCore import *
+from PyQt6.QtWidgets import *
 
 from utils import *
 from worker import *
@@ -69,7 +69,7 @@ class JobDetailDialog(QDialog):
 		layout.addWidget(info_label)
 
 		self.usage_label = QLabel("<table cellspacing='10'><tr><td>CPU: 0 | Memory: 0</td></tr></table>", self)
-		self.usage_label.setAlignment(Qt.AlignCenter)
+		self.usage_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
 		layout.addWidget(self.usage_label)
 
 		btn_box = QDialogButtonBox(QDialogButtonBox.Ok)
@@ -93,7 +93,7 @@ class JobDetailDialog(QDialog):
 		self.timer.start(1000)
 		self.accepted.connect(self.timer.stop)
 
-	@Slot()
+	@pyqtSlot()
 	def update_usage(self):
 		if self.procs is None:
 			self.usage_label.setText("<table cellspacing='10'><tr><td>CPU: 0 | Memory: 0</td></tr></table>")
@@ -151,7 +151,7 @@ class JobLogDialog(QDialog):
 		sql = "SELECT name FROM logs WHERE jid=?"
 		return DB.get_column(sql, (self.job,))
 
-	@Slot()
+	@pyqtSlot(int)
 	def on_tab_changed(self, index):
 		name = self.log_names[index]
 		sql = "SELECT content FROM logs WHERE jid=? AND name=? LIMIT 1"
@@ -169,13 +169,13 @@ class DockeyListView(QListView):
 	def __init__(self, parent=None):
 		super(DockeyListView, self).__init__(parent)
 		self.parent = parent
-		self.setContextMenuPolicy(Qt.CustomContextMenu)
+		self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
 		self.customContextMenuRequested.connect(self.on_custom_menu)
 
 	def sizeHint(self):
 		return QSize(180, 100)
 
-	@Slot()
+	@pyqtSlot(QPoint)
 	def on_custom_menu(self, pos):
 		self.current_index = self.indexAt(pos)
 
@@ -244,24 +244,24 @@ class DockeyListView(QListView):
 		menu.addAction(stat_act)
 		menu.popup(self.mapToGlobal(pos))
 
-	@Slot()
+	@pyqtSlot()
 	def add_receptors(self):
 		self.parent.import_receptors()
 
-	@Slot()
+	@pyqtSlot()
 	def add_ligands(self):
 		self.parent.import_ligands()
 
-	@Slot()
+	@pyqtSlot()
 	def set_flex_residules(self):
 		mol_id = self.current_index.siblingAtColumn(0).data()
 		self.parent.set_receptor_flexres(mol_id)
 
-	@Slot()
+	@pyqtSlot()
 	def ligand_filter(self):
 		self.parent.filter_ligands()
 
-	@Slot()
+	@pyqtSlot()
 	def delete_molecular(self):
 		ret = QMessageBox.question(self.parent, "Comfirmation",
 			"Are you sure you want to delete select moleculue?")
@@ -292,7 +292,7 @@ class DockeyListView(QListView):
 
 		self.parent.mol_model.remove(self.current_index.row())
 
-	@Slot()
+	@pyqtSlot()
 	def delete_ligands(self):
 		ret = QMessageBox.question(self.parent, "Comfirmation",
 			"Are you sure you want to delete all ligands?")
@@ -312,7 +312,7 @@ class DockeyListView(QListView):
 			DB.set_option('molecule_count', total)
 			self.parent.mol_model.select()
 
-	@Slot()
+	@pyqtSlot()
 	def delete_receptors(self):
 		ret = QMessageBox.question(self.parent, "Comfirmation",
 			"Are you sure you want to delete all receptors?")
@@ -331,7 +331,7 @@ class DockeyListView(QListView):
 			DB.set_option('molecule_count', total)
 			self.parent.mol_model.select()
 
-	@Slot()
+	@pyqtSlot()
 	def delete_all(self):
 		ret = QMessageBox.question(self.parent, "Comfirmation",
 			"Are you sure you want to delete all moleculues?")
@@ -346,7 +346,7 @@ class DockeyListView(QListView):
 
 		self.parent.mol_model.select()
 
-	@Slot()
+	@pyqtSlot()
 	def view_stats(self):
 		rep_count = DB.get_option('receptor_count') or 0
 		lig_count = DB.get_option('ligand_count') or 0
@@ -364,7 +364,7 @@ class DockeyListView(QListView):
 			rep_count, lig_count, total_count))
 		dlg.exec()
 
-	@Slot()
+	@pyqtSlot()
 	def view_details(self):
 		if not self.current_index.isValid():
 			return
@@ -438,7 +438,7 @@ class DockeyListView(QListView):
 class DockeyTableModel(QAbstractTableModel):
 	table = None
 	custom_headers = []
-	row_count = Signal(int)
+	row_count = pyqtSignal(int)
 
 	def __init__(self, parent=None):
 		super(DockeyTableModel, self).__init__(parent)
@@ -471,24 +471,24 @@ class DockeyTableModel(QAbstractTableModel):
 
 		return len(self.custom_headers)
 
-	def data(self, index, role=Qt.DisplayRole):
+	def data(self, index, role=Qt.ItemDataRole.DisplayRole):
 		if not index.isValid():
 			return None
 
 		row = index.row()
 		col = index.column()
 
-		if role == Qt.DisplayRole:
+		if role == Qt.ItemDataRole.DisplayRole:
 			return self.get_value(row, col)
 
-		elif role == Qt.BackgroundRole:
+		elif role == Qt.ItemDataRole.BackgroundRole:
 			pass
 
-	def headerData(self, section, orientation, role=Qt.DisplayRole):
-		if orientation == Qt.Horizontal and role == Qt.DisplayRole:
+	def headerData(self, section, orientation, role=Qt.ItemDataRole.DisplayRole):
+		if orientation == Qt.Orientation.Horizontal and role == Qt.ItemDataRole.DisplayRole:
 			return self.custom_headers[section]
 
-		elif orientation == Qt.Vertical and role == Qt.DisplayRole:
+		elif orientation == Qt.Orientation.Vertical and role == Qt.ItemDataRole.DisplayRole:
 			return section+1
 
 	def canFetchMore(self, parent):
@@ -601,7 +601,7 @@ class MolecularTableModel(DockeyTableModel):
 		)
 
 	def data(self, index, role):
-		if role == Qt.DecorationRole:
+		if role == Qt.ItemDataRole.DecorationRole:
 			row = index.row()
 			v = self.get_value(row, 2)
 
@@ -657,15 +657,15 @@ class JobsTableModel(DockeyTableModel):
 			"WHERE j.id=? LIMIT 1"
 		)
 
-	def headerData(self, section, orientation, role=Qt.DisplayRole):
-		if orientation == Qt.Horizontal and role == Qt.DisplayRole:
+	def headerData(self, section, orientation, role=Qt.ItemDataRole.DisplayRole):
+		if orientation == Qt.Orientation.Horizontal and role == Qt.ItemDataRole.DisplayRole:
 			return self.custom_headers[section]
 
-		elif orientation == Qt.Vertical and role == Qt.DecorationRole:
+		elif orientation == Qt.Orientation.Vertical and role == Qt.ItemDataRole.DecorationRole:
 			status = self.get_value(section, 3)
 			return self.status_icons[status]
 
-	def data(self, index, role=Qt.DisplayRole):
+	def data(self, index, role=Qt.ItemDataRole.DisplayRole):
 		if not index.isValid():
 			return None
 
@@ -673,7 +673,7 @@ class JobsTableModel(DockeyTableModel):
 		col = index.column()
 		val = self.get_value(row, col)
 
-		if role == Qt.DisplayRole:
+		if role == Qt.ItemDataRole.DisplayRole:
 			if col == 3:
 				return self.statuses[val]
 
@@ -682,7 +682,7 @@ class JobsTableModel(DockeyTableModel):
 
 			return val
 
-		elif role == Qt.ForegroundRole:
+		elif role == Qt.ItemDataRole.ForegroundRole:
 			if col == 3:
 				return self.status_colors[val]
 
@@ -694,7 +694,7 @@ class JobsTableModel(DockeyTableModel):
 		#	if col != 7:
 		#		return Qt.AlignCenter
 
-	@Slot()
+	@pyqtSlot(int)
 	def update_row(self, rowid):
 		if rowid not in self.displayed:
 			return
@@ -705,19 +705,20 @@ class JobsTableModel(DockeyTableModel):
 		index1 = self.index(rowid, 0)
 		index2 = self.index(rowid, colid)
 		self.dataChanged.emit(index1, index2)
-		self.headerDataChanged.emit(Qt.Vertical, rowid, rowid)
+		self.headerDataChanged.emit(Qt.Orientation.Vertical, rowid, rowid)
 
 class JobsTableDelegate(QStyledItemDelegate):
 	def paint(self, painter, option, index):
 		percent = index.data() or 0
-		bar = QStyleOptionProgressBar(2)
+		#bar = QStyleOptionProgressBar(2)
+		bar = QStyleOptionProgressBar()
 		bar.rect = option.rect.adjusted(0, 5, 0, -5)
 		bar.minimum = 0
 		bar.maximum = 100
-		bar.progress = percent
+		bar.progress = int(percent)
 		bar.text = "{}%".format(percent)
 		bar.textVisible = True
-		bar.textAlignment = Qt.AlignCenter
+		bar.textAlignment = Qt.AlignmentFlag.AlignCenter
 		bar.state |= QStyle.StateFlag.State_Horizontal
 		painter.save()
 
@@ -725,7 +726,7 @@ class JobsTableDelegate(QStyledItemDelegate):
 		if sys.platform == 'darwin':
 			painter.translate(bar.rect.x(), bar.rect.y())
 		
-		QApplication.style().drawControl(QStyle.CE_ProgressBar, bar, painter)
+		QApplication.style().drawControl(QStyle.ControlElement.CE_ProgressBar, bar, painter)
 		painter.restore()
 
 class PoseTableModel(DockeyTableModel):
@@ -866,10 +867,10 @@ class BestTableModel(PoseTableModel):
 		if column in [1, 2, 3, 4, 14]:
 			return
 
-		if order == Qt.DescendingOrder:
+		if order == Qt.SortOrder.DescendingOrder:
 			self.sorter = "{} DESC".format(fields[column])
 
-		elif order == Qt.AscendingOrder:
+		elif order == Qt.SortOrder.AscendingOrder:
 			self.sorter = fields[column]
 
 		else:
@@ -1001,7 +1002,7 @@ class JobTableView(QTableView):
 	def __init__(self, parent=None):
 		super(JobTableView, self).__init__(parent)
 		self.parent = parent
-		self.setContextMenuPolicy(Qt.CustomContextMenu)
+		self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
 		self.customContextMenuRequested.connect(self.on_custom_menu)
 
 	def sizeHint(self):
@@ -1011,7 +1012,7 @@ class JobTableView(QTableView):
 		if self.parent.job_worker:
 			return self.parent.job_worker.get_job_pid(job)
 
-	@Slot()
+	@pyqtSlot(QPoint)
 	def on_custom_menu(self, pos):
 		self.current_index = self.indexAt(pos)
 
@@ -1035,7 +1036,7 @@ class JobTableView(QTableView):
 		stop_job_act.setEnabled(False)
 
 		if self.current_index.isValid():
-			status = self.current_index.siblingAtColumn(3).data(Qt.DisplayRole)
+			status = self.current_index.siblingAtColumn(3).data(Qt.ItemDataRole.DisplayRole)
 
 			if status == 'Running':
 				stop_job_act.setEnabled(True)
@@ -1054,7 +1055,7 @@ class JobTableView(QTableView):
 		menu.addAction(export_act)
 		menu.popup(self.viewport().mapToGlobal(pos))
 
-	@Slot()
+	@pyqtSlot()
 	def view_job_details(self):
 		if not self.current_index.isValid():
 			return
@@ -1098,7 +1099,7 @@ class JobTableView(QTableView):
 		), pid)
 		dlg.exec()
 
-	@Slot()
+	@pyqtSlot()
 	def view_job_statuses(self):
 		statuses = ['Failure', 'Success', 'Running', 'Waiting', 'Stopped']
 		sql = "SELECT status, COUNT(1) from jobs group by status"
@@ -1116,7 +1117,7 @@ class JobTableView(QTableView):
 		dlg = JobStatusesDialog(self.parent, info)
 		dlg.exec()
 
-	@Slot()
+	@pyqtSlot()
 	def stop_select_job(self):
 		if not self.current_index.isValid():
 			return
@@ -1124,7 +1125,7 @@ class JobTableView(QTableView):
 		jid = self.current_index.row() + 1
 		self.parent.stop_job(jid)
 
-	@Slot()
+	@pyqtSlot()
 	def view_logs(self):
 		if not self.current_index.isValid():
 			return
@@ -1132,7 +1133,7 @@ class JobTableView(QTableView):
 		jid = self.current_index.row() + 1
 		JobLogDialog.view_log(self.parent, jid)
 
-	@Slot()
+	@pyqtSlot()
 	def export_table(self):
 		out, _ = QFileDialog.getSaveFileName(self.parent, filter="CSV file (*.csv)")
 
@@ -1161,13 +1162,13 @@ class PoseTableView(QTableView):
 	def __init__(self, parent=None):
 		super(PoseTableView, self).__init__(parent)
 		self.parent = parent
-		self.setContextMenuPolicy(Qt.CustomContextMenu)
+		self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
 		self.customContextMenuRequested.connect(self.on_custom_menu)
 
 	def sizeHint(self):
 		return QSize(300, 150)
 
-	@Slot()
+	@pyqtSlot(QPoint)
 	def on_custom_menu(self, pos):
 		self.current_index = self.indexAt(pos)
 		
@@ -1210,9 +1211,9 @@ class PoseTableView(QTableView):
 
 		row = self.current_index.row()
 		index = self.current_index.model().createIndex(row, 0)
-		pid = index.data(role=Qt.DisplayRole)
+		pid = index.data(role=Qt.ItemDataRole.DisplayRole)
 		index = self.current_index.model().createIndex(row, 1)
-		jid = index.data(role=Qt.DisplayRole)
+		jid = index.data(role=Qt.ItemDataRole.DisplayRole)
 		return pid, jid
 
 	def export_table(self):
@@ -1337,7 +1338,7 @@ class BestTableView(PoseTableView):
 		super(BestTableView, self).__init__(parent)
 		self.setSortingEnabled(True)
 
-	@Slot()
+	@pyqtSlot(QPoint)
 	def on_custom_menu(self, pos):
 		self.current_index = self.indexAt(pos)
 		
@@ -1380,9 +1381,9 @@ class BestTableView(PoseTableView):
 
 		row = self.current_index.row()
 		index = self.current_index.model().createIndex(row, 1)
-		pid = index.data(role=Qt.DisplayRole)
+		pid = index.data(role=Qt.ItemDataRole.DisplayRole)
 		index = self.current_index.model().createIndex(row, 2)
-		jid = index.data(role=Qt.DisplayRole)
+		jid = index.data(role=Qt.ItemDataRole.DisplayRole)
 		return pid, jid
 
 	def export_table(self):
@@ -1502,11 +1503,11 @@ class InteractionTableView(QTableView):
 		super(InteractionTableView, self).__init__(parent)
 		#self.verticalHeader().hide()
 		self.parent = parent
-		self.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-		self.setSelectionBehavior(QAbstractItemView.SelectRows)
-		self.setEditTriggers(QAbstractItemView.NoEditTriggers)
+		self.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
+		self.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+		self.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
 		self.doubleClicked.connect(self.on_double_clicked)
-		self.setContextMenuPolicy(Qt.CustomContextMenu)
+		self.setContextMenuPolicy(Qt.ContextMenuPolicy.CustomContextMenu)
 		self.customContextMenuRequested.connect(self.on_custom_menu)
 
 	def sizeHint(self):

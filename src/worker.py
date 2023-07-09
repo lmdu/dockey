@@ -6,7 +6,7 @@ import traceback
 import subprocess
 import multiprocessing
 
-from PySide6.QtCore import *
+from PyQt6.QtCore import *
 
 from param import *
 from utils import *
@@ -22,11 +22,11 @@ __all__ = ['AutodockWorker', 'AutodockVinaWorker', 'QuickVinaWorker',
 ]
 
 class ImportSignals(QObject):
-	success = Signal()
-	failure = Signal(str)
-	message = Signal(str)
-	finished = Signal(str)
-	progress = Signal(int)
+	success = pyqtSignal()
+	failure = pyqtSignal(str)
+	message = pyqtSignal(str)
+	finished = pyqtSignal(str)
+	progress = pyqtSignal(int)
 
 class ImportWorker(QRunnable):
 	processer = None
@@ -130,11 +130,11 @@ class ImportFolderWorker(ImportWorker):
 	processer = ImportFolderProcess
 
 class JobListSignals(QObject):
-	failure = Signal(str)
-	message = Signal(str)
-	success = Signal()
-	finished = Signal()
-	progress = Signal(int)
+	failure = pyqtSignal(str)
+	message = pyqtSignal(str)
+	success = pyqtSignal()
+	finished = pyqtSignal()
+	progress = pyqtSignal(int)
 
 class JobListGenerator(QRunnable):
 	def __init__(self):
@@ -192,13 +192,13 @@ class JobListGenerator(QRunnable):
 		self.signals.progress.emit(100)
 
 class WorkerSignals(QObject):
-	finished = Signal()
-	refresh = Signal(int)
-	message = Signal(str)
-	failure = Signal(str)
-	threads = Signal(int)
-	stopjob = Signal(int)
-	progress = Signal(int)
+	finished = pyqtSignal()
+	refresh = pyqtSignal(int)
+	message = pyqtSignal(str)
+	failure = pyqtSignal(str)
+	threads = pyqtSignal(int)
+	stopjob = pyqtSignal(int)
+	progress = pyqtSignal(int)
 
 class BaseWorker(QRunnable):
 	processer = None
@@ -275,7 +275,7 @@ class BaseWorker(QRunnable):
 			'flex': residues
 		})
 
-	@Slot()
+	@pyqtSlot(int)
 	def change_job_numbers(self, num):
 		self.job_num = num
 		num = len(self.jobs)
@@ -501,7 +501,7 @@ class BaseWorker(QRunnable):
 
 		return self.jobs[job].process.pid
 
-	@Slot()
+	@pyqtSlot()
 	def run(self):
 		self.job_total = int(DB.get_option('job_count'))
 		self.job_query = DB.query("SELECT id FROM jobs")
@@ -581,8 +581,8 @@ class QuickVinaWorker(BaseWorker):
 		return vina
 
 class InteractionExportSignal(QObject):
-	message = Signal(str)
-	finished = Signal()
+	message = pyqtSignal(str)
+	finished = pyqtSignal()
 
 class InteractionExportWorker(QRunnable):
 	def __init__(self, out_dir, table_models):

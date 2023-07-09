@@ -1,0 +1,4 @@
+Fix Segmentation fault when closing on linux
+https://github.com/microsoft/wslg/issues/715
+export MESA_D3D12_DEFAULT_ADAPTER_NAME="llvm"
+export LIBGL_ALWAYS_SOFTWARE=true

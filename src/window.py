@@ -3,9 +3,9 @@ import time
 import psutil
 import multiprocessing
 
-from PySide6.QtGui import *
-from PySide6.QtCore import *
-from PySide6.QtWidgets import *
+from PyQt6.QtGui import *
+from PyQt6.QtCore import *
+from PyQt6.QtWidgets import *
 
 from pymol._gui import PyMOLDesktopGUI
 from pymol.importing import read_mol2str
@@ -23,7 +23,7 @@ from gridbox import *
 __all__ = ['DockeyMainWindow']
 
 class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
-	project_ready = Signal(bool)
+	project_ready = pyqtSignal(bool)
 
 	def __init__(self):
 		super().__init__()
@@ -40,7 +40,7 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		self.setWindowTitle("Dockey v{}".format(DOCKEY_VERSION))
 		self.setWindowIcon(QIcon(':/icons/logo.svg'))
 		self.setAcceptDrops(True)
-		self.setDockOptions(QMainWindow.AnimatedDocks | QMainWindow.AllowTabbedDocks)
+		self.setDockOptions(QMainWindow.DockOption.AnimatedDocks | QMainWindow.DockOption.AllowTabbedDocks)
 
 		self.create_pymol_viewer()
 		self.create_molecular_viewer()
@@ -76,8 +76,6 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 
 		if self.job_worker:
 			self.job_worker.exit()
-
-		#self.save_project()
 
 		event.accept()
 
@@ -209,9 +207,9 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		self.feedback_edit.setPlaceholderText("PyMOL>")
 		self.feedback_browser = FeedbackBrowser(self)
 		self.feedback_dock = QDockWidget("Feedbacks", self)
-		self.feedback_dock.setAllowedAreas(Qt.TopDockWidgetArea | Qt.BottomDockWidgetArea)
+		self.feedback_dock.setAllowedAreas(Qt.DockWidgetArea.TopDockWidgetArea | Qt.DockWidgetArea.BottomDockWidgetArea)
 		self.feedback_dock.setWidget(self.feedback_browser)
-		self.addDockWidget(Qt.BottomDockWidgetArea, self.feedback_dock, Qt.Vertical)
+		self.addDockWidget(Qt.DockWidgetArea.BottomDockWidgetArea, self.feedback_dock, Qt.Orientation.Vertical)
 		self.feedback_dock.setVisible(False)
 
 		#timer
@@ -225,11 +223,11 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		#self.interaction_title = InteractionTitleWidget(self)
 		self.interaction_dock = QDockWidget("Interactions", self)
 		#self.interaction_dock.setTitleBarWidget(self.interaction_title)
-		self.interaction_dock.setAllowedAreas(Qt.TopDockWidgetArea | Qt.BottomDockWidgetArea)
+		self.interaction_dock.setAllowedAreas(Qt.DockWidgetArea.TopDockWidgetArea | Qt.DockWidgetArea.BottomDockWidgetArea)
 		self.interaction_dock.setWidget(self.interaction_tab)
-		self.addDockWidget(Qt.BottomDockWidgetArea, self.interaction_dock, Qt.Vertical)
+		self.addDockWidget(Qt.DockWidgetArea.BottomDockWidgetArea, self.interaction_dock, Qt.Orientation.Vertical)
 
-	@Slot()
+	@pyqtSlot()
 	def execute_pymol_cmd(self):
 		cmd = self.feedback_edit.text().strip()
 
@@ -238,7 +236,7 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 			self.feedback_edit.clear()
 			self.feedback_timer.start(0)
 
-	@Slot()
+	@pyqtSlot()
 	def update_feedback(self):
 		feedbacks = self.cmd._get_feedback()
 		if feedbacks:
@@ -262,9 +260,9 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		self.mol_viewer = DockeyListView(self)
 		self.mol_viewer.clicked.connect(self.on_molecular_changed)
 		self.mol_dock = QDockWidget("Molecules", self)
-		self.mol_dock.setAllowedAreas(Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea)
+		self.mol_dock.setAllowedAreas(Qt.DockWidgetArea.LeftDockWidgetArea | Qt.DockWidgetArea.RightDockWidgetArea)
 		self.mol_dock.setWidget(self.mol_viewer)
-		self.addDockWidget(Qt.LeftDockWidgetArea, self.mol_dock)
+		self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, self.mol_dock)
 		self.mol_dock.setVisible(True)
 
 	def draw_grid_box(self, rid):
@@ -290,13 +288,13 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		elif mol_format == 'sdf':
 			self.cmd.read_sdfstr(mol_content, mol_name)
 
-	@Slot()
+	@pyqtSlot(QModelIndex)
 	def on_molecular_changed(self, index):
 		self.cmd.delete('all')
 		self.cmd.initialize()
 
-		#name = index.data(Qt.DisplayRole)
-		mol_id = index.siblingAtColumn(0).data(Qt.DisplayRole)
+		#name = index.data(Qt.ItemDataRole.DisplayRole)
+		mol_id = index.siblingAtColumn(0).data(Qt.ItemDataRole.DisplayRole)
 
 		sql = "SELECT id,name,type,content,format FROM molecular WHERE id=? LIMIT 1"
 		mol = DB.get_dict(sql, (mol_id,))
@@ -306,7 +304,7 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		if mol.type == 1 and self.box_sidebar_act.isChecked():
 			self.draw_grid_box(mol.id)
 
-	@Slot()
+	@pyqtSlot(bool)
 	def display_grid_box(self, flag):
 		objects = self.cmd.get_names('objects')
 
@@ -324,28 +322,28 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 	def create_gridbox_adjuster(self):
 		self.box_adjuster = GridBoxSettingPanel(self)
 		self.box_dock = QDockWidget("Grid", self)
-		self.box_dock.setAllowedAreas(Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea)
+		self.box_dock.setAllowedAreas(Qt.DockWidgetArea.LeftDockWidgetArea | Qt.DockWidgetArea.RightDockWidgetArea)
 		self.box_dock.setWidget(self.box_adjuster)
-		self.addDockWidget(Qt.RightDockWidgetArea, self.box_dock)
+		self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.box_dock)
 		self.box_dock.setVisible(False)
 
 	def create_job_table(self):
 		self.job_table = JobTableView(self)
 		self.job_table.clicked.connect(self.on_job_changed)
 		self.job_table.setItemDelegateForColumn(4, JobsTableDelegate(self))
-		self.job_table.setSelectionBehavior(QAbstractItemView.SelectRows)
-		self.job_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
+		self.job_table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+		self.job_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
 		#self.job_table.horizontalHeader().setStretchLastSection(True)
 		#self.job_table.verticalHeader().hide()
 		#self.job_table.setAlternatingRowColors(True)
 		self.job_dock = QDockWidget("Jobs", self)
 		self.job_dock.setWidget(self.job_table)
-		self.job_dock.setAllowedAreas(Qt.TopDockWidgetArea | Qt.BottomDockWidgetArea
-			| Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea)
-		self.addDockWidget(Qt.LeftDockWidgetArea, self.job_dock, Qt.Vertical)
+		self.job_dock.setAllowedAreas(Qt.DockWidgetArea.TopDockWidgetArea | Qt.DockWidgetArea.BottomDockWidgetArea
+			| Qt.DockWidgetArea.LeftDockWidgetArea | Qt.DockWidgetArea.RightDockWidgetArea)
+		self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, self.job_dock, Qt.Orientation.Vertical)
 		self.job_dock.setVisible(True)
 
-	@Slot()
+	@pyqtSlot(QModelIndex)
 	def on_job_changed(self, index):
 		job_id = index.row() + 1
 		sql = (
@@ -370,18 +368,18 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 
 		self.pose_dock = QDockWidget("Poses", self)
 		self.pose_dock.setWidget(self.pose_tab)
-		self.pose_dock.setAllowedAreas(Qt.TopDockWidgetArea | Qt.BottomDockWidgetArea)
-		self.addDockWidget(Qt.BottomDockWidgetArea, self.pose_dock, Qt.Vertical)
+		self.pose_dock.setAllowedAreas(Qt.DockWidgetArea.TopDockWidgetArea | Qt.DockWidgetArea.BottomDockWidgetArea)
+		self.addDockWidget(Qt.DockWidgetArea.BottomDockWidgetArea, self.pose_dock, Qt.Orientation.Vertical)
 		self.pose_dock.setVisible(True)
 
-	@Slot()
+	@pyqtSlot(QModelIndex)
 	def on_task_pose_changed(self, index):
-		pid = index.siblingAtColumn(0).data(Qt.DisplayRole)
+		pid = index.siblingAtColumn(0).data(Qt.ItemDataRole.DisplayRole)
 		self.interaction_tab.change_pose(pid)
 
-	@Slot()
+	@pyqtSlot(QModelIndex)
 	def on_best_pose_changed(self, index):
-		pid = index.siblingAtColumn(1).data(Qt.DisplayRole)
+		pid = index.siblingAtColumn(1).data(Qt.ItemDataRole.DisplayRole)
 		self.interaction_tab.change_pose(pid)
 
 	def create_molecular_model(self):
@@ -399,11 +397,11 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		#header.resizeSection(3, fm.maxWidth()*5)
 		#self.job_table.hideColumn(0)
 		#self.job_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
-		header.setSectionResizeMode(0, QHeaderView.ResizeToContents)
-		header.setSectionResizeMode(1, QHeaderView.Stretch)
-		header.setSectionResizeMode(2, QHeaderView.Stretch)
-		header.setSectionResizeMode(3, QHeaderView.ResizeToContents)
-		header.setSectionResizeMode(4, QHeaderView.ResizeToContents)
+		header.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
+		header.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
+		header.setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
+		header.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
+		header.setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)
 	
 	#def create_pose_model(self):
 	#	self.pose_model = PoseTableModel()
@@ -412,143 +410,116 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 	#	self.pose_table.hideColumn(1)
 
 	def create_actions(self):
-		self.new_project_act = QAction(QIcon(':/icons/new.svg'), "&New Project", self,
-			shortcut = QKeySequence.New,
-			triggered = self.new_project
-		)
+		self.new_project_act = QAction(QIcon(':/icons/new.svg'), "&New Project", self)
+		self.new_project_act.setShortcut(QKeySequence.StandardKey.New)
+		self.new_project_act.triggered.connect(self.new_project)
 		self.new_project_act.setIconVisibleInMenu(False)
 
-		self.open_project_act = QAction(QIcon(':/icons/open.svg'), "&Open Project", self,
-			shortcut = QKeySequence.Open,
-			triggered = self.open_project
-		)
+		self.open_project_act = QAction(QIcon(':/icons/open.svg'), "&Open Project", self)
+		self.open_project_act.setShortcut(QKeySequence.StandardKey.Open)
+		self.open_project_act.triggered.connect(self.open_project)
 		self.open_project_act.setIconVisibleInMenu(False)
 
-		self.save_project_act = QAction("&Save Project", self,
-			disabled = True,
-			shortcut = QKeySequence.Save,
-			triggered = self.save_project
-		)
+		self.save_project_act = QAction("&Save Project", self)
+		self.save_project_act.setShortcut(QKeySequence.StandardKey.Save)
+		self.save_project_act.setDisabled(True)
+		self.save_project_act.triggered.connect(self.save_project)
 		self.project_ready.connect(self.save_project_act.setEnabled)
 
-		self.save_project_as_act = QAction("&Save Project As", self,
-			disabled = True,
-			shortcut = QKeySequence.SaveAs,
-			triggered = self.save_project_as
-		)
+		self.save_project_as_act = QAction("&Save Project As", self)
+		self.save_project_as_act.setDisabled(True)
+		self.save_project_as_act.setShortcut(QKeySequence.StandardKey.SaveAs)
+		self.save_project_as_act.triggered.connect(self.save_project_as)
 		self.project_ready.connect(self.save_project_as_act.setEnabled)
 
-		self.close_project_act = QAction("&Close Project", self,
-			disabled = True,
-			shortcut = QKeySequence.Close,
-			triggered = self.close_project
-		)
+		self.close_project_act = QAction("&Close Project", self)
+		self.close_project_act.setDisabled(True)
+		self.close_project_act.setShortcut(QKeySequence.StandardKey.Close)
+		self.close_project_act.triggered.connect(self.close_project)
 		self.project_ready.connect(self.close_project_act.setEnabled)
 
-		self.import_receptor_act = QAction("&Import Receptors", self,
-			disabled = True,
-			triggered = self.import_receptors
-		)
+		self.import_receptor_act = QAction("&Import Receptors", self)
+		self.import_receptor_act.setDisabled(True)
+		self.import_receptor_act.triggered.connect(self.import_receptors)
 		self.project_ready.connect(self.import_receptor_act.setEnabled)
 
-		self.import_pdb_act = QAction("&PDB", self,
-			disabled = True,
-			triggered = self.import_receptor_from_pdb
-		)
+		self.import_pdb_act = QAction("&PDB", self)
+		self.import_pdb_act.setDisabled(True)
+		self.import_pdb_act.triggered.connect(self.import_receptor_from_pdb)
 		self.project_ready.connect(self.import_pdb_act.setEnabled)
 
-		self.import_ligand_act = QAction("&Import Ligands", self,
-			disabled = True,
-			triggered = self.import_ligands
-		)
+		self.import_ligand_act = QAction("&Import Ligands", self)
+		self.import_ligand_act.setDisabled(True)
+		self.import_ligand_act.triggered.connect(self.import_ligands)
 		self.project_ready.connect(self.import_ligand_act.setEnabled)
 
-		self.import_ligand_sdf_act = QAction("&SDF", self,
-			disabled = True,
-			triggered = self.import_ligands_from_sdf
-		)
+		self.import_ligand_sdf_act = QAction("&SDF", self)
+		self.import_ligand_sdf_act.setDisabled(True)
+		self.import_ligand_sdf_act.triggered.connect(self.import_ligands_from_sdf)
 		self.project_ready.connect(self.import_ligand_sdf_act.setEnabled)
 
-		self.import_ligand_dir_act = QAction("&Import Ligands from Directory", self,
-			disabled = True,
-			triggered = self.import_ligands_from_dir
-		)
+		self.import_ligand_dir_act = QAction("&Import Ligands from Directory", self)
+		self.import_ligand_dir_act.setDisabled(True)
+		self.import_ligand_dir_act.triggered.connect(self.import_ligands_from_dir)
 		self.project_ready.connect(self.import_ligand_dir_act.setEnabled)
 
-		self.import_zinc_act = QAction("&ZINC", self,
-			disabled = True,
-			triggered = self.import_ligand_from_zinc
-		)
+		self.import_zinc_act = QAction("&ZINC", self)
+		self.import_zinc_act.setDisabled(True)
+		self.import_zinc_act.triggered.connect(self.import_ligand_from_zinc)
 		self.project_ready.connect(self.import_zinc_act.setEnabled)
 
-		self.import_pubchem_act = QAction("&PubChem", self,
-			disabled = True,
-			triggered = self.import_ligand_from_pubchem
-		)
+		self.import_pubchem_act = QAction("&PubChem", self)
+		self.import_pubchem_act.setDisabled(True)
+		self.import_pubchem_act.triggered.connect(self.import_ligand_from_pubchem)
 		self.project_ready.connect(self.import_pubchem_act.setEnabled)
 
-		self.import_coconut_act = QAction("&COCONUT", self,
-			disabled = True,
-			triggered = self.import_ligand_from_coconut
-		) 
+		self.import_coconut_act = QAction("&COCONUT", self)
+		self.import_coconut_act.setDisabled(True)
+		self.import_coconut_act.triggered.connect(self.import_ligand_from_coconut)
 		self.project_ready.connect(self.import_coconut_act.setEnabled)
 
-		self.import_chembl_act = QAction("&ChEMBL", self,
-			disabled = True,
-			triggered = self.import_ligand_from_chembl
-		) 
+		self.import_chembl_act = QAction("&ChEMBL", self)
+		self.import_chembl_act.setDisabled(True)
+		self.import_chembl_act.triggered.connect(self.import_ligand_from_chembl)
 		self.project_ready.connect(self.import_chembl_act.setEnabled)
 
-		self.export_image_act = QAction(QIcon(':/icons/image.svg'), "&Export As Image", self,
-			triggered = self.export_as_image
-		)
+		self.export_image_act = QAction(QIcon(':/icons/image.svg'), "&Export As Image", self)
+		self.export_image_act.triggered.connect(self.export_as_image)
 		self.export_image_act.setIconVisibleInMenu(False)
 
-		self.export_file_act = QAction("&Export As File", self,
-			triggered = self.export_as_file
-		)
+		self.export_file_act = QAction("&Export As File", self)
+		self.export_file_act.triggered.connect(self.export_as_file)
 
-		self.exit_act = QAction("&Exit", self,
-			#triggered = self.close,
-			triggered = lambda : print(GridBoxSettingPanel.params.spacing),
-			shortcut = QKeySequence.Quit
-		)
+		self.exit_act = QAction("&Exit", self)
+		self.exit_act.setShortcut(QKeySequence.StandardKey.Quit)
+		#triggered = lambda : print(GridBoxSettingPanel.params.spacing),
 
 		#edit actions
-		self.pymol_undo_act = QAction("Undo", self,
-			shortcut = QKeySequence.Undo,
-			#triggered = self.pymol_undo
-			triggered = self.cmd.undo
-		)
-		self.pymol_redo_act = QAction("Redo", self,
-			shortcut = QKeySequence.Redo,
-			#triggered = self.pymol_redo
-			triggered = self.cmd.redo
-		)
+		self.pymol_undo_act = QAction("Undo", self)
+		self.pymol_undo_act.setShortcut(QKeySequence.StandardKey.Undo)
+		self.pymol_undo_act.triggered.connect(self.cmd.undo)
+	
+		self.pymol_redo_act = QAction("Redo", self)
+		self.pymol_redo_act.setShortcut(QKeySequence.StandardKey.Redo)
+		self.pymol_redo_act.triggered.connect(self.cmd.redo)
 
-		self.all_hydro_act = QAction("Add All Hydrogens", self,
-			triggered = self.pymol_add_all_hydrogens
-		)
+		self.all_hydro_act = QAction("Add All Hydrogens", self)
+		self.all_hydro_act.triggered.connect(self.pymol_add_all_hydrogens)
 
-		self.polar_hydro_act = QAction("Add Polar Hydrogens", self,
-			triggered = self.pymol_add_polar_hydrogens
-		)
+		self.polar_hydro_act = QAction("Add Polar Hydrogens", self)
+		self.polar_hydro_act.triggered.connect(self.pymol_add_polar_hydrogens)
 
-		self.del_water_act = QAction("Remove Water", self,
-			triggered = self.pymol_remove_water
-		)
+		self.del_water_act = QAction("Remove Water", self)
+		self.del_water_act.triggered.connect(self.pymol_remove_water)
 
-		self.del_solvent_act = QAction("Remove Solvent", self,
-			triggered = self.pymol_remove_solvent
-		)
+		self.del_solvent_act = QAction("Remove Solvent", self)
+		self.del_solvent_act.triggered.connect(self.pymol_remove_solvent)
 
-		self.del_organic_act = QAction("Remove Organic", self,
-			triggered = self.pymol_remove_organic
-		)
+		self.del_organic_act = QAction("Remove Organic", self)
+		self.del_organic_act.triggered.connect(self.pymol_remove_organic)
 
-		self.del_chain_act = QAction("Remove Chain", self,
-			triggered = self.pymol_remove_chain
-		)
+		self.del_chain_act = QAction("Remove Chain", self)
+		self.del_chain_act.triggered.connect(self.pymol_remove_chain)
 
 		#self.pymol_color_act = QAction("Color", self,
 		#	triggered = self.pymol_settings
@@ -562,36 +533,29 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		#index = self.cmd.setting._get_index('opaque_background')
 		#self.pymol_actions.setdefault(index, []).append(self.pymol_opaque_act)
 
-		self.dock_tool_act = QAction("Docking Tools", self,
-			triggered = self.docking_tool_settings
-		)
+		self.dock_tool_act = QAction("Docking Tools", self)
+		self.dock_tool_act.triggered.connect(self.docking_tool_settings)
 
-		self.job_num_act = QAction("Concurrent execution", self,
-			triggered = self.concurrent_job_number
-		)
+		self.job_num_act = QAction("Concurrent execution", self)
+		self.job_num_act.triggered.connect(self.concurrent_job_number)
 
-		self.setting_act = QAction("Molecular Docking Settings", self,
-			triggered = self.open_settings_dialog
-		)
+		self.setting_act = QAction("Molecular Docking Settings", self)
+		self.setting_act.triggered.connect(self.open_settings_dialog)
 
-		self.repprep_act = QAction("Receptor Preprocessing Settings", self,
-			triggered = self.open_receptor_preprocess_dialog
-		)
+		self.repprep_act = QAction("Receptor Preprocessing Settings", self)
+		self.repprep_act.triggered.connect(self.open_receptor_preprocess_dialog)
 
-		self.recprep_act = QAction("Receptor Preparation Settings", self,
-			triggered = self.open_receptor_prepare_dialog
-		)
+		self.recprep_act = QAction("Receptor Preparation Settings", self)
+		self.recprep_act.triggered.connect(self.open_receptor_prepare_dialog)
 
-		self.ligprep_act = QAction("Ligand Preparation Settings", self,
-			triggered = self.open_ligand_prepare_dialog
-		)
+		self.ligprep_act = QAction("Ligand Preparation Settings", self)
+		self.ligprep_act.triggered.connect(self.open_ligand_prepare_dialog)
 
 		#view actions
 		#pymol sidebar
-		self.pymol_sidebar_act = QAction("Show Pymol Sidebar", self,
-			checkable = True,
-			checked = False
-		)
+		self.pymol_sidebar_act = QAction("Show Pymol Sidebar", self)
+		self.pymol_sidebar_act.setCheckable(True)
+		self.pymol_sidebar_act.setChecked(False)
 		self.pymol_sidebar_act.toggled.connect(self.pymol_sidebar_toggle)
 
 		index = self.cmd.setting._get_index('internal_gui')
@@ -600,10 +564,9 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		self.pymol_feedback_act = self.feedback_dock.toggleViewAction()
 		self.pymol_feedback_act.setText("Show Pymol Feedback")
 
-		self.pymol_cmd_act = QAction(QIcon(':/icons/cmd.svg'), "Show Pymol Command", self,
-			checkable = True,
-			checked =  False
-		)
+		self.pymol_cmd_act = QAction(QIcon(':/icons/cmd.svg'), "Show Pymol Command", self)
+		self.pymol_cmd_act.setCheckable(True)
+		self.pymol_cmd_act.setChecked(False)
 		self.pymol_cmd_act.setIconVisibleInMenu(False)
 
 		#gridbox setting sidebar
@@ -634,53 +597,43 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		self.interaction_table_act.setIconVisibleInMenu(False)
 		self.interaction_table_act.setText("Show Interaction Table")
 
-		self.bounding_box_act = QAction(QIcon(':/icons/bounding.svg'), "Draw Bounding Box", self,
-			triggered = self.draw_bounding_box
-		)
+		self.bounding_box_act = QAction(QIcon(':/icons/bounding.svg'), "Draw Bounding Box", self)
+		self.bounding_box_act.triggered.connect(self.draw_bounding_box)
 		self.bounding_box_act.setIconVisibleInMenu(False)
 
-		self.custom_box_act = QAction("Draw Custom Box", self,
-			triggered = self.draw_custom_box
-		)
+		self.custom_box_act = QAction("Draw Custom Box", self)
+		self.custom_box_act.triggered.connect(self.draw_custom_box)
 
-		self.delete_box_act = QAction("Delete Grid Box", self,
-			triggered = self.delete_grid_box
-		)
+		self.delete_box_act = QAction("Delete Grid Box", self)
+		self.delete_box_act.triggered.connect(self.delete_grid_box)
 
-		self.run_autodock_act = QAction("Autodock", self,
-			disabled = True,
-			triggered = self.run_autodock
-		)
+		self.run_autodock_act = QAction("Autodock", self)
+		self.run_autodock_act.setDisabled(True)
+		self.run_autodock_act.triggered.connect(self.run_autodock)
 		self.project_ready.connect(self.run_autodock_act.setEnabled)
 
-		self.run_vina_act = QAction("Autodock Vina", self,
-			disabled = True,
-			triggered = self.run_autodock_vina
-		)
+		self.run_vina_act = QAction("Autodock Vina", self)
+		self.run_vina_act.setDisabled(True)
+		self.run_vina_act.triggered.connect(self.run_autodock_vina)
 		self.project_ready.connect(self.run_vina_act.setEnabled)
 
-		self.run_qvina_act = QAction("QuickVina-W", self,
-			disabled = True,
-			triggered = self.run_quick_vina_w
-		)
+		self.run_qvina_act = QAction("QuickVina-W", self)
+		self.run_qvina_act.setDisabled(True)
+		self.run_qvina_act.triggered.connect(self.run_quick_vina_w)
 		self.project_ready.connect(self.run_qvina_act.setEnabled)
 
 		#help actions
-		self.about_act = QAction("&About", self,
-			triggered = self.open_about
-		)
+		self.about_act = QAction("&About", self)
+		self.about_act.triggered.connect(self.open_about)
 
-		self.doc_act = QAction("Documentation", self,
-			triggered = self.open_documentation
-		)
+		self.doc_act = QAction("Documentation", self)
+		self.doc_act.triggered.connect(self.open_documentation)
 
-		self.issue_act = QAction("Report Issue", self,
-			triggered = self.report_issue
-		)
+		self.issue_act = QAction("Report Issue", self)
+		self.issue_act.triggered.connect(self.report_issue)
 
-		self.update_act = QAction("Check for updates", self,
-			triggered = self.check_update
-		)
+		self.update_act = QAction("Check for updates", self)
+		self.update_act.triggered.connect(self.check_update)
 
 	def create_menus(self):
 		self.file_menu = self.menuBar().addMenu("&File")
@@ -810,11 +763,11 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 	def show_message(self, msg):
 		self.statusbar.showMessage(msg)
 
-	@Slot()
+	@pyqtSlot(str)
 	def show_error_message(self, msg):
 		QMessageBox.critical(self, "Error", msg)
 
-	@Slot()
+	@pyqtSlot(str)
 	def show_popup_message(self, msg):
 		QMessageBox.information(self, "Message", msg)
 
@@ -1107,25 +1060,25 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 
 		self.cmd.save(outfile)
 
-	#@Slot()
+	#@pyqtSlot()
 	#def pymol_undo(self):
 	#	self.cmd.undo()
 
-	#@Slot()
+	#@pyqtSlot()
 	#def pymol_redo(self):
 	#	self.cmd.redo()
 
-	@Slot()
+	@pyqtSlot()
 	def pymol_settings(self):
 		dlg = PymolSettingDialog(self)
 		dlg.exec()
 
-	@Slot()
+	@pyqtSlot()
 	def docking_tool_settings(self):
 		dlg = DockingToolSettingDialog(self)
 		dlg.exec()
 
-	@Slot()
+	@pyqtSlot()
 	def concurrent_job_number(self):
 		dlg = JobConcurrentSettingDialog(self)
 		dlg.exec()

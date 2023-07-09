@@ -6,7 +6,7 @@ import subprocess
 import multiprocessing
 
 from rdkit import Chem
-from PySide6.QtCore import *
+from PyQt6.QtCore import *
 
 from utils import *
 from param import *

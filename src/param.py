@@ -3,8 +3,8 @@ import sys
 import copy
 import psutil
 
-from PySide6.QtCore import *
-from PySide6.QtWidgets import *
+from PyQt6.QtCore import *
+from PyQt6.QtWidgets import *
 from collections import OrderedDict
 
 from utils import *
@@ -787,7 +787,7 @@ class AutodockParameterWizard(QWizard):
 	def update_parameter(self, cmd, value, idx=-1):
 		self.params.set_value(cmd, value, idx)
 
-	@Slot()
+	@pyqtSlot(int)
 	def on_algorithm_changed(self, index):
 		#remove widgets
 		for i in range(self.algorithm_layout.rowCount()):

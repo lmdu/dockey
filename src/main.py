@@ -3,15 +3,15 @@ import sys
 import rc_icons
 import multiprocessing
 
-from PySide6.QtGui import *
-from PySide6.QtCore import *
-from PySide6.QtWidgets import *
+from PyQt6.QtGui import *
+from PyQt6.QtCore import *
+from PyQt6.QtWidgets import *
 
 from config import *
 from window import *
 
 class DockeyApplication(QApplication):
-	osx_open_with = Signal(str)
+	osx_open_with = pyqtSignal(str)
 
 	def __init__(self, argv):
 		super().__init__(argv)
@@ -39,7 +39,7 @@ if __name__ == '__main__':
 	app = DockeyApplication(sys.argv)
 	win = DockeyMainWindow()
 
-	QSettings.setDefaultFormat(QSettings.IniFormat)
+	QSettings.setDefaultFormat(QSettings.Format.IniFormat)
 
 	#support for macos open with when associated with dock file
 	app.osx_open_with.connect(win.create_db_connect)
