@@ -91,11 +91,9 @@ cp logo.svg Dockey/usr/share/icons/hicolor/scalable/apps
 cat > Dockey/AppRun <<EOF
 #!/bin/bash
 appdir=$(dirname $0)
-
 exec "$appdir/Dockey" "$@"
-
 EOF
-chmod 755 AppRun
+chmod 755 Dockey/AppRun
 
 cat > Dockey/dockey.desktop <<EOF
 [Desktop Entry]
