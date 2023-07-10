@@ -86,16 +86,20 @@ cp dockey.desktop Dockey
 cp logo.svg Dockey/dockey.svg
 
 mkdir -p Dockey/usr/share/icons/hicolor/scalable/apps
-cp logo.svg Dockey/usr/share/icons/hicolor/scalable/apps
+cp logo.svg Dockey/usr/share/icons/hicolor/scalable/apps/dockey.svg
 
-cat > Dockey/AppRun <<EOF
+cat > Dockey/AppRun <<'EOF'
 #!/bin/bash
 
 appdir=$(dirname $0)
 
 export LD_LIBRARY_PATH=$appdir
+export QT_QPA_FONTDIR=/usr/share/fonts
+export QT_QPA_PLATFORMTHEME=xdgdesktopportal
+export QT_XKB_CONFIG_ROOT=/usr/share/X11/xkb
 
 exec "$appdir/Dockey" "$@"
+
 EOF
 chmod 755 Dockey/AppRun
 
