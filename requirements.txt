@@ -1,8 +1,10 @@
 apsw==3.42.0.0
-numpy==1.25.1
+numpy==1.21.5
 psutil==5.9.5
 meeko==0.4.0
 rdkit==2023.3.2
 pdb2pqr==3.6.1
-PyQt6==6.5.1
+PyQt6-sip==13.4.1
+PyQt6==6.4.2
+PyQt6-Qt6==6.4.2
 pyinstaller==5.13.0
