@@ -90,7 +90,11 @@ cp logo.svg Dockey/usr/share/icons/hicolor/scalable/apps
 
 cat > Dockey/AppRun <<EOF
 #!/bin/bash
+
 appdir=$(dirname $0)
+
+export LD_LIBRARY_PATH=$appdir
+
 exec "$appdir/Dockey" "$@"
 EOF
 chmod 755 Dockey/AppRun
