@@ -522,26 +522,15 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		self.del_chain_act = QAction("Remove Chain", self)
 		self.del_chain_act.triggered.connect(self.pymol_remove_chain)
 
-		#self.pymol_color_act = QAction("Color", self,
-		#	triggered = self.pymol_settings
-		#)
+		#preferences actions
+		#self.dock_tool_act = QAction("Docking Tools", self)
+		#self.dock_tool_act.triggered.connect(self.docking_tool_settings)
 
-		#self.pymol_opaque_act = QAction("Opaque", self,
-		#	checkable = True,
-		#	checked = False
-		#)
-		#self.pymol_opaque_act.toggled.connect(self.pymol_opaque_background)
-		#index = self.cmd.setting._get_index('opaque_background')
-		#self.pymol_actions.setdefault(index, []).append(self.pymol_opaque_act)
+		#self.job_num_act = QAction("Concurrent execution", self)
+		#self.job_num_act.triggered.connect(self.concurrent_job_number)
 
-		self.dock_tool_act = QAction("Docking Tools", self)
-		self.dock_tool_act.triggered.connect(self.docking_tool_settings)
-
-		self.job_num_act = QAction("Concurrent execution", self)
-		self.job_num_act.triggered.connect(self.concurrent_job_number)
-
-		self.setting_act = QAction("Molecular Docking Settings", self)
-		self.setting_act.triggered.connect(self.open_settings_dialog)
+		self.engine_act = QAction("Docking Engine Settings", self)
+		self.engine_act.triggered.connect(self.open_engine_settings_dialog)
 
 		self.repprep_act = QAction("Receptor Preprocessing Settings", self)
 		self.repprep_act.triggered.connect(self.open_receptor_preprocess_dialog)
@@ -551,6 +540,9 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 
 		self.ligprep_act = QAction("Ligand Preparation Settings", self)
 		self.ligprep_act.triggered.connect(self.open_ligand_prepare_dialog)
+
+		self.job_act = QAction("Concurrent Job Manager", self)
+		self.job_act.triggered.connect(self.open_job_manager_dialog)
 
 		#view actions
 		#pymol sidebar
@@ -680,13 +672,6 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		self.edit_menu.addAction(self.del_chain_act)
 		self.edit_menu.addSeparator()
 
-		#self.edit_menu.addAction(self.dock_tool_act)
-		#self.edit_menu.addAction(self.job_num_act)
-		self.edit_menu.addAction(self.setting_act)
-		self.edit_menu.addAction(self.repprep_act)
-		self.edit_menu.addAction(self.recprep_act)
-		self.edit_menu.addAction(self.ligprep_act)
-
 		self.view_menu = self.menuBar().addMenu("&View")
 		#self.view_menu.addAction(self.open_project_dir_act)
 		#self.view_menu.addSeparator()
@@ -715,6 +700,17 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		self.run_menu.addAction(self.run_qvina_act)
 
 		self.pymol_menu = self.menuBar().addMenu("&PyMOL")
+
+		self.prefer_menu = self.menuBar().addMenu("&Preference")
+		#self.prefer_menu.addAction(self.dock_tool_act)
+		#self.prefer_menu.addAction(self.job_num_act)
+		self.prefer_menu.addAction(self.engine_act)
+		self.prefer_menu.addSeparator()
+		self.prefer_menu.addAction(self.repprep_act)
+		self.prefer_menu.addAction(self.recprep_act)
+		self.prefer_menu.addAction(self.ligprep_act)
+		self.prefer_menu.addSeparator()
+		self.prefer_menu.addAction(self.job_act)
 
 		self.help_menu = self.menuBar().addMenu("&Help")
 		self.help_menu.addAction(self.about_act)
@@ -815,24 +811,30 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 					"{} is not a dockey project file".format(project_file)
 				)
 
-	def open_settings_dialog(self):
-		dlg = DockeyConfigDialog(self)
+	def open_engine_settings_dialog(self):
+		dlg = DockingEngineDialog(self)
+		dlg.exec()
 
-		if dlg.exec() == QDialog.Accepted:
+	def open_job_manager_dialog(self):
+		dlg = JobManagerDialog(self)
+
+		if dlg.exec() == QDialog.DialogCode.Accepted:
 			if self.job_worker:
 				settings = QSettings()
 				num = settings.value('Job/concurrent', 1, int)
 				self.job_worker.signals.threads.emit(num)
 
 	def open_receptor_prepare_dialog(self):
-		dlg = MolecularPrepareDialog(self)
+		dlg = ReceptorPrepareDialog(self)
 		dlg.exec()
 
 	def open_receptor_preprocess_dialog(self):
-		pass
+		dlg = ReceptorPreprocessDialog(self)
+		dlg.exec()
 
 	def open_ligand_prepare_dialog(self):
-		pass
+		dlg = LigandPrepareDialog(self)
+		dlg.exec()
 
 	def new_project(self):
 		if DB.active():
@@ -1152,7 +1154,7 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 
 		self.cmd.select('chain {}'.format(chains[0]))
 
-		if dlg.exec() == QDialog.Accepted:
+		if dlg.exec() == QDialog.DialogCode.Accepted:
 			chain = dlg.textValue()
 			self.cmd.remove('chain {}'.format(chain))
 			self.pymol_auto_save_mol()

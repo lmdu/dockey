@@ -211,6 +211,7 @@ class BaseProcess(multiprocessing.Process):
 		self.dock_params = params[0]
 		self.ligp_params = params[1]
 		self.repp_params = params[2]
+		self.prep_params = params[3]
 		#self.grid_spacing = params[3]
 		
 		if os.name == 'nt':
@@ -269,7 +270,7 @@ class BaseProcess(multiprocessing.Process):
 	def prepare_receptor(self):
 		rpdbqt = os.path.join(self.work_dir, "{}.pdbqt".format(self.job.rn))
 
-		if self.job.rf in ['pdb', 'mol2']:
+		if self.job.rf == 'pdb':
 			content = self.job.rc
 			rfile = os.path.join(self.work_dir, "{}.{}".format(self.job.rn, self.job.rf))
 
@@ -279,6 +280,16 @@ class BaseProcess(multiprocessing.Process):
 
 		with open(rfile, 'w', encoding='utf-8') as fw:
 			fw.write(content)
+
+		if self.prep_params['use_pdbfix']:
+			pfile = rfile
+			rfile = os.path.join(self.work_dir, "{}.fix.pdb".format(self.job.rn))
+			fix_receptor_pdb(pfile, rfile, self.prep_params)
+
+		if self.prep_params['use_pdbpqr']:
+			pfile = rfile
+			rfile = os.path.join(self.work_dir, "{}.pqr".format(self.job.rn))
+			convert_pdb_to_pqr(pfile, rfile, self.prep_params)
 
 		prepare_autodock_receptor(rfile, rpdbqt, self.repp_params)
 

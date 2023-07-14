@@ -15,10 +15,6 @@ class DockeyApplication(QApplication):
 
 	def __init__(self, argv):
 		super().__init__(argv)
-		self.setOrganizationName("BIG")
-		self.setOrganizationDomain("dockey.readthedocs.io")
-		self.setApplicationName("Dockey")
-		self.setApplicationVersion(DOCKEY_VERSION)
 
 	def event(self, event):
 		if sys.platform == 'darwin':
@@ -33,13 +29,17 @@ if __name__ == '__main__':
 	#fix incorrect icon display in taskbar on Windows
 	if os.name == 'nt':
 		import ctypes
-		myappid = "BIG.Dockey.Dockey.{}".format(DOCKEY_VERSION)
+		myappid = "Dulab.Dockey.Dockey.{}".format(DOCKEY_VERSION)
 		ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
+
+	QCoreApplication.setOrganizationName("Dulab")
+	QCoreApplication.setOrganizationDomain("big.cdu.edu.cn")
+	QCoreApplication.setApplicationName("Dockey")
+	QCoreApplication.setApplicationVersion(DOCKEY_VERSION)
+	QSettings.setDefaultFormat(QSettings.Format.IniFormat)
 
 	app = DockeyApplication(sys.argv)
 	win = DockeyMainWindow()
-
-	QSettings.setDefaultFormat(QSettings.Format.IniFormat)
 
 	#support for macos open with when associated with dock file
 	app.osx_open_with.connect(win.create_db_connect)

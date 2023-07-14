@@ -354,7 +354,7 @@ class BaseWorker(QRunnable):
 				double_bond_penalty = self.settings.value('double_bond_penalty', 50, int)
 			)
 			self.settings.endGroup()
-		
+
 		self.settings.beginGroup('Receptor')
 		rep_params = dict(
 			repairs = self.settings.value('repairs', ''),
@@ -364,13 +364,40 @@ class BaseWorker(QRunnable):
 			delete_single_nonstd_residues = self.settings.value('delete_single_nonstd_residues', False, bool),
 			unique_atom_names = self.settings.value('unique_atom_names', False, bool)
 		)
-		self. settings.endGroup()
+		self.settings.endGroup()
 
-		return lig_params, rep_params
+		self.settings.beginGroup('PDBFixer')
+		pdbfix_params = dict(
+			use_pdbfix = self.settings.value('use_pdbfix', True, bool),
+			replace_nonres = self.settings.value('replace_nonres', True, bool),
+			remove_heterogen = self.settings.value('remove_heterogen', True, bool),
+			add_misheavy = self.settings.value('add_misheavy', True, bool),
+			add_mishydrogen = self.settings.value('add_mishydrogen', True, bool),
+			mishydrogen_ph = self.settings.value('mishydrogen_ph', 7.0, float)
+		)
+		self.settings.endGroup()
+
+		self.settings.beginGroup('PDB2PQR')
+		pdbpqr_params = dict(
+			use_pdbpqr = self.settings.value('use_pdbpqr', False, bool),
+			force_field = self.settings.value('force_field', 'PARSE'),
+			use_propka = self.settings.value('use_propka', True, bool),
+			propka_ph = self.settings.value('propka_ph', 7.0, float),
+			node_bump = self.settings.value('node_bump', False, bool),
+			no_hopt = self.settings.value('no_hopt', False, bool),
+			remove_water = self.setting.value('remove_water', True, bool)
+		)
+		self.settings.endGroup()
+
+		pre_params = {}
+		pre_params.update(pdbfix_params)
+		pre_params.update(pdbpqr_params)
+
+		return lig_params, rep_params, pre_params
 
 	def get_all_params(self):
-		lig_params, rep_params = self.get_prepare_params()
-		return [self.params, lig_params, rep_params]
+		lig_params, rep_params, pre_params = self.get_prepare_params()
+		return [self.params, lig_params, rep_params, pre_params]
 
 	def write_pose_interactions(self, data):
 		jid = data['job']

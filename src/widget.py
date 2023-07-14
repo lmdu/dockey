@@ -15,12 +15,18 @@ from backend import *
 
 __all__ = ['BrowseInput', 'CreateProjectDialog', 'AutodockConfigDialog',
 			'AutodockVinaConfigDialog', 'ExportImageDialog', 'FeedbackBrowser',
-			'PymolSettingDialog', 'DockingToolSettingDialog', 'InteractionTabWidget',
-			'JobConcurrentSettingDialog', 'DockeyConfigDialog', 'PDBDownloader',
+			'PymolSettingDialog', 'DockingEngineDialog', 'InteractionTabWidget',
+			'JobManagerDialog', 'PDBDownloader', 'ReceptorPreprocessDialog',
 			'ZINCDownloader', 'QuickVinaConfigDialog', 'PoseTabWidget',
-			'MolecularPrepareDialog', 'FlexResiduesDialog', 'LigandFilterDialog',
-			'PubchemDownloader', 'ChemblDownloader'
+			'ReceptorPrepareDialog', 'FlexResiduesDialog', 'LigandFilterDialog',
+			'PubchemDownloader', 'ChemblDownloader', 'LigandPrepareDialog',
 			]
+
+class QHLine(QFrame):
+	def __init__(self):
+		super().__init__()
+		self.setFrameShape(QFrame.Shape.HLine)
+		self.setFrameShadow(QFrame.Shadow.Sunken)
 
 class BrowseInput(QWidget):
 	def __init__(self, parent=None, is_file=True, is_save=False, _filter=""):
@@ -91,7 +97,7 @@ class CreateProjectDialog(QDialog):
 
 		self.tip_label = QLabel(tips, self)
 
-		action_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+		action_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
 		action_box.accepted.connect(self.check_input_name)
 		action_box.rejected.connect(self.reject)
 
@@ -172,7 +178,7 @@ class DockingToolSettingDialog(QDialog):
 		self.layout.addWidget(QLabel("QuickVina-W executable", self))
 		self.layout.addWidget(self.qvina_input)
 
-		btn_box = QDialogButtonBox(QDialogButtonBox.Save | QDialogButtonBox.Cancel)
+		btn_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Save | QDialogButtonBox.StandardButton.Cancel)
 		btn_box.accepted.connect(self.save_settings)
 		btn_box.rejected.connect(self.reject)
 		self.layout.addWidget(btn_box)
@@ -226,7 +232,7 @@ class ProgramConfigDialog(QDialog):
 				layout.addWidget(QLabel(l, self))
 				layout.addWidget(self.inputs[i])
 
-		action_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+		action_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
 		action_box.accepted.connect(self.save_config)
 		action_box.rejected.connect(self.reject)
 
@@ -322,7 +328,7 @@ class ExportImageDialog(QDialog):
 
 		layout.addRow(sub_layout)
 
-		action_box = QDialogButtonBox(QDialogButtonBox.Save | QDialogButtonBox.Cancel)
+		action_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Save | QDialogButtonBox.StandardButton.Cancel)
 		action_box.accepted.connect(self.save_image)
 		action_box.rejected.connect(self.reject)
 
@@ -671,30 +677,30 @@ class InteractionTabWidget(QTabWidget):
 		for i in range(8):
 			self.widget(i).model().reset()
 
-class DockeyConfigDialog(QDialog):
+class DockingEngineDialog(QDialog):
 	def __init__(self, parent):
 		super().__init__(parent)
-		self.parent = parent
-		self.setWindowTitle("Settings")
+		self.setWindowTitle("Docking engine settings")
 		self.resize(QSize(550, 100))
 		self.input_widgets = []
 		self.settings = QSettings()
-		self.tab_widget = QTabWidget(self)
+		self.main_layout = QVBoxLayout()
+		self.main_layout.setContentsMargins(20, 20, 20, 20)
+		self.main_layout.setSpacing(10)
+		self.setLayout(self.main_layout)
+
+		self.create_engine_inputs()
+		self.main_layout.addWidget(QHLine())
 
 		self.btn_widget = QDialogButtonBox(
-			QDialogButtonBox.Ok | QDialogButtonBox.Cancel
+			QDialogButtonBox.StandardButton.Ok |
+			QDialogButtonBox.StandardButton.Cancel
 		)
 
 		self.btn_widget.accepted.connect(self.write_settings)
 		self.btn_widget.rejected.connect(self.reject)
+		self.main_layout.addWidget(self.btn_widget)
 
-		main_layout = QVBoxLayout()
-		main_layout.addWidget(self.tab_widget)
-		main_layout.addWidget(self.btn_widget)
-		self.setLayout(main_layout)
-
-		self.create_tool_tab()
-		self.create_job_tab()
 		self.read_settings()
 
 	def register_widget(self, option, widget, wgtype, default='', convert=str):
@@ -706,11 +712,7 @@ class DockeyConfigDialog(QDialog):
 			convert = convert
 		))
 
-	def create_tool_tab(self):
-		page = QWidget(self)
-		layout = QVBoxLayout()
-		page.setLayout(layout)
-
+	def create_engine_inputs(self):
 		self.autodock_input = BrowseInput(self)
 		self.autogrid_input = BrowseInput(self)
 		self.vina_input = BrowseInput(self)
@@ -721,91 +723,106 @@ class DockeyConfigDialog(QDialog):
 		self.register_widget('Tools/autodock_vina', self.vina_input, 'browse')
 		self.register_widget('Tools/quick_vina_w', self.qvina_input, 'browse')
                           
-		layout.addWidget(QLabel("Autogrid executable", self))
-		layout.addWidget(self.autogrid_input)
-		layout.addWidget(QLabel("Autodock executable", self))
-		layout.addWidget(self.autodock_input)
-		layout.addWidget(QLabel("Autodock Vina executable", self))
-		layout.addWidget(self.vina_input)
-		layout.addWidget(QLabel("QuickVina-W executable", self))
-		layout.addWidget(self.qvina_input)
-
-		self.tab_widget.addTab(page, 'Docking Tools')
-
-	def create_job_tab(self):
-		page = QWidget(self)
-		layout = QGridLayout()
-		layout.setColumnStretch(0, 5)
-		layout.setColumnStretch(1, 1)
-		page.setLayout(layout)
-		label = QLabel("Number of concurrent running jobs", self)
-		layout.addWidget(label, 0, 0)
-		self.thread_input = QSpinBox(self)
-		self.thread_input.setRange(1, max(1, psutil.cpu_count()))
-		self.register_widget('Job/concurrent', self.thread_input, 'spinbox', 1, int)
-
-		tips = (
-			"You can set the number of jobs that can run concurrently to improve the docking speed."
-			"Limiting the number of concurrent jobs helps you reduce CPU consumption."
-			"You can set the number of concurrent jobs to any number from 1 to maximum CPU threads."
-		)
-		tips_label = QLabel(tips, self)
-		tips_label.setWordWrap(True)
-
-		layout.addWidget(self.thread_input, 0, 1)
-		layout.addWidget(tips_label, 1, 0)
-
-		self.tab_widget.addTab(page, 'Job Manager')
+		self.main_layout.addWidget(QLabel("Autogrid executable", self))
+		self.main_layout.addWidget(self.autogrid_input)
+		self.main_layout.addWidget(QLabel("Autodock executable", self))
+		self.main_layout.addWidget(self.autodock_input)
+		self.main_layout.addWidget(QLabel("Autodock Vina executable", self))
+		self.main_layout.addWidget(self.vina_input)
+		self.main_layout.addWidget(QLabel("QuickVina-W executable", self))
+		self.main_layout.addWidget(self.qvina_input)
 
 	def read_settings(self):
 		for i in self.input_widgets:
 			val = self.settings.value(i.option, i.default, i.convert)
-
-			if i.wgtype == 'browse':
-				i.widget.set_text(val)
-			elif i.wgtype == 'linedit':
-				i.widget.setText(val)
-			elif i.wgtype == 'spinbox':
-				i.widget.setValue(val)
+			i.widget.set_text(val)
 
 	def write_settings(self):
 		for i in self.input_widgets:
-			if i.wgtype == 'browse':
-				val = i.widget.get_text()
-			elif i.wgtype == 'linedit':
-				val = i.widget.text()
-			elif i.wgtype == 'spinbox':
-				val = i.widget.value()
-			else:
-				val = None
-
+			val = i.widget.get_text()
 			self.settings.setValue(i.option, val)
 
 		self.accept()
 
-class MolecularPrepareDialog(QDialog):
+class JobManagerDialog(QDialog):
+	def __init__(self, parent):
+		super().__init__(parent)
+		self.setWindowTitle("Concurrent job manager")
+		self.settings = QSettings()
+
+		self.main_layout = QVBoxLayout()
+		self.main_layout.setContentsMargins(20, 20, 20, 20)
+		self.main_layout.setSpacing(10)
+		self.setLayout(self.main_layout)
+
+		job_layout = QGridLayout()
+		job_layout.setColumnStretch(1, 1)
+		self.main_layout.addLayout(job_layout)
+		job_label = QLabel("Number of concurrent running jobs:", self)
+		job_layout.addWidget(job_label, 0, 0)
+
+		sys_cpus = psutil.cpu_count()
+
+		self.job_num = QSpinBox(self)
+		self.job_num.setRange(1, max(1, sys_cpus))
+		job_layout.addWidget(self.job_num, 1, 1)
+
+		job_layout.addWidget(QLabel("<font color='red'>Total CPU numbers: {}</font>".format(sys_cpus), self), 1, 2)
+
+		self.main_layout.addWidget(QLabel("<b>Tips:</b>", self))
+		tips = (
+			"<p>1. You can set the number of jobs that can run concurrently to improve the docking speed.</p>"
+			"<p>2. Limiting the number of concurrent jobs helps you reduce CPU consumption.</p>"
+			"<p>3. You can set the number of concurrent jobs to any number from 1 to maximum CPU threads.</p>"
+			"<p>4. For AutoDock Vina or QuickVina-W, the total CPU consumed is job number x vina CPU number.</p>"
+		)
+		tips_label = QLabel(tips, self)
+
+		self.main_layout.addWidget(tips_label)
+
+		self.btn_widget = QDialogButtonBox(
+			QDialogButtonBox.StandardButton.Ok |
+			QDialogButtonBox.StandardButton.Cancel
+		)
+
+		self.btn_widget.accepted.connect(self.write_settings)
+		self.btn_widget.rejected.connect(self.reject)
+		self.main_layout.addWidget(QHLine())
+		self.main_layout.addWidget(self.btn_widget)
+
+	def read_settings(self):
+		val = self.settings.value('Job/concurrent', 1, int)
+		self.job_num.setValue(val)
+
+	def write_settings(self):
+		val = self.job_num.value()
+		self.settings.setValue('Job/concurrent', val)
+		self.accept()
+
+class ReceptorPrepareDialog(QDialog):
 	def __init__(self, parent=None):
 		super().__init__(parent)
-		self.setWindowTitle("Molecular preparation")
+		self.setWindowTitle("Receptor preparation settings")
+
+		self.input_widgets = []
 		self.settings = QSettings()
-		self.tab_widget = QTabWidget(self)
-		main_layout = QVBoxLayout()
-		main_layout.addWidget(self.tab_widget)
+		self.main_layout = QVBoxLayout()
+		self.main_layout.setContentsMargins(20,20,20,20)
+		self.main_layout.setSpacing(10)
+		self.setLayout(self.main_layout)
+
+		self.create_receptor_tab()
+		self.main_layout.addWidget(QHLine())
+
 		btn_widget = QDialogButtonBox(
-			QDialogButtonBox.RestoreDefaults |
-			QDialogButtonBox.Ok | QDialogButtonBox.Cancel
+			QDialogButtonBox.StandardButton.RestoreDefaults |
+			QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
 		)
 
 		btn_widget.accepted.connect(self.write_settings)
 		btn_widget.rejected.connect(self.reject)
-		btn_widget.button(QDialogButtonBox.RestoreDefaults).clicked.connect(self.reset_settings)
-		main_layout.addWidget(btn_widget)
-		self.setLayout(main_layout)
-
-		self.input_widgets = []
-
-		self.create_receptor_tab()
-		self.create_ligand_tab()
+		btn_widget.button(QDialogButtonBox.StandardButton.RestoreDefaults).clicked.connect(self.reset_settings)
+		self.main_layout.addWidget(btn_widget)
 
 		self.read_settings()
 
@@ -819,11 +836,6 @@ class MolecularPrepareDialog(QDialog):
 		))
 
 	def create_receptor_tab(self):
-		page = QWidget(self)
-		layout = QVBoxLayout()
-		page.setLayout(layout)
-		self.tab_widget.addTab(page, 'Receptor')
-
 		b_h_radio = QRadioButton('Build bonds and add hydrogens', self)
 		b_radio = QRadioButton('Build a single bond from each atom with no bonds to its closest neighbor', self)
 		h_radio = QRadioButton('Add hydrogens', self)
@@ -843,14 +855,14 @@ class MolecularPrepareDialog(QDialog):
 		repair_group.addButton(c_h_radio)
 		repair_group.addButton(non_radio)
 
-		layout.addWidget(QLabel("<b>Types of repairs to make:</b>", self))
+		self.main_layout.addWidget(QLabel("<b>Types of repairs to make:</b>", self))
 		repair_layout = QGridLayout()
 		repair_layout.addWidget(non_radio, 0, 0)
 		repair_layout.addWidget(b_h_radio, 0, 1)
 		repair_layout.addWidget(h_radio, 1, 0)
 		repair_layout.addWidget(c_h_radio, 1, 1)
 		repair_layout.addWidget(b_radio, 2, 0, 1, 2)
-		layout.addLayout(repair_layout)
+		self.main_layout.addLayout(repair_layout)
 
 		n_c_radio = QRadioButton("Preserve all input charges, do not add new charges", self)
 		a_g_radio = QRadioButton("Add gasteiger charges", self)
@@ -865,21 +877,8 @@ class MolecularPrepareDialog(QDialog):
 		charge_layout = QHBoxLayout()
 		charge_layout.addWidget(a_g_radio)
 		charge_layout.addWidget(n_c_radio)
-		layout.addWidget(QLabel("<b>Charges:</b>", self))
-		layout.addLayout(charge_layout)
-
-		"""
-		c_a_input = QLineEdit(self)
-		self.register_widget(c_a_input, 'edit', 'Receptor/preserve_charge_types', '', str)
-
-		atom_layout = QHBoxLayout()
-		atom_layout.addWidget(QLabel("Preserve input charges on specific atom types:", self))
-		atom_layout.addWidget(c_a_input)
-		layout.addLayout(atom_layout)
-		note_label = QLabel("<font color='gray'>Multiple atoms can be separated by comma, e.g. Zn,Fe</font>", self)
-		note_label.setAlignment(Qt.AlignRight)
-		layout.addWidget(note_label)
-		"""
+		self.main_layout.addWidget(QLabel("<b>Charges:</b>", self))
+		self.main_layout.addLayout(charge_layout)
 
 		nphs_check = QCheckBox("Merge charges and remove non-polar hydrogens")
 		lps_check = QCheckBox("Merge charges and remove lone pairs")
@@ -893,30 +892,154 @@ class MolecularPrepareDialog(QDialog):
 		self.register_widget(nonstd_check, 'check', 'Receptor/cleanup', 'nonstdres', str)
 		self.register_widget(delalt_check, 'check', 'Receptor/cleanup', 'deleteAltB', str)
 
-		layout.addWidget(QLabel("<b>Clean types:</b>", self))
-		layout.addWidget(nphs_check)
-		layout.addWidget(lps_check)
-		layout.addWidget(water_check)
-		layout.addWidget(nonstd_check)
-		layout.addWidget(delalt_check)
+		self.main_layout.addWidget(QLabel("<b>Clean types:</b>", self))
+		self.main_layout.addWidget(nphs_check)
+		self.main_layout.addWidget(lps_check)
+		self.main_layout.addWidget(water_check)
+		self.main_layout.addWidget(nonstd_check)
+		self.main_layout.addWidget(delalt_check)
 
-		layout.addWidget(QLabel("<b>Residues:</b>", self))
+		self.main_layout.addWidget(QLabel("<b>Residues:</b>", self))
 		e_check = QCheckBox("Delete every non-standard residue from any chain", self)
-		layout.addWidget(e_check)
-		layout.addWidget(QLabel("<font color='gray'>Any residue whose name is not in below list will be deleted from any chain</font>", self))
-		layout.addWidget(QLabel("<font color='gray'><small>[CYS,ILE,SER,VAL,GLN,LYS,ASN,PRO,THR,PHE,ALA,HIS,GLY,ASP,LEU,ARG,TRP,GLU,TYR,MET,HID,HSP,HIE,HIP,CYX,CSS]<small></font>", self))
+		self.main_layout.addWidget(e_check)
+		self.main_layout.addWidget(QLabel("<font color='gray'>Any residue whose name is not in below list will be deleted from any chain</font>", self))
+		self.main_layout.addWidget(QLabel("<font color='gray'><small>[CYS,ILE,SER,VAL,GLN,LYS,ASN,PRO,THR,PHE,ALA,HIS,GLY,ASP,LEU,ARG,TRP,GLU,TYR,MET,HID,HSP,HIE,HIP,CYX,CSS]<small></font>", self))
 		self.register_widget(e_check, 'check', 'Receptor/delete_single_nonstd_residues', False, bool)
 
-		layout.addWidget(QLabel("<b>Atoms:</b>", self))
+		self.main_layout.addWidget(QLabel("<b>Atoms:</b>", self))
 		w_check = QCheckBox("assign each receptor atom a unique name: newname is original name plus its index(1-based)", self)
-		layout.addWidget(w_check)
+		self.main_layout.addWidget(w_check)
 		self.register_widget(w_check, 'check', 'Receptor/unique_atom_names', False, bool)
 
+	def read_settings(self):
+		for i in self.input_widgets:
+			if i.wgtype == 'radio':
+				if 'repairs' in i.option:
+					val = self.settings.value(i.option, '')
+
+				elif 'charges_to_add' in i.option:
+					val = self.settings.value(i.option, 'gasteiger')
+
+					if val == 'None':
+						val = None
+
+				else:
+					val = self.settings.value(i.option, i.default, i.convert)
+
+				i.widget.setChecked(val == i.default)
+
+			elif i.wgtype == 'check':
+				if 'cleanup' in i.option:
+					val = self.settings.value(i.option, 'nphs_lps_waters_nonstdres')
+					val = i.default in val
+
+				elif i.option == 'Ligand/allowed_bonds':
+					val = self.settings.value(i.option, 'backbone')
+					val = i.default in val
+
+				else:
+					val = self.settings.value(i.option, i.default, i.convert)
+
+				if val:
+					i.widget.setCheckState(Qt.CheckState.Checked)
+
+				else:
+					i.widget.setCheckState(Qt.CheckState.Unchecked)
+
+			elif i.wgtype == 'edit':
+				val = self.settings.value(i.option, i.default)
+				i.widget.setText(val)
+
+			elif i.wgtype == 'spin':
+				val = self.settings.value(i.option, i.default, i.convert)
+				i.widget.setValue(val)
+
+			elif i.wgtype == 'select':
+				val = self.settings.value(i.option, i.default)
+				index = i.widget.findText(val)
+				i.widget.setCurrentIndex(index)
+
+	def write_settings(self):
+		for i in self.input_widgets:
+			if i.wgtype == 'radio':
+				if i.widget.isChecked():
+					self.settings.setValue(i.option, i.default)
+
+			elif i.wgtype == 'check':
+				if 'cleanup' in i.option or 'allowed_bonds' in i.option:
+					vals = self.settings.value(i.option, '')
+
+					if vals:
+						vals = vals.split('_')
+					else:
+						vals = []
+
+					if i.widget.isChecked() and i.default not in vals:
+						vals.append(i.default)
+					elif not i.widget.isChecked() and i.default in vals:
+						vals.remove(i.default)
+
+					self.settings.setValue(i.option, '_'.join(vals))
+
+				else:
+					self.settings.setValue(i.option, i.widget.isChecked())
+
+			elif i.wgtype == 'edit':
+				val = i.widget.text()
+				self.settings.setValue(i.option, val)
+
+			elif i.wgtype == 'spin':
+				val = i.widget.value()
+				self.settings.setValue(i.option, val)
+
+			elif i.wgtype == 'select':
+				val = i.widget.currentText()
+				self.settings.setValue(i.option, val)
+
+		self.accept()
+
+	def reset_settings(self):
+		self.settings.remove('Receptor')
+		self.read_settings()
+
+class LigandPrepareDialog(QDialog):
+	def __init__(self, parent=None):
+		super().__init__(parent)
+		self.setWindowTitle("Ligand preparation settings")
+
+		self.input_widgets = []
+		self.settings = QSettings()
+		self.main_layout = QVBoxLayout()
+		self.main_layout.setContentsMargins(20,20,20,20)
+		self.main_layout.setSpacing(10)
+
+		self.setLayout(self.main_layout)
+		
+		self.create_ligand_tab()
+		self.main_layout.addWidget(QHLine())
+
+		btn_widget = QDialogButtonBox(
+			QDialogButtonBox.StandardButton.RestoreDefaults |
+			QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+		)
+
+		btn_widget.accepted.connect(self.write_settings)
+		btn_widget.rejected.connect(self.reject)
+		btn_widget.button(QDialogButtonBox.StandardButton.RestoreDefaults).clicked.connect(self.reset_settings)
+		self.main_layout.addWidget(btn_widget)
+		
+		self.read_settings()
+
+	def register_widget(self, widget, wgtype, option, default, convert):
+		self.input_widgets.append(AttrDict(
+			widget = widget,
+			wgtype = wgtype,
+			option = option,
+			default = default,
+			convert = convert
+		))
+
 	def create_ligand_tab(self):
-		page = QWidget(self)
-		main_layout = QVBoxLayout()
-		page.setLayout(main_layout)
-		self.tab_widget.addTab(page, "Ligand")
 		tool_select = QComboBox(self)
 		tool_select.addItems(["prepare_ligand4", "meeko"])
 		stack_widget = QStackedWidget(self)
@@ -928,9 +1051,9 @@ class MolecularPrepareDialog(QDialog):
 		tool_layout.addWidget(QLabel("Select a ligand preparation tool:"))
 		tool_layout.addWidget(tool_select)
 
-		main_layout.addLayout(tool_layout)
-		main_layout.addWidget(QLabel("<font color='gray'>prepare_ligand4 recommended for AutoDock4 and meeko recommended for AutoDock Vina</font>", self))
-		main_layout.addWidget(stack_widget)
+		self.main_layout.addLayout(tool_layout)
+		self.main_layout.addWidget(QLabel("<font color='gray'>prepare_ligand4 recommended for AutoDock4 and meeko recommended for AutoDock Vina</font>", self))
+		self.main_layout.addWidget(stack_widget)
 
 		#prepare_ligand4.py settings
 		prelig_page = QWidget(self)
@@ -1045,7 +1168,7 @@ class MolecularPrepareDialog(QDialog):
 		meeko_page.setLayout(meeko_layout)
 		stack_widget.addWidget(meeko_page)
 
-		ahc_check = QCheckBox("Add hydrogens and 3D coordinates", self)
+		#ahc_check = QCheckBox("Add hydrogens and 3D coordinates", self)
 		rmc_check = QCheckBox("Keep macrocycles rigid in input conformation", self)
 		kcr_check = QCheckBox("Return all rings from exhaustive perception", self)
 		ker_check = QCheckBox("Equivalent rings have the same size and neighbors", self)
@@ -1055,7 +1178,7 @@ class MolecularPrepareDialog(QDialog):
 		aim_check = QCheckBox("Write map of atom indices from input to pdbqt", self)
 		rms_check = QCheckBox("Do not write smiles as remark to pdbqt", self)
 
-		self.register_widget(ahc_check, 'check', 'Meeko/add_h_3d', True, bool)
+		#self.register_widget(ahc_check, 'check', 'Meeko/add_h_3d', True, bool)
 		self.register_widget(rmc_check, 'check', 'Meeko/rigid_macrocycles', False, bool)
 		self.register_widget(kcr_check, 'check', 'Meeko/keep_chorded_rings', False, bool)
 		self.register_widget(ker_check, 'check', 'Meeko/keep_equivalent_rings', False, bool)
@@ -1065,7 +1188,7 @@ class MolecularPrepareDialog(QDialog):
 		self.register_widget(aim_check, 'check', 'Meeko/add_index_map', False, bool)
 		self.register_widget(rms_check, 'check', 'Meeko/remove_smiles', False, bool)
 
-		meeko_layout.addWidget(ahc_check)
+		#meeko_layout.addWidget(ahc_check)
 		meeko_layout.addWidget(rmc_check)
 		meeko_layout.addWidget(kcr_check)
 		meeko_layout.addWidget(ker_check)
@@ -1192,7 +1315,6 @@ class MolecularPrepareDialog(QDialog):
 		self.accept()
 
 	def reset_settings(self):
-		self.settings.remove('Receptor')
 		self.settings.remove('Ligand')
 		self.settings.remove('Meeko')
 		self.read_settings()
@@ -1225,8 +1347,8 @@ class DownloaderDialog(QDialog):
 		self.layout.addRow("Progress", self.progress_bar)
 
 		btn_box = QDialogButtonBox()
-		self.start_btn = btn_box.addButton("Import", QDialogButtonBox.AcceptRole)
-		self.abort_btn = btn_box.addButton("Cancel", QDialogButtonBox.RejectRole)
+		self.start_btn = btn_box.addButton("Import", QDialogButtonBox.ButtonRole.AcceptRole)
+		self.abort_btn = btn_box.addButton("Cancel", QDialogButtonBox.ButtonRole.RejectRole)
 		self.layout.addRow(btn_box)
 
 		self.start_btn.clicked.connect(self.on_start)
@@ -1416,7 +1538,7 @@ class FlexResiduesDialog(QDialog):
 		self.bond_check = QCheckBox("Select bonds to disallowed", self)
 		self.bond_check.stateChanged.connect(self.bond_tree.setVisible)
 
-		self.btns = QDialogButtonBox( QDialogButtonBox.Cancel | QDialogButtonBox.Ok)
+		self.btns = QDialogButtonBox( QDialogButtonBox.StandardButton.Cancel | QDialogButtonBox.StandardButton.Ok)
 		self.btns.accepted.connect(self.on_accept_clicked)
 		self.btns.rejected.connect(self.reject)
 
@@ -1580,7 +1702,7 @@ class LigandFilterDialog(QDialog):
 		self.cpjoin = QComboBox(self)
 		self.cpjoin.addItems(['AND', 'OR'])
 
-		self.btns = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+		self.btns = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
 		self.btns.accepted.connect(self.accept)
 		self.btns.rejected.connect(self.reject)
 
@@ -1599,12 +1721,11 @@ class LigandFilterDialog(QDialog):
 		grid_layout.addWidget(self.cpsign, 2, 2)
 		grid_layout.addWidget(self.clogp, 2, 3)
 
-		main_layout = QVBoxLayout()
-		main_layout.addWidget(QLabel("<b>Remove ligands that match the filter:</b>", self))
-		main_layout.addLayout(grid_layout)
-		main_layout.addSpacing(20)
-		main_layout.addWidget(self.btns)
-		self.setLayout(main_layout)
+		self.layout = QVBoxLayout()
+		self.layout.addWidget(QLabel("<b>Remove ligands that match the filter:</b>", self))
+		self.layout.addLayout(grid_layout)
+		self.layout.addSpacing(20)
+		self.layout.addWidget(self.btns)
 
 	def sizeHint(self):
 		return QSize(400, 100)
@@ -1613,7 +1734,7 @@ class LigandFilterDialog(QDialog):
 	def filter(cls, parent):
 		dlg = cls(parent)
 
-		if dlg.exec() == QDialog.Accepted:
+		if dlg.exec() == QDialog.DialogCode.Accepted:
 			mwt = dlg.weight.value()
 			mws = dlg.mwsign.currentText()
 
@@ -1644,3 +1765,181 @@ class LigandFilterDialog(QDialog):
 
 			return ''.join(conditions)
 
+
+class ReceptorPreprocessDialog(QDialog):
+	def __init__(self, parent):
+		super().__init__(parent)
+		self.setWindowTitle("Receptor preprocessing settings")
+
+		self.input_widgets = []
+		self.settings = QSettings()
+		self.main_layout = QVBoxLayout()
+		self.main_layout.setContentsMargins(20, 20, 20, 20)
+		self.main_layout.setSpacing(10)
+		self.setLayout(self.main_layout)
+
+		self.create_pdbfix_widgets()
+		self.create_pdbpqr_widgets()
+
+		self.main_layout.addWidget(QHLine())
+
+		btn_widget = QDialogButtonBox(
+			QDialogButtonBox.StandardButton.RestoreDefaults |
+			QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+		)
+
+		btn_widget.accepted.connect(self.write_settings)
+		btn_widget.rejected.connect(self.reject)
+		btn_widget.button(QDialogButtonBox.StandardButton.RestoreDefaults).clicked.connect(self.reset_settings)
+		self.main_layout.addWidget(btn_widget)
+
+		self.read_settings()
+
+	def register_widget(self, widget, wgtype, option, default, convert):
+		self.input_widgets.append(AttrDict(
+			widget = widget,
+			wgtype = wgtype,
+			option = option,
+			default = default,
+			convert = convert
+		))
+
+	def create_pdbfix_widgets(self):
+		pdbfix_grid = QGridLayout()
+		pdbfix_grid.setColumnStretch(1, 1)
+		pdbfix_grid.setColumnStretch(2, 1)
+		self.main_layout.addLayout(pdbfix_grid)
+		pdbfix_label = QLabel("<b>Use PDBFixer to fix receptor PDB file</b>", self)
+		use_pdbfix = QCheckBox(self)
+		self.register_widget(use_pdbfix, 'check', 'PDBFixer/use_pdbfix', True, bool)
+
+		pdbfix_grid.addWidget(use_pdbfix, 0, 0)
+		pdbfix_grid.addWidget(pdbfix_label, 0, 1)
+		
+		replace_nonres = QCheckBox("Replace non-standard residues", self)
+		self.register_widget(replace_nonres, 'check', 'PDBFixer/replace_nonres', True, bool)
+		pdbfix_grid.addWidget(replace_nonres, 1, 1)
+		use_pdbfix.stateChanged.connect(replace_nonres.setEnabled)
+
+		remove_heterogen = QCheckBox("Remove all heterogens including water", self)
+		self.register_widget(remove_heterogen, 'check', 'PDBFixer/remove_heterogen', True, bool)
+		pdbfix_grid.addWidget(remove_heterogen, 2, 1)
+		use_pdbfix.stateChanged.connect(remove_heterogen.setEnabled)
+
+		add_misheavy = QCheckBox("Add missing heavy atoms", self)
+		self.register_widget(add_misheavy, 'check', 'PDBFixer/add_misheavy', True, bool)
+		pdbfix_grid.addWidget(add_misheavy, 3, 1)
+		use_pdbfix.stateChanged.connect(add_misheavy.setEnabled)
+
+		add_mishydrogen = QCheckBox("Add missing hydrogen atoms, the pH to use for adding hydrogens:", self)
+		self.register_widget(add_mishydrogen, 'check', 'PDBFixer/add_mishydrogen', True, bool)
+		pdbfix_grid.addWidget(add_mishydrogen, 4, 1)
+		mishydrogen_ph = QDoubleSpinBox(self)
+		mishydrogen_ph.setRange(0, 14)
+		mishydrogen_ph.setDecimals(1)
+		self.register_widget(mishydrogen_ph, 'spin', 'PDBFixer/mishydrogen_ph', 7.0, float)
+		pdbfix_grid.addWidget(mishydrogen_ph, 4, 2)
+		use_pdbfix.stateChanged.connect(add_mishydrogen.setEnabled)
+		use_pdbfix.stateChanged.connect(mishydrogen_ph.setEnabled)
+
+	def create_pdbpqr_widgets(self):
+		pdbpqr_grid = QGridLayout()
+		pdbpqr_grid.setColumnStretch(1, 1)
+		pdbpqr_grid.setColumnStretch(2, 1)
+		self.main_layout.addLayout(pdbpqr_grid)
+		pdbpqr_label = QLabel("<b>Use PDB2PQR to convert PDB file to PQR file</b>", self)
+		use_pdbpqr = QCheckBox(self)
+		self.register_widget(use_pdbpqr, 'check', 'PDB2PQR/use_pdbpqr', False, bool)
+
+		pdbpqr_grid.addWidget(use_pdbpqr, 0, 0)
+		pdbpqr_grid.addWidget(pdbpqr_label, 0, 1)
+
+		pdbpqr_grid.addWidget(QLabel("choose a forcefield to use:", self), 1, 1)
+		force_field = QComboBox(self)
+		force_field.addItems(['AMBER', 'CHARMM', 'PEOEPB', 'PARSE', 'SWANSON', 'TYL06'])
+		force_field.setCurrentIndex(3)
+		force_field.setEnabled(False)
+		pdbpqr_grid.addWidget(force_field, 1, 2)
+		self.register_widget(force_field, 'select', 'PDB2PQR/force_field', 'PARSE', str)
+		use_pdbpqr.stateChanged.connect(force_field.setEnabled)
+
+		use_propka = QCheckBox("Use PROPKA to assign protonation states at provided pH:", self)
+		use_propka.setEnabled(False)
+		use_pdbpqr.stateChanged.connect(use_propka.setEnabled)
+		pdbpqr_grid.addWidget(use_propka, 2, 1)
+		self.register_widget(use_propka, 'check', 'PDB2PQR/use_propka', True, bool)
+
+		propka_ph = QDoubleSpinBox(self)
+		propka_ph.setRange(0, 14)
+		propka_ph.setDecimals(1)
+		propka_ph.setEnabled(False)
+		use_pdbpqr.stateChanged.connect(propka_ph.setEnabled)
+		self.register_widget(propka_ph, 'spin', 'PDB2PQR/propka_ph', 7.0, float)
+		pdbpqr_grid.addWidget(propka_ph, 2, 2)
+
+		node_bump = QCheckBox("Ensure that new atoms are not rebuilt too close to existing atoms", self)
+		node_bump.setEnabled(False)
+		use_pdbpqr.stateChanged.connect(node_bump.setEnabled)
+		pdbpqr_grid.addWidget(node_bump, 3, 1, 1, 2)
+		self.register_widget(node_bump, 'check', 'PDB2PQR/node_bump', False, bool)
+
+		no_hopt = QCheckBox("Optimize the hydrogen bonding network", self)
+		no_hopt.setEnabled(False)
+		use_pdbpqr.stateChanged.connect(no_hopt.setEnabled)
+		pdbpqr_grid.addWidget(no_hopt, 4, 1)
+		self.register_widget(no_hopt, 'check', 'PDB2PQR/no_hopt', False, bool)
+
+		remove_water = QCheckBox("Remove the waters from the output file", self)
+		remove_water.setEnabled(False)
+		use_pdbpqr.stateChanged.connect(remove_water.setEnabled)
+		pdbpqr_grid.addWidget(remove_water, 5, 1)
+		self.register_widget(remove_water, 'check', 'PDB2PQR/remove_water', True, bool)
+
+		neutraln = QCheckBox("Make the N-terminus of a protein neutral (only for PARSE)", self)
+		neutraln.setEnabled(False)
+		use_pdbpqr.stateChanged.connect(neutraln.setEnabled)
+		pdbpqr_grid.addWidget(neutraln, 6, 1)
+		self.register_widget(neutraln, 'check', 'PDB2PQR/neutraln', False, bool)
+
+		neutralc = QCheckBox("Make the C-terminus of a protein neutral (only for PARSE)", self)
+		neutralc.setEnabled(False)
+		use_pdbpqr.stateChanged.connect(neutralc.setEnabled)
+		pdbpqr_grid.addWidget(neutralc, 7, 1)
+		self.register_widget(neutralc, 'check', 'PDB2PQR/neutralc', False, bool)
+
+	def read_settings(self):
+		for i in self.input_widgets:
+			val = self.settings.value(i.option, i.default, i.convert)
+
+			if i.wgtype == 'check':
+				if val:
+					i.widget.setCheckState(Qt.CheckState.Checked)
+
+				else:
+					i.widget.setCheckState(Qt.CheckState.Unchecked)
+
+			elif i.wgtype == 'spin':
+				i.widget.setValue(val)
+
+			elif i.wgtype == 'select':
+				i.widget.setCurrentIndex(i.widget.findText(val))
+
+	def write_settings(self):
+		for i in self.input_widgets:
+			if i.wgtype == 'check':
+				val = i.widget.isChecked()
+
+			elif i.wgtype == 'spin':
+				val = i.widget.value()
+
+			elif i.wgtype == 'select':
+				val = i.widget.currentText()
+
+			self.settings.setValue(i.option, val)
+
+		self.accept()
+
+	def reset_settings(self):
+		self.settings.remove('PDBFixer')
+		self.settings.remove('PDB2PQR')
+		self.read_settings()

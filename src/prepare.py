@@ -3,7 +3,10 @@ import os
 import MolKit.molecule
 import MolKit.protein
 
-#from pdbfixer import PDBFixer
+from pdbfixer import PDBFixer
+from openmm.app import PDBFile
+
+from pdb2pqr.main import build_main_parser, main_driver
 
 from MolKit import Read
 from MolKit.molecule import BondSet
@@ -21,21 +24,64 @@ from AutoDockTools.MoleculePreparation import AD4FlexibleReceptorPreparation
 from utils import load_molecule_from_file
 
 __all__ = ['prepare_autodock_ligand', 'prepare_autodock_receptor',
-	'prepare_meeko_ligand', 'prepare_ligand', 'prepare_flex_receptor'
+	'prepare_meeko_ligand', 'prepare_ligand', 'prepare_flex_receptor',
+	'fix_receptor_pdb', 'convert_pdb_to_pqr'
 ]
 
 
-def fix_receptor_pdb(receptor_file):
-	fixer = PDBFixer(receptor_file)
+def fix_receptor_pdb(pdbfile, outfile, params):
+	fixer = PDBFixer(filename = pdbfile)
 	fixer.findMissingResidues()
-	fixer.findNonstandardResidues()
-	fixer.replaceNonstandardResidues()
-	fixer.removeHeterogens(True)
-	fixer.findMissingAtoms()
-	fixer.addMissingAtoms()
-	fixer.addMissingHydrogens(7.0)
-	fixer.addSolvent(fixer.topology.getUnitCellDimensions())
 
+	if params['replace_nonres']:
+		fixer.findNonstandardResidues()
+		fixer.replaceNonstandardResidues()
+
+	if params['remove_heterogen']:
+		fixer.removeHeterogens(True)
+	else:
+		fixer.removeHeterogens(False)
+
+	if params['add_misheavy']:
+		fixer.findMissingAtoms()
+		fixer.addMissingAtoms()
+
+	if params['add_mishydrogen']:
+		fixer.addMissingHydrogens(params['mishydrogen_ph'])
+
+	with open(outfile, 'w') as fw:
+		PDBFile.writeFile(fixer.topology, fixer.positions, fw)
+
+def convert_pdb_to_pqr(pdbfile, pqrfile, params):
+	args_list = ["--ff", params['force_field']]
+
+	if params['force_field'] == 'PARSE':
+		if params['neutraln']:
+			args_list.append('--neutraln')
+
+		if params['neutralc']:
+			args_list.append('--neutralc')
+
+	if params['use_propka']:
+		args_list.extend(['--titration-state-method', 'propka'])
+		args_list.extend(['--with-ph', params['propka_ph']])
+
+	if params['node_bump']:
+		args_list.append('--nodebump')
+
+	if params['no_hopt']:
+		args_list.append('--noopt')
+
+	if params['remove_water']:
+		args_list.append('--drop-water')
+
+	args_list.append(pdbfile)
+	args_list.append(pqrfile)
+	args_list.extend(['--log-level', 'ERROR'])
+
+	parser = build_main_parser()
+	args = parser.parse_args(args_list)
+	main_driver(args)
 
 def prepare_autodock_ligand(ligand_file, ligand_pdbqt, params):
 	repairs = params['repairs']
