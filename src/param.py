@@ -774,7 +774,7 @@ class AutodockParameterWizard(QWizard):
 	def __init__(self, parent):
 		super(AutodockParameterWizard, self).__init__(parent)
 		self.setWindowTitle("Parameter settings for AutoDock")
-		self.setWizardStyle(QWizard.ClassicStyle)
+		self.setWizardStyle(QWizard.WizardStyle.ModernStyle)
 
 		self.algorithms = ["Lamarckian GA", "Genetic Algorithm",
 							"Simulated Annealing", "Local Search"]
@@ -1165,7 +1165,7 @@ class AutodockVinaParameterWizard(QWizard):
 	def __init__(self, parent=None):
 		super(AutodockVinaParameterWizard, self).__init__(parent)
 		self.setWindowTitle("Run Autodock Vina")
-		self.setWizardStyle(QWizard.ClassicStyle)
+		self.setWizardStyle(QWizard.WizardStyle.ModernStyle)
 
 		self.create_parameter_page()
 		self.create_finish_page()
@@ -1380,7 +1380,7 @@ class QuickVinaParameterWizard(QWizard):
 	def __init__(self, parent=None):
 		super(QuickVinaParameterWizard, self).__init__(parent)
 		self.setWindowTitle("Run QuickVina-W")
-		self.setWizardStyle(QWizard.ClassicStyle)
+		self.setWizardStyle(QWizard.WizardStyle.ModernStyle)
 
 		self.create_parameter_page()
 		self.create_finish_page()

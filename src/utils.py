@@ -401,7 +401,6 @@ def get_molecule_information(mol_file, from_string=False, mol_name=None, mol_for
 		out_format = 'pdb'
 		mol_content = None
 
-
 	obc = openbabel.OBConversion()
 	obc.SetInAndOutFormats(mol_format, out_format)
 	mol = openbabel.OBMol()

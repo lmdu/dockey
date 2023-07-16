@@ -64,7 +64,7 @@ def convert_pdb_to_pqr(pdbfile, pqrfile, params):
 
 	if params['use_propka']:
 		args_list.extend(['--titration-state-method', 'propka'])
-		args_list.extend(['--with-ph', params['propka_ph']])
+		args_list.extend(['--with-ph', str(params['propka_ph'])])
 
 	if params['node_bump']:
 		args_list.append('--nodebump')
@@ -75,9 +75,10 @@ def convert_pdb_to_pqr(pdbfile, pqrfile, params):
 	if params['remove_water']:
 		args_list.append('--drop-water')
 
+	args_list.extend(['--log-level', 'ERROR'])
+
 	args_list.append(pdbfile)
 	args_list.append(pqrfile)
-	args_list.extend(['--log-level', 'ERROR'])
 
 	parser = build_main_parser()
 	args = parser.parse_args(args_list)

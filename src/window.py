@@ -796,10 +796,10 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 				if DB.active():
 					ret = QMessageBox.warning(self, "Warning",
 						"Are you sure you want to close the current project and open the dragged project?",
-						QMessageBox.Yes | QMessageBox.No
+						QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
 					)
 
-					if ret == QMessageBox.No:
+					if ret == QMessageBox.StandardButton.No:
 						return
 					else:
 						self.close_project()
@@ -840,10 +840,10 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		if DB.active():
 			ret = QMessageBox.warning(self, "Warning",
 				"Are you sure you want to close the current project and create a new project?",
-				QMessageBox.Yes | QMessageBox.No
+				QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
 			)
 
-			if ret == QMessageBox.No:
+			if ret == QMessageBox.StandardButton.No:
 				return
 			else:
 				self.close_project()
@@ -868,10 +868,10 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		if DB.active():
 			ret = QMessageBox.warning(self, "Warning",
 				"Are you sure you want to close the current project and open a new project?",
-				QMessageBox.Yes | QMessageBox.No
+				QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
 			)
 
-			if ret == QMessageBox.No:
+			if ret == QMessageBox.StandardButton.No:
 				return
 			else:
 				self.close_project()
@@ -976,15 +976,15 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 
 		importor = ImportFileWorker(receptors, 1)
 		self.start_import_thread(importor)
-		
 
 	def import_receptor_from_pdb(self):
-		#pdb_url = PDBDownloader.get_url(self)
+		urls = PDBDownloadDialog.get_urls(self)
+		
+		if not urls:
+			return
 
-		#if pdb_url:
-		#	self.import_moleculars([pdb_url], 1)
-		dlg = PDBDownloader(self)
-		dlg.exec()
+		importor = ImportURLWorker(urls, 1)
+		self.start_import_thread(importor)
 
 	def import_ligands(self):
 		ligands, _ = QFileDialog.getOpenFileNames(self,
@@ -1030,16 +1030,31 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		self.start_import_thread(importor)
 
 	def import_ligand_from_zinc(self):
-		dlg = ZINCDownloader(self)
-		dlg.exec()
+		urls = ZINCDownloadDialog.get_urls(self)
+		
+		if not urls:
+			return
+
+		importor = ImportURLWorker(urls, 2)
+		self.start_import_thread(importor)
 
 	def import_ligand_from_pubchem(self):
-		dlg = PubchemDownloader(self)
-		dlg.exec()
+		urls = PubchemDownloadDialog.get_urls(self)
+		
+		if not urls:
+			return
+
+		importor = ImportURLWorker(urls, 2)
+		self.start_import_thread(importor)
 
 	def import_ligand_from_chembl(self):
-		dlg = ChemblDownloader(self)
-		dlg.exec()
+		urls = ChemblDownloadDialog.get_urls(self)
+		
+		if not urls:
+			return
+
+		importor = ImportURLWorker(urls, 2)
+		self.start_import_thread(importor)
 
 	def import_ligand_from_coconut(self):
 		pass
@@ -1217,10 +1232,10 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 	def stop_job(self, job):
 		ret = QMessageBox.warning(self, "Warning",
 			"Are you sure you want to stop this job?",
-			QMessageBox.Yes | QMessageBox.No
+			QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
 		)
 
-		if ret == QMessageBox.No:
+		if ret == QMessageBox.StandardButton.No:
 			return False
 
 		if self.job_worker is not None:
@@ -1276,10 +1291,10 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		if jobs:
 			ret = QMessageBox.warning(self, "Warning",
 				"Are you sure you want to delete the previous jobs and analysis results?",
-				QMessageBox.Yes | QMessageBox.No
+				QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
 			)
 
-			if ret == QMessageBox.No:
+			if ret == QMessageBox.StandardButton.No:
 				return False
 
 		self.job_model.clear()
@@ -1383,7 +1398,7 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 				ret = QMessageBox.question(self, "Comfirmation",
 					"Are you sure you want to remove {} ligand(s) that match the filter?".format(count))
 
-				if ret == QMessageBox.Yes:
+				if ret == QMessageBox.StandardButton.Yes:
 					DB.query("DELETE FROM molecular WHERE type=2 AND {}".format(condition))
 
 					ligand_count = int(DB.get_option('ligand_count'))

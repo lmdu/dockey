@@ -1,6 +1,7 @@
 import os
 import time
 import psutil
+import requests
 import traceback
 import subprocess
 import multiprocessing
@@ -15,7 +16,7 @@ from backend import *
 
 __all__ = ['ImportFileProcess', 'ImportFolderProcess', 'JobListProcess',
 	'AutodockProcess', 'AutodockVinaProcess', 'QuickVinaProcess',
-	'ImportSDFProcess'
+	'ImportSDFProcess', 'ImportURLProcess'
 ]
 
 class ImportProcess(multiprocessing.Process):
@@ -67,7 +68,8 @@ class ImportProcess(multiprocessing.Process):
 	def run(self):
 		try:
 			self.process()
-		
+			self.write()
+
 		except:
 			self.producer.send({
 				'action': 'failure',
@@ -83,17 +85,7 @@ class ImportFileProcess(ImportProcess):
 
 		for mol_file in self.mol_files:
 			m = get_molecule_information(mol_file)
-
-			if 'error' in m:
-				self.producer.send({
-					'action': 'failure',
-					'message': "{}: {}".format(mol_file, m.error)
-				})
-				return
-
 			self.add(m)
-
-		self.write()
 
 class ImportSDFProcess(ImportProcess):
 	def process(self):
@@ -109,17 +101,7 @@ class ImportSDFProcess(ImportProcess):
 			mol_str = Chem.SDWriter.GetText(mol, kekulize=False)
 
 			m = get_molecule_information(mol_str, True, mol_name, 'sdf')
-
-			if 'error' in m:
-				self.producer.send({
-					'action': 'failure',
-					'message': "{}: {}".format(mol_file, m.error)
-				})
-				return
-
 			self.add(m)
-
-		self.write()
 
 class ImportFolderProcess(ImportProcess):
 	def process(self):
@@ -130,17 +112,20 @@ class ImportFolderProcess(ImportProcess):
 			mol_file = mol_files.next()
 
 			m = get_molecule_information(mol_file)
-
-			if 'error' in m:
-				self.producer.send({
-					'action': 'failure',
-					'message': "{}: {}".format(mol_file, m.error)
-				})
-				return
-
 			self.add(m)
 
-		self.write()
+class ImportURLProcess(ImportProcess):
+	def process(self):
+		self.mol_total = len(self.mol_files)
+
+		for mol_name, mol_url, mol_fmt in self.mol_files:
+			r = requests.get(mol_url, allow_redirects=True)
+
+			if r.status_code != 200:
+				r.raise_for_status()
+
+			m = get_molecule_information(r.text, True, mol_name, mol_fmt)
+			self.add(m)
 
 class JobListProcess(multiprocessing.Process):
 	def __init__(self, rids, lids, producer):

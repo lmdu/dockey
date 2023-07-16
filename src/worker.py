@@ -18,7 +18,7 @@ from prepare import *
 __all__ = ['AutodockWorker', 'AutodockVinaWorker', 'QuickVinaWorker',
 	'ImportFileWorker', 'ImportFolderWorker', 'JobListGenerator',
 	'PoseInteractionExportWorker', 'BestInteractionExportWorker',
-	'ImportSDFWorker'
+	'ImportSDFWorker', 'ImportURLWorker'
 ]
 
 class ImportSignals(QObject):
@@ -128,6 +128,9 @@ class ImportSDFWorker(ImportWorker):
 
 class ImportFolderWorker(ImportWorker):
 	processer = ImportFolderProcess
+
+class ImportURLWorker(ImportWorker):
+	processer = ImportURLProcess
 
 class JobListSignals(QObject):
 	failure = pyqtSignal(str)
@@ -275,7 +278,7 @@ class BaseWorker(QRunnable):
 			'flex': residues
 		})
 
-	@pyqtSlot(int)
+	#@pyqtSlot(int)
 	def change_job_numbers(self, num):
 		self.job_num = num
 		num = len(self.jobs)
@@ -385,7 +388,9 @@ class BaseWorker(QRunnable):
 			propka_ph = self.settings.value('propka_ph', 7.0, float),
 			node_bump = self.settings.value('node_bump', False, bool),
 			no_hopt = self.settings.value('no_hopt', False, bool),
-			remove_water = self.setting.value('remove_water', True, bool)
+			remove_water = self.settings.value('remove_water', True, bool),
+			neutraln = self.settings.value('neutraln', False, bool),
+			neutralc = self.settings.value('neutralc', False, bool)
 		)
 		self.settings.endGroup()
 
@@ -528,7 +533,7 @@ class BaseWorker(QRunnable):
 
 		return self.jobs[job].process.pid
 
-	@pyqtSlot()
+	#@pyqtSlot()
 	def run(self):
 		self.job_total = int(DB.get_option('job_count'))
 		self.job_query = DB.query("SELECT id FROM jobs")

@@ -31,7 +31,7 @@ class MoleculeDetailDialog(QDialog):
 		label.setWordWrap(True)
 		layout.addWidget(label)
 
-		btn_box = QDialogButtonBox(QDialogButtonBox.Ok)
+		btn_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok)
 		btn_box.accepted.connect(self.accept)
 		btn_box.rejected.connect(self.reject)
 		layout.addWidget(btn_box)
@@ -49,7 +49,7 @@ class JobStatusesDialog(QDialog):
 		label.setWordWrap(True)
 		layout.addWidget(label)
 
-		btn_box = QDialogButtonBox(QDialogButtonBox.Ok)
+		btn_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok)
 		btn_box.accepted.connect(self.accept)
 		btn_box.rejected.connect(self.reject)
 		layout.addWidget(btn_box)
@@ -72,7 +72,7 @@ class JobDetailDialog(QDialog):
 		self.usage_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
 		layout.addWidget(self.usage_label)
 
-		btn_box = QDialogButtonBox(QDialogButtonBox.Ok)
+		btn_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok)
 		btn_box.accepted.connect(self.accept)
 		btn_box.rejected.connect(self.reject)
 		layout.addWidget(btn_box)
@@ -136,7 +136,7 @@ class JobLogDialog(QDialog):
 		self.tab_bar.currentChanged.connect(self.on_tab_changed)
 		self.on_tab_changed(0)
 
-		btn_box = QDialogButtonBox(QDialogButtonBox.Ok)
+		btn_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok)
 		btn_box.accepted.connect(self.accept)
 
 		self.layout = QVBoxLayout()
@@ -187,45 +187,37 @@ class DockeyListView(QListView):
 		#	triggered = self.add_ligands
 		#)
 
-		rep_f_act = QAction("Set Flexible Residues", self,
-			enabled = self.current_index.isValid() and self.current_index.siblingAtColumn(2).data() == 1,
-			triggered = self.set_flex_residules
-		)
+		rep_f_act = QAction("Set Flexible Residues", self)
+		rep_f_act.triggered.connect(self.set_flex_residules)
+		rep_f_act.setEnabled(self.current_index.isValid() and self.current_index.siblingAtColumn(2).data() == 1)
 
-		lig_f_act = QAction("Perform Ligand Filter", self,
-			enabled = DB.active(),
-			triggered = self.ligand_filter
-		)
+		lig_f_act = QAction("Ligand Filter", self)
+		lig_f_act.triggered.connect(self.ligand_filter)
+		lig_f_act.setEnabled(DB.active())
 
-		del_m_act = QAction("Delete Select", self,
-			enabled = self.current_index.isValid(),
-			triggered = self.delete_molecular
-		)
+		del_m_act = QAction("Delete Select", self)
+		del_m_act.triggered.connect(self.delete_molecular)
+		del_m_act.setEnabled(self.current_index.isValid())
 
-		clr_r_act = QAction("Delete All Receptors", self,
-			enabled = DB.active(),
-			triggered = self.delete_receptors
-		)
+		clr_r_act = QAction("Delete All Receptors", self)
+		clr_r_act.setEnabled(DB.active())
+		clr_r_act.triggered.connect(self.delete_receptors)
 
-		clr_l_act = QAction("Delete All Ligands", self,
-			enabled = DB.active(),
-			triggered = self.delete_ligands
-		)
+		clr_l_act = QAction("Delete All Ligands", self)
+		clr_l_act.triggered.connect(self.delete_ligands)
+		clr_l_act.setEnabled(DB.active())
 
-		clr_m_act = QAction("Delete All Molecules", self,
-			enabled = DB.active(),
-			triggered = self.delete_all
-		)
+		clr_m_act = QAction("Delete All Molecules", self)
+		clr_m_act.triggered.connect(self.delete_all)
+		clr_m_act.setEnabled(DB.active())
 
-		view_act = QAction("View Molecule Details", self,
-			enabled = self.current_index.isValid(),
-			triggered = self.view_details
-		)
+		view_act = QAction("View Molecule Details", self)
+		view_act.triggered.connect(self.view_details)
+		view_act.setEnabled(self.current_index.isValid())
 
-		stat_act = QAction("View Molecule Counts", self,
-			enabled = DB.active(),
-			triggered = self.view_stats
-		)
+		stat_act = QAction("View Molecule Counts", self)
+		stat_act.triggered.connect(self.view_stats)
+		stat_act.setEnabled(DB.active())
 
 		menu = QMenu(self)
 		#menu.addAction(add_r_act)
@@ -266,7 +258,7 @@ class DockeyListView(QListView):
 		ret = QMessageBox.question(self.parent, "Comfirmation",
 			"Are you sure you want to delete select moleculue?")
 
-		if ret == QMessageBox.No:
+		if ret == QMessageBox.StandardButton.No:
 			return
 
 		if not self.current_index.isValid():
@@ -297,7 +289,7 @@ class DockeyListView(QListView):
 		ret = QMessageBox.question(self.parent, "Comfirmation",
 			"Are you sure you want to delete all ligands?")
 
-		if ret == QMessageBox.No:
+		if ret == QMessageBox.StandardButton.No:
 			return
 
 		DB.query("DELETE FROM molecular WHERE type=2")
@@ -317,7 +309,7 @@ class DockeyListView(QListView):
 		ret = QMessageBox.question(self.parent, "Comfirmation",
 			"Are you sure you want to delete all receptors?")
 
-		if ret == QMessageBox.No:
+		if ret == QMessageBox.StandardButton.No:
 			return
 
 		DB.query("DELETE FROM molecular WHERE type=1")
@@ -336,7 +328,7 @@ class DockeyListView(QListView):
 		ret = QMessageBox.question(self.parent, "Comfirmation",
 			"Are you sure you want to delete all moleculues?")
 
-		if ret == QMessageBox.No:
+		if ret == QMessageBox.StandardButton.No:
 			return
 
 		DB.query("DELETE FROM molecular")
@@ -1016,23 +1008,20 @@ class JobTableView(QTableView):
 	def on_custom_menu(self, pos):
 		self.current_index = self.indexAt(pos)
 
-		view_detail_act = QAction("View Job Details", self,
-			triggered = self.view_job_details
-		)
+		view_detail_act = QAction("View Job Details", self)
+		view_detail_act.triggered.connect(self.view_job_details)
 		view_detail_act.setEnabled(self.current_index.isValid())
 
-		view_status_act = QAction("View Job Counts", self,
-			disabled = not DB.active(),
-			triggered = self.view_job_statuses
-		)
+		view_status_act = QAction("View Job Counts", self)
+		view_status_act.triggered.connect(self.view_job_statuses)
+		view_status_act.setDisabled(not DB.active())
 
 		#view_logs_act = QAction("View Log Files", self,
 		#	triggered = self.view_logs
 		#)
 		#view_logs_act.setEnabled(self.current_index.isValid())
-		stop_job_act = QAction("Stop Select Job", self,
-			triggered = self.stop_select_job
-		)
+		stop_job_act = QAction("Stop Select Job", self)
+		stop_job_act.triggered.connect(self.stop_select_job)
 		stop_job_act.setEnabled(False)
 
 		if self.current_index.isValid():
@@ -1041,9 +1030,8 @@ class JobTableView(QTableView):
 			if status == 'Running':
 				stop_job_act.setEnabled(True)
 
-		export_act = QAction("Export Table", self,
-			triggered = self.export_table
-		)
+		export_act = QAction("Export Table", self)
+		export_act.triggered.connect(self.export_table)
 
 		menu = QMenu(self)
 		menu.addAction(view_detail_act)
@@ -1172,26 +1160,21 @@ class PoseTableView(QTableView):
 	def on_custom_menu(self, pos):
 		self.current_index = self.indexAt(pos)
 		
-		save_pose_act = QAction("Save Selected Pose", self,
-			triggered = self.save_pose
-		)
+		save_pose_act = QAction("Save Selected Pose", self)
+		save_pose_act.triggered.connect(self.save_pose)
 		save_pose_act.setDisabled(not self.current_index.isValid())
-		save_all_act = QAction("Save All Poses", self,
-			triggered = self.save_all
-		)
+		save_all_act = QAction("Save All Poses", self)
+		save_all_act.triggered.connect(self.save_all)
 
-		save_complex_act = QAction("Save Receptor Ligand Complex", self,
-			triggered = self.save_complex
-		)
+		save_complex_act = QAction("Save Receptor Ligand Complex", self)
+		save_complex_act.triggered.connect(self.save_complex)
 		save_complex_act.setDisabled(not self.current_index.isValid())
 
-		export_act = QAction("Export Table", self,
-			triggered = self.export_table
-		)
+		export_act = QAction("Export Table", self)
+		export_act.triggered.connect(self.export_table)
 
-		view_act = QAction("View Details", self,
-			triggered = self.view_details
-		)
+		view_act = QAction("View Details", self)
+		view_act.triggered.connect(self.view_details)
 		view_act.setDisabled(not self.current_index.isValid())
 
 		menu = QMenu(self)
@@ -1342,26 +1325,21 @@ class BestTableView(PoseTableView):
 	def on_custom_menu(self, pos):
 		self.current_index = self.indexAt(pos)
 		
-		save_pose_act = QAction("Save Selected Pose", self,
-			triggered = self.save_pose
-		)
+		save_pose_act = QAction("Save Selected Pose", self)
+		save_pose_act.triggered.connect(self.save_pose)
 		save_pose_act.setDisabled(not self.current_index.isValid())
-		save_all_act = QAction("Save All Poses", self,
-			triggered = self.save_all
-		)
+		save_all_act = QAction("Save All Poses", self)
+		save_all_act.triggered.connect(self.save_all)
 
-		save_complex_act = QAction("Save Receptor Ligand Complex", self,
-			triggered = self.save_complex
-		)
+		save_complex_act = QAction("Save Receptor Ligand Complex", self)
+		save_complex_act.triggered.connect(self.save_complex)
 		save_complex_act.setDisabled(not self.current_index.isValid())
 
-		export_act = QAction("Export Table", self,
-			triggered = self.export_table
-		)
+		export_act = QAction("Export Table", self)
+		export_act.triggered.connect(self.export_table)
 
-		view_act = QAction("View Details", self,
-			triggered = self.view_details
-		)
+		view_act = QAction("View Details", self)
+		view_act.triggered.connect(self.view_details)
 		view_act.setDisabled(not self.current_index.isValid())
 
 		menu = QMenu(self)
@@ -1530,18 +1508,14 @@ class InteractionTableView(QTableView):
 			'metal_complex': MetalComplexModel
 		}
 
-		exp_cur_act = QAction("Export Current Table", self,
-			triggered = self.export_current_table
-		)
-		exp_all_act = QAction("Export All Tables", self,
-			triggered = self.export_all_tables
-		)
-		exp_best_act = QAction("Export Interactions for Best Poses", self,
-			triggered = self.export_best_poses_interactions
-		)
-		exp_pose_act = QAction("Export Interactions for All Poses", self,
-			triggered = self.export_all_poses_interactions
-		)
+		exp_cur_act = QAction("Export Current Table", self)
+		exp_cur_act.triggered.connect(self.export_current_table)
+		exp_all_act = QAction("Export All Tables", self)
+		exp_all_act.triggered.connect(self.export_all_tables)
+		exp_best_act = QAction("Export Interactions for Best Poses", self)
+		exp_best_act.triggered.connect(self.export_best_poses_interactions)
+		exp_pose_act = QAction("Export Interactions for All Poses", self)
+		exp_pose_act.triggered.connect(self.export_all_poses_interactions)
 
 		menu = QMenu(self)
 		menu.addAction(exp_cur_act)

@@ -16,10 +16,10 @@ from backend import *
 __all__ = ['BrowseInput', 'CreateProjectDialog', 'AutodockConfigDialog',
 			'AutodockVinaConfigDialog', 'ExportImageDialog', 'FeedbackBrowser',
 			'PymolSettingDialog', 'DockingEngineDialog', 'InteractionTabWidget',
-			'JobManagerDialog', 'PDBDownloader', 'ReceptorPreprocessDialog',
-			'ZINCDownloader', 'QuickVinaConfigDialog', 'PoseTabWidget',
+			'JobManagerDialog', 'PDBDownloadDialog', 'ReceptorPreprocessDialog',
+			'ZINCDownloadDialog', 'QuickVinaConfigDialog', 'PoseTabWidget',
 			'ReceptorPrepareDialog', 'FlexResiduesDialog', 'LigandFilterDialog',
-			'PubchemDownloader', 'ChemblDownloader', 'LigandPrepareDialog',
+			'PubchemDownloadDialog', 'ChemblDownloadDialog', 'LigandPrepareDialog',
 			]
 
 class QHLine(QFrame):
@@ -723,9 +723,9 @@ class DockingEngineDialog(QDialog):
 		self.register_widget('Tools/autodock_vina', self.vina_input, 'browse')
 		self.register_widget('Tools/quick_vina_w', self.qvina_input, 'browse')
                           
-		self.main_layout.addWidget(QLabel("Autogrid executable", self))
+		self.main_layout.addWidget(QLabel("Autogrid4 executable", self))
 		self.main_layout.addWidget(self.autogrid_input)
-		self.main_layout.addWidget(QLabel("Autodock executable", self))
+		self.main_layout.addWidget(QLabel("Autodock4 executable", self))
 		self.main_layout.addWidget(self.autodock_input)
 		self.main_layout.addWidget(QLabel("Autodock Vina executable", self))
 		self.main_layout.addWidget(self.vina_input)
@@ -1020,7 +1020,8 @@ class LigandPrepareDialog(QDialog):
 
 		btn_widget = QDialogButtonBox(
 			QDialogButtonBox.StandardButton.RestoreDefaults |
-			QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+			QDialogButtonBox.StandardButton.Ok |
+			QDialogButtonBox.StandardButton.Cancel
 		)
 
 		btn_widget.accepted.connect(self.write_settings)
@@ -1328,43 +1329,31 @@ class DownloaderDialog(QDialog):
 
 	def __init__(self, parent=None):
 		super().__init__(parent)
-		self.parent = parent
-		self.reply = None
-		self.resize(QSize(450, 10))
+
 		self.setWindowTitle(self.title)
 		self.layout = QFormLayout()
-		self.layout.setVerticalSpacing(20)
+		self.layout.setVerticalSpacing(10)
 		self.setLayout(self.layout)
-		
-
-		self.manager = QNetworkAccessManager(self.parent)
 
 		self.add_logo()
 		self.create_widgets()
 
-		self.progress_bar = QProgressBar(self)
-		self.progress_bar.setAlignment(Qt.AlignmentFlag.AlignCenter)
-		self.layout.addRow("Progress", self.progress_bar)
-
-		btn_box = QDialogButtonBox()
-		self.start_btn = btn_box.addButton("Import", QDialogButtonBox.ButtonRole.AcceptRole)
-		self.abort_btn = btn_box.addButton("Cancel", QDialogButtonBox.ButtonRole.RejectRole)
+		btn_box = QDialogButtonBox(
+			QDialogButtonBox.StandardButton.Ok |
+			QDialogButtonBox.StandardButton.Cancel
+		)
+		btn_box.accepted.connect(self.accept)
+		btn_box.rejected.connect(self.reject)
 		self.layout.addRow(btn_box)
 
-		self.start_btn.clicked.connect(self.on_start)
-		self.abort_btn.clicked.connect(self.on_abort)
+	def sizeHint(self):
+		return QSize(500, 10)
 
 	def create_widgets(self):
-		self.text_widget = QLineEdit(self)
+		self.text_widget = QPlainTextEdit(self)
 		self.layout.addRow(self.id_label, self.text_widget)
-
-	def get_url(self):
-		self.mol_id = self.text_widget.text().strip().lower()
-
-		if not self.mol_id:
-			return None
-
-		return QUrl(self.base_url.format(self.mol_id))
+		tip_label = QLabel("<font color='gray'>Use comma to separate multiple IDs</font>", self) 
+		self.layout.addRow('', tip_label)
 
 	def add_logo(self):
 		logo_label = QLabel(self)
@@ -1372,144 +1361,58 @@ class DownloaderDialog(QDialog):
 		logo_label.setPixmap(logo_image)
 		self.layout.addRow(logo_label)
 
-	@pyqtSlot()
-	def on_start(self):
-		url = self.get_url()
+	@classmethod
+	def get_urls(cls, parent):
+		dlg = cls(parent)
 
-		if url:
-			self.start_btn.setDisabled(True)
-			self.reply = self.manager.get(QNetworkRequest(url))
-			self.reply.downloadProgress.connect(self.on_progress)
-			self.reply.finished.connect(self.on_finished)
-			self.reply.errorOccurred.connect(self.on_error)
+		mol_urls = []
 
-	@pyqtSlot()
-	def on_abort(self):
-		if self.reply:
-			self.reply.abort()
-			self.progress_bar.setValue(0)
-		else:
-			self.reject()
+		if dlg.exec() == QDialog.DialogCode.Accepted:
+			text = dlg.text_widget.toPlainText().strip()
 
-		self.start_btn.setDisabled(False)
+			if not text:
+				QMessageBox.warning(parent, 'Warning', 
+					"There are no input ids to download"
+				)
+				return
 
-	@pyqtSlot()
-	def on_finished(self):
-		if self.reply:
-			if self.reply.error() == QNetworkReply.NoError:
-				content = str(self.reply.readAll(), encoding='utf-8')
+			entries = text.split(',')
 
-				self.save_molecular(content)
+			for entry in entries:
+				entry = entry.strip()
+				mol_urls.append((entry, cls.base_url.format(entry), cls.mol_fmt))
 
-			self.reply.deleteLater()
+		return mol_urls
 
-		self.start_btn.setDisabled(False)
-		self.accept()
-
-	@pyqtSlot(int, int)
-	def on_progress(self, received_bytes, total_bytes):
-		self.progress_bar.setRange(0, total_bytes)
-		self.progress_bar.setValue(received_bytes)
-
-	@pyqtSlot(QNetworkReply.NetworkError)
-	def on_error(self, code):
-		self.reject()
-
-		if self.reply:
-			QMessageBox.critical(self.parent, "Error", self.reply.errorString())
-
-	def save_molecular(self, mol):
-		sql = "INSERT INTO molecular VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
-		mi = get_molecule_information(mol, True, self.mol_id, self.mol_fmt)
-		row = [None, mi.name, self.mol_type, mi.content, mi.format, mi.atoms,
-			mi.bonds, mi.hvyatoms, mi.residues, mi.rotors, mi.formula, mi.energy,
-			mi.weight, mi.logp
-		]
-		DB.query(sql, row)
-		mol_type = ['', 'receptor', 'ligand'][self.mol_type]
-
-		if self.mol_type == 1:
-			option = 'receptor_count'
-		else:
-			option = 'ligand_count'
-
-		count = DB.get_option(option)
-
-		if count:
-			count = int(count) + 1
-		else:
-			count = 1
-
-		DB.set_option(option, count)
-
-		total = DB.get_option('molecule_count')
-
-		if total:
-			total = int(total) + 1
-		else:
-			total = 1
-
-		DB.set_option('molecule_count', total)
-
-		self.parent.show_message("Import {} {}".format(mol_type, row[1]))
-		self.parent.mol_model.select()
-
-class PDBDownloader(DownloaderDialog):
-	title = "Import Receptor from PDB"
+class PDBDownloadDialog(DownloaderDialog):
+	title = "Import Receptors from PDB Database"
 	logo = 'icons/pdb.png'
 	id_label = "PDB ID:"
 	base_url = "https://files.rcsb.org/download/{}.pdb"
 
-class ZINCDownloader(DownloaderDialog):
-	title = "Import Ligand from ZINC"
+class ZINCDownloadDialog(DownloaderDialog):
+	title = "Import Ligands from ZINC Database"
 	logo = "icons/zinc.png"
-	id_label = "ZINC ID:"
+	id_label = "ZINC IDs:"
 	mol_type = 2
 	mol_fmt = 'sdf'
+	base_url = "https://zinc.docking.org/substances/{}.sdf"
 
-	def create_widgets(self):
-		super().create_widgets()
-		self.version_widget = QComboBox(self)
-		self.version_widget.addItems(['zinc20', 'zinc15'])
-		self.layout.addRow("ZINC Version:", self.version_widget)
-
-	def get_url(self):
-		zinc_id = self.text_widget.text().strip().upper()
-
-		if not zinc_id:
-			return None
-
-		if len(zinc_id) != 16:
-			zinc_id = zinc_id.strip('ZINC')
-			zinc_id = "ZINC{:0>12}".format(zinc_id)
-
-		self.mol_id = zinc_id
-
-		ver = self.version_widget.currentText()
-
-		if ver == 'zinc20':
-			base_url = "https://zinc20.docking.org/substances/{}.sdf"
-		else:
-			base_url = "https://zinc15.docking.org/substances/{}.sdf"
-
-		return QUrl(base_url.format(zinc_id))
-
-class PubchemDownloader(DownloaderDialog):
-	title = "Import Ligand from PubChem"
+class PubchemDownloadDialog(DownloaderDialog):
+	title = "Import Ligand from PubChem Database"
 	logo = "icons/pubchem.png"
-	id_label = "PubChem CID:"
+	id_label = "PubChem CIDs:"
 	mol_type = 2
 	mol_fmt = 'sdf'
 	base_url = "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/{}/sdf"
 
-class ChemblDownloader(DownloaderDialog):
-	title = "Import Ligand from ChEMBL"
+class ChemblDownloadDialog(DownloaderDialog):
+	title = "Import Ligand from ChEMBL Database"
 	logo = "icons/chembl.png"
-	id_label = "ChEMBL ID:"
+	id_label = "ChEMBL IDs:"
 	mol_type = 2
 	mol_fmt = 'sdf'
 	base_url = "https://www.ebi.ac.uk/chembl/api/data/molecule/{}.sdf"
-
 
 class FlexResiduesDialog(QDialog):
 	def __init__(self, parent, mol_id):
@@ -1538,7 +1441,10 @@ class FlexResiduesDialog(QDialog):
 		self.bond_check = QCheckBox("Select bonds to disallowed", self)
 		self.bond_check.stateChanged.connect(self.bond_tree.setVisible)
 
-		self.btns = QDialogButtonBox( QDialogButtonBox.StandardButton.Cancel | QDialogButtonBox.StandardButton.Ok)
+		self.btns = QDialogButtonBox(
+			QDialogButtonBox.StandardButton.Cancel |
+			QDialogButtonBox.StandardButton.Ok
+		)
 		self.btns.accepted.connect(self.on_accept_clicked)
 		self.btns.rejected.connect(self.reject)
 
