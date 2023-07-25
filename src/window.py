@@ -562,6 +562,10 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		self.pymol_cmd_act.setChecked(False)
 		self.pymol_cmd_act.setIconVisibleInMenu(False)
 
+		self.check_cpu_act = QAction(QIcon(':/icons/cpu.svg'), "View CPU Consumption", self)
+		self.check_cpu_act.setIconVisibleInMenu(False)
+		self.check_cpu_act.triggered.connect(self.view_cpu_consumption)
+
 		#gridbox setting sidebar
 		self.box_sidebar_act = self.box_dock.toggleViewAction()
 		self.box_sidebar_act.setIcon(QIcon(':/icons/box.svg'))
@@ -618,6 +622,9 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		#help actions
 		self.about_act = QAction("&About", self)
 		self.about_act.triggered.connect(self.open_about)
+
+		self.thank_act = QAction("Acknowledgements", self)
+		self.thank_act.triggered.connect(self.open_thanks)
 
 		self.doc_act = QAction("Documentation", self)
 		self.doc_act.triggered.connect(self.open_documentation)
@@ -714,6 +721,7 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 
 		self.help_menu = self.menuBar().addMenu("&Help")
 		self.help_menu.addAction(self.about_act)
+		self.help_menu.addAction(self.thank_act)
 		self.help_menu.addAction(self.doc_act)
 		self.help_menu.addAction(self.issue_act)
 		self.help_menu.addAction(self.update_act)
@@ -736,6 +744,7 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		self.toolbar.addSeparator()
 		self.toolbar.addAction(self.export_image_act)
 		self.toolbar.addSeparator()
+		self.toolbar.addAction(self.check_cpu_act)
 		self.toolbar.addAction(self.pymol_cmd_act)
 		self.feedback_act = self.toolbar.addWidget(self.feedback_edit)
 		self.feedback_act.setVisible(False)
@@ -1368,8 +1377,15 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		self.generate_job_list()
 		#self.submit_jobs('qvina', params)
 
+	def view_cpu_consumption(self):
+		dlg = CPUAndMemoryViewDialog(self)
+		dlg.exec()
+
 	def open_about(self):
 		QMessageBox.about(self, "About dockey", DOCKEY_ABOUT)
+
+	def open_thanks(self):
+		AcknowledgementDialog.thank(self, DOCKEY_THANKS)
 
 	def open_documentation(self):
 		QDesktopServices.openUrl(QUrl("https://dockey.readthedocs.io"))

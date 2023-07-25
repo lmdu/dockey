@@ -331,9 +331,14 @@ def prepare_meeko_ligand(ligand_file, ligand_pdbqt, params):
 	#	etkdgv3 = rdDistGeom.ETKDGv3()
 	#	rdDistGeom.EmbedMolecule(mol, etkdgv3)
 	#	rdForceFieldHelpers.UFFOptimizeMolecule(mol)
-	mol = Chem.AddHs(mol)
-	AllChem.EmbedMolecule(mol, AllChem.ETKDGv3())
-	AllChem.UFFOptimizeMolecule(mol)
+	#mol = Chem.AddHs(mol)
+	#AllChem.EmbedMolecule(mol, AllChem.ETKDGv3())
+
+	#try:
+	#	AllChem.UFFOptimizeMolecule(mol)
+	#except:
+	#	pass
+	mol = Chem.AddHs(mol, addCoords=True)
 
 	preparator = MoleculePreparation(
 		keep_nonpolar_hydrogens = keep_nonpolar_hydrogens,

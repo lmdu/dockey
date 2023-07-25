@@ -7,12 +7,14 @@ import meeko
 import openmm
 import psutil
 import pdb2pqr
+import requests
 import pdbfixer
 import openbabel
 from PyQt6.QtCore import PYQT_VERSION_STR as pyqt_version
 from plip.basic.config import __version__ as plip_version
 
-__all__ = ['DOCKEY_VERSION', 'DOCKEY_BUILD', 'DOCKEY_ABOUT']
+__all__ = ['DOCKEY_VERSION', 'DOCKEY_BUILD', 'DOCKEY_ABOUT',
+			'DOCKEY_THANKS']
 
 DOCKEY_VERSION = "0.9.0"
 
@@ -21,9 +23,25 @@ DOCKEY_BUILD = "230730"
 DOCKEY_ABOUT = """
 <p>Dockey - Molecular Docking and Virtual Screening</p>
 <p><b>Version</b> v{version} <b>Build</b> {build}</p>
-<p>Dockey is a morden tool for molecular docking</p>
-<p><b>Acknowledgements:</b></p>
-<table cellpadding="0" cellspacing="5">
+<p>Dockey is a morden graphical user interface tool for
+molecular docking. Dockey seamlessly integrates serveral
+external tools to implement a complete streamlined docking
+pipeline including molecular preprocessing, molecular preparation,
+paralleled docking execution, interaction detection and
+conformation visualization.
+<p><b>Citation:</b><br>
+Du L, Geng C, Zeng Q et al. Dockey: a modern integrated tool for
+large-scale molecular docking and virtual screening. <i>Briefings in
+Bioinformatics</i>. 2023, 24(2):bbad047.
+(doi:<a href="https://doi.org/10.1093/bib/bbad047">10.1093/bib/bbad047</a>)
+</p>
+""".format(
+	version = DOCKEY_VERSION,
+	build = DOCKEY_BUILD
+)
+
+DOCKEY_THANKS = """
+<table cellpadding="0" cellspacing="15">
 	<tr>
 		<td>Python</td>
 		<td>v{python}</td>
@@ -32,6 +50,7 @@ DOCKEY_ABOUT = """
 				https://www.python.org
 			</a>
 		</td>
+		<td>PSFL</td>
 	</tr>
 	<tr>
 		<td>APSW</td>
@@ -41,15 +60,17 @@ DOCKEY_ABOUT = """
 				https://github.com/rogerbinns/apsw
 			</a>
 		</td>
+		<td></td>
 	</tr>
 	<tr>
 		<td>PyQt</td>
 		<td>v{pyqt}</td>
 		<td>
-			<a href="https://doc.qt.io/qtforpython/">
-				https://doc.qt.io/qtforpython
+			<a href="https://riverbankcomputing.com/software/pyqt/">
+				https://riverbankcomputing.com/software/pyqt
 			</a>
 		</td>
+		<td>GPLv3</td>
 	</tr>
 	<tr>
 		<td>Pymol</td>
@@ -59,6 +80,7 @@ DOCKEY_ABOUT = """
 				https://pymol.org
 			</a>
 		</td>
+		<td>BSD-like</td>
 	</tr>
 	<tr>
 		<td>OpenBabel</td>
@@ -68,6 +90,7 @@ DOCKEY_ABOUT = """
 				http://openbabel.org
 			</a>
 		</td>
+		<td>GPL-2.0</td>
 	</tr>
 		<tr>
 		<td>RDKit</td>
@@ -77,6 +100,7 @@ DOCKEY_ABOUT = """
 				https://www.rdkit.org
 			</a>
 		</td>
+		<td>BSD 3-Clause</td>
 	</tr>
 	<tr>
 		<td>Meeko</td>
@@ -86,6 +110,7 @@ DOCKEY_ABOUT = """
 				https://github.com/forlilab/Meeko
 			</a>
 		</td>
+		<td>LGPL-2.1</td>
 	</tr>
 	<tr>
 		<td>Plip</td>
@@ -95,6 +120,7 @@ DOCKEY_ABOUT = """
 				https://github.com/pharmai/plip
 			</a>
 		</td>
+		<td>GPL-2.0</td>
 	</tr>
 	<tr>
 		<td>Psutil</td>
@@ -104,6 +130,7 @@ DOCKEY_ABOUT = """
 				https://github.com/giampaolo/psutil
 			</a>
 		</td>
+		<td>BSD 3-Clause</td>
 	</tr>
 	<tr>
 		<td>NumPy</td>
@@ -113,6 +140,7 @@ DOCKEY_ABOUT = """
 				https://numpy.org
 			</a>
 		</td>
+		<td>BSD 3-Clause</td>
 	</tr>
 	<tr>
 		<td>OpenMM</td>
@@ -122,6 +150,7 @@ DOCKEY_ABOUT = """
 				https://openmm.org
 			</a>
 		</td>
+		<td>MIT/LGPL</td>
 	</tr>
 	<tr>
 		<td>PDBFixer</td>
@@ -131,6 +160,7 @@ DOCKEY_ABOUT = """
 				https://github.com/openmm/pdbfixer
 			</a>
 		</td>
+		<td>MIT</td>
 	</tr>
 	<tr>
 		<td>PDB2PQR</td>
@@ -140,6 +170,17 @@ DOCKEY_ABOUT = """
 				https://www.poissonboltzmann.org
 			</a>
 		</td>
+		<td></td>
+	</tr>
+	<tr>
+		<td>Requests</td>
+		<td>v{requests}</td>
+		<td>
+			<a href="https://github.com/psf/requests">
+				https://github.com/psf/requests
+			</a>
+		</td>
+		<td>Apache-2.0</td>
 	</tr>
 	<tr>
 		<td>Icons</td>
@@ -149,10 +190,8 @@ DOCKEY_ABOUT = """
 				https://icons.getbootstrap.com
 			</a>
 		</td>
+		<td>MIT</td>
 	</tr>
-</table>
-<p><b>Requirements:</b></p>
-<table cellpadding="0" cellspacing="5">
 	<tr>
 		<td>AutoDock</td>
 		<td>v4.2.6</td>
@@ -161,15 +200,17 @@ DOCKEY_ABOUT = """
 				https://autodock.scripps.edu
 			</a>
 		</td>
+		<td>GPL</td>
 	</tr>
 	<tr>
 		<td>Vina</td>
-		<td>v1.2.3</td>
+		<td>v1.2.5</td>
 		<td>
 			<a href="https://github.com/ccsb-scripps/AutoDock-Vina/">
 				https://github.com/ccsb-scripps/AutoDock-Vina
 			</a>
 		</td>
+		<td>Apache-2.0</td>
 	</tr>
 	<tr>
 		<td>QuickVina-W</td>
@@ -179,11 +220,10 @@ DOCKEY_ABOUT = """
 				https://qvina.github.io
 			</a>
 		</td>
+		<td>Apache-2.0</td>
 	</tr>
 </table>
 """.format(
-	version = DOCKEY_VERSION,
-	build = DOCKEY_BUILD,
 	python = sys.version.split()[0],
 	apsw = apsw.apswversion(),
 	pyqt = pyqt_version,
@@ -197,5 +237,6 @@ DOCKEY_ABOUT = """
 	pdbfixer = pdbfixer.pdbfixer.__version__,
 	pdb2pqr = pdb2pqr.__version__,
 	numpy = numpy.__version__,
+	requests = requests.__version__,
 	icon = '1.7.0'
 )

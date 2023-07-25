@@ -20,6 +20,7 @@ __all__ = ['BrowseInput', 'CreateProjectDialog', 'AutodockConfigDialog',
 			'ZINCDownloadDialog', 'QuickVinaConfigDialog', 'PoseTabWidget',
 			'ReceptorPrepareDialog', 'FlexResiduesDialog', 'LigandFilterDialog',
 			'PubchemDownloadDialog', 'ChemblDownloadDialog', 'LigandPrepareDialog',
+			'AcknowledgementDialog', 'CPUAndMemoryViewDialog'
 			]
 
 class QHLine(QFrame):
@@ -790,6 +791,8 @@ class JobManagerDialog(QDialog):
 		self.main_layout.addWidget(QHLine())
 		self.main_layout.addWidget(self.btn_widget)
 
+		self.read_settings()
+
 	def read_settings(self):
 		val = self.settings.value('Job/concurrent', 1, int)
 		self.job_num.setValue(val)
@@ -1331,8 +1334,8 @@ class DownloaderDialog(QDialog):
 		super().__init__(parent)
 
 		self.setWindowTitle(self.title)
-		self.layout = QFormLayout()
-		self.layout.setVerticalSpacing(10)
+		self.layout = QVBoxLayout()
+		#self.layout.setVerticalSpacing(10)
 		self.setLayout(self.layout)
 
 		self.add_logo()
@@ -1344,22 +1347,23 @@ class DownloaderDialog(QDialog):
 		)
 		btn_box.accepted.connect(self.accept)
 		btn_box.rejected.connect(self.reject)
-		self.layout.addRow(btn_box)
+		self.layout.addWidget(btn_box)
 
 	def sizeHint(self):
 		return QSize(500, 10)
 
 	def create_widgets(self):
+		self.layout.addWidget(QLabel(self.id_label, self))
 		self.text_widget = QPlainTextEdit(self)
-		self.layout.addRow(self.id_label, self.text_widget)
+		self.layout.addWidget(self.text_widget)
 		tip_label = QLabel("<font color='gray'>Use comma to separate multiple IDs</font>", self) 
-		self.layout.addRow('', tip_label)
+		self.layout.addWidget(tip_label)
 
 	def add_logo(self):
 		logo_label = QLabel(self)
 		logo_image = QPixmap(self.logo)
 		logo_label.setPixmap(logo_image)
-		self.layout.addRow(logo_label)
+		self.layout.addWidget(logo_label)
 
 	@classmethod
 	def get_urls(cls, parent):
@@ -1849,3 +1853,86 @@ class ReceptorPreprocessDialog(QDialog):
 		self.settings.remove('PDBFixer')
 		self.settings.remove('PDB2PQR')
 		self.read_settings()
+
+class AcknowledgementDialog(QDialog):
+	def __init__(self, parent, text):
+		super().__init__(parent)
+		self.setWindowTitle("Acknowledgements")
+
+		layout = QVBoxLayout()
+		self.setLayout(layout)
+
+		info = QLabel(
+			"Dockey has integrated a plenty of external useful tools "
+			"and denpends on preinstallation of docking engines"
+		, self)
+		layout.addWidget(info)
+
+		thanks = QTextBrowser(self)
+		thanks.setHtml(text)
+		layout.addWidget(thanks)
+
+		btnbox = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok)
+		btnbox.accepted.connect(self.accept)
+		layout.addWidget(btnbox)
+
+	def sizeHint(self):
+		return QSize(630, 350)
+
+	@classmethod
+	def thank(cls, parent, text):
+		dlg = cls(parent, text)
+		dlg.exec()
+
+class CPUAndMemoryViewDialog(QDialog):
+	def __init__(self, parent):
+		super().__init__(parent)
+		self.setWindowTitle("CPU and Memory Usage")
+		self.proc = psutil.Process(os.getpid())
+
+		main_layout = QFormLayout()
+		main_layout.setVerticalSpacing(20)
+		main_layout.addRow(QLabel("Computing resoure usage:", self))
+
+		self.cpu_usage = QProgressBar(self)
+		self.memory_usage = QProgressBar(self)
+		self.memory_text = QLabel(self)
+		main_layout.addRow('CPU:', self.cpu_usage)
+		main_layout.addRow('Memory:', self.memory_usage)
+		main_layout.addRow('', self.memory_text)
+
+		btnbox = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok)
+		btnbox.accepted.connect(self.accept)
+		main_layout.addRow(btnbox)
+
+		self.setLayout(main_layout)
+
+		self.timer = QTimer(self)
+		self.timer.timeout.connect(self.update_resource_usage)
+		self.timer.start(1000)
+		self.accepted.connect(self.timer.stop)
+		self.rejected.connect(self.timer.stop)
+
+	def sizeHint(self):
+		return QSize(400, 10)
+
+	@pyqtSlot()
+	def update_resource_usage(self):
+		cpu = self.proc.cpu_percent()
+		mem = self.proc.memory_info().rss
+		memp = self.proc.memory_percent()
+
+		for child in self.proc.children():
+			cpu += child.cpu_percent()
+			mem += child.memory_info().rss
+			memp += child.memory_percent()
+
+		cpu = int(cpu/psutil.cpu_count())
+		memp = int(memp)
+		mem = memory_format(mem)
+
+		self.cpu_usage.setValue(cpu)
+		self.memory_usage.setValue(memp)
+		self.memory_text.setText(mem)
+
+
