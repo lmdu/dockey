@@ -1918,16 +1918,16 @@ class CPUAndMemoryViewDialog(QDialog):
 
 	@pyqtSlot()
 	def update_resource_usage(self):
-		cpu = self.proc.cpu_percent()
+		cpu = self.proc.cpu_percent(interval=0.1)
 		mem = self.proc.memory_info().rss
 		memp = self.proc.memory_percent()
 
 		for child in self.proc.children():
-			cpu += child.cpu_percent()
+			cpu += child.cpu_percent(interval=0.1)
 			mem += child.memory_info().rss
 			memp += child.memory_percent()
 
-		cpu = int(cpu/psutil.cpu_count())
+		cpu = int(cpu)
 		memp = int(memp)
 		mem = memory_format(mem)
 

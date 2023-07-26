@@ -24,5 +24,6 @@
 	<file>icons/queue.svg</file>
 	<file>icons/yes.svg</file>
 	<file>icons/no.svg</file>
+	<file>icons/cpu.svg</file>
 </qresource>
 </RCC>
