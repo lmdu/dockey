@@ -530,7 +530,7 @@ class DockeyTableModel(QAbstractTableModel):
 		if row != self.cache_row[0]:
 			self.update_cache(row)
 
-		print(self.cache_row)
+		#print(self.cache_row)
 
 		return self.cache_row[1][col]
 
