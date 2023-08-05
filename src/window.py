@@ -523,6 +523,10 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		self.del_chain_act.triggered.connect(self.pymol_remove_chain)
 
 		#preferences actions
+		self.setting_act = QAction("Settings", self)
+		self.setting_act.triggered.connect(self.open_setting_dialog)
+		self.setting_act.setShortcut(QKeySequence.Preferences)
+
 		#self.dock_tool_act = QAction("Docking Tools", self)
 		#self.dock_tool_act.triggered.connect(self.docking_tool_settings)
 
@@ -678,6 +682,7 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		self.edit_menu.addAction(self.del_organic_act)
 		self.edit_menu.addAction(self.del_chain_act)
 		self.edit_menu.addSeparator()
+		self.edit_menu.addAction(self.setting_act)
 
 		self.view_menu = self.menuBar().addMenu("&View")
 		#self.view_menu.addAction(self.open_project_dir_act)
@@ -819,6 +824,10 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 				QMessageBox.critical(self, "Error",
 					"{} is not a dockey project file".format(project_file)
 				)
+
+	def open_setting_dialog(self):
+		dlg = DockeyConfigDialog(self)
+		dlg.exec()
 
 	def open_engine_settings_dialog(self):
 		dlg = DockingEngineDialog(self)

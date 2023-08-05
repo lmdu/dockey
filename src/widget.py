@@ -20,7 +20,7 @@ __all__ = ['BrowseInput', 'CreateProjectDialog', 'AutodockConfigDialog',
 			'ZINCDownloadDialog', 'QuickVinaConfigDialog', 'PoseTabWidget',
 			'ReceptorPrepareDialog', 'FlexResiduesDialog', 'LigandFilterDialog',
 			'PubchemDownloadDialog', 'ChemblDownloadDialog', 'LigandPrepareDialog',
-			'AcknowledgementDialog', 'CPUAndMemoryViewDialog'
+			'AcknowledgementDialog', 'CPUAndMemoryViewDialog', 'DockeyConfigDialog'
 			]
 
 class QHLine(QFrame):
@@ -1334,13 +1334,74 @@ class LigandPrepareDialog(QDialog):
 class DockeyConfigDialog(QDialog):
 	def __init__(self, parent):
 		super().__init__(parent)
+		self.settings = QSettings()
 
-		self.list_menu = QListWdiget(self)
+		self.list_menu = QListWidget(self)
 		self.list_menu.setViewMode(QListView.IconMode)
-		self.list_menu.setIconSize(QSize(96, 84))
+		self.list_menu.setIconSize(QSize(24, 24))
 		self.list_menu.setMovement(QListView.Static)
 		self.list_menu.setMaximumWidth(128)
 		self.list_menu.setSpacing(12)
+
+		self.list_page = QStackedWidget(self)
+
+		self.btns_box = QDialogButtonBox(
+			QDialogButtonBox.RestoreDefaults |
+			QDialogButtonBox.Ok |
+			QDialogButtonBox.Cancel |
+			QDialogButtonBox.Apply
+		)
+
+		self.btns_box.accepted.connect(self.accept)
+		self.btns_box.rejected.connect(self.reject)
+		self.btns_box.button(QDialogButtonBox.Apply).clicked.connect(self.write_settings)
+		self.btns_box.button(QDialogButtonBox.RestoreDefaults).clicked.connect(self.reset_settings)
+		
+		page_layout = QHBoxLayout()
+		page_layout.addWidget(self.list_menu)
+		page_layout.addWidget(self.list_page, 1)
+
+		main_layout = QVBoxLayout()
+		main_layout.addLayout(page_layout)
+		main_layout.addWidget(self.btns_box)
+		self.setLayout(main_layout)
+
+		self.create_list_menu()
+
+	def create_list_menu(self):
+		docking_menu = QListWidgetItem(self.list_menu)
+		docking_menu.setIcon(QIcon('icons/docker.svg'))
+		docking_menu.setText('Docking tools')
+		docking_menu.setTextAlignment(Qt.AlignCenter)
+		docking_menu.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
+
+		receptor_menu = QListWidgetItem(self.list_menu)
+		receptor_menu.setIcon(QIcon('icons/virus.svg'))
+		receptor_menu.setText('Receptor')
+		receptor_menu.setTextAlignment(Qt.AlignCenter)
+		receptor_menu.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
+
+		ligand_menu = QListWidgetItem(self.list_menu)
+		ligand_menu.setIcon(QIcon('icons/capsule.svg'))
+		ligand_menu.setText('Ligand')
+		ligand_menu.setTextAlignment(Qt.AlignCenter)
+		ligand_menu.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
+
+		self.list_menu.currentItemChanged.connect(self.change_menu_page)
+
+	@Slot()
+	def change_menu_page(self):
+		pass
+
+	def read_settings(self):
+		pass
+
+	def write_settings(self):
+		pass
+
+	def reset_settings(self):
+		self.read_settings()
+
 
 class DownloaderDialog(QDialog):
 	title = ''
