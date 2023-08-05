@@ -34,21 +34,21 @@ jobs:
           $line = Select-String -Path src\config.py -Pattern 'DOCKEY_VERSION =' | Out-String
           $version = $line.Split('"')[1]
           iscc /DMyAppVersion=$version package/build_win_installer.iss
-          Compress-Archive -Path dist/Dockey -Destination Dockey-v$version-win64-portable.zip
+          7z a Dockey-v$version-win64-portable.7z dist/Dockey
 
       - uses: actions/upload-artifact@v3
         with:
           name: Dockey-win64
           path: |
             dist/*.exe
-            dist/*.zip
+            dist/*.7z
 
       - uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
         with:
           files: |
             dist/*.exe
-            dist/*.zip
+            dist/*.7z
 
 
   build_ubuntu:
