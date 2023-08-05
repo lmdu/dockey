@@ -1177,7 +1177,7 @@ class LigandPrepareDialog(QDialog):
 		kcr_check = QCheckBox("Return all rings from exhaustive perception", self)
 		ker_check = QCheckBox("Equivalent rings have the same size and neighbors", self)
 		hyd_check = QCheckBox("Add water molecules for hydrated docking", self)
-		knh_check = QCheckBox("Keep non-polar hydrogens (default: merge onto heavy atom)", self)
+		#knh_check = QCheckBox("Keep non-polar hydrogens (default: merge onto heavy atom)", self)
 		far_check = QCheckBox("Allow amide bonds to rotate and be non-planar, which is bad", self)
 		aim_check = QCheckBox("Write map of atom indices from input to pdbqt", self)
 		rms_check = QCheckBox("Do not write smiles as remark to pdbqt", self)
@@ -1187,21 +1187,28 @@ class LigandPrepareDialog(QDialog):
 		self.register_widget(kcr_check, 'check', 'Meeko/keep_chorded_rings', False, bool)
 		self.register_widget(ker_check, 'check', 'Meeko/keep_equivalent_rings', False, bool)
 		self.register_widget(hyd_check, 'check', 'Meeko/hydrate', False, bool)
-		self.register_widget(knh_check, 'check', 'Meeko/keep_nonpolar_hydrogens', False, bool)
+		#self.register_widget(knh_check, 'check', 'Meeko/keep_nonpolar_hydrogens', False, bool)
 		self.register_widget(far_check, 'check', 'Meeko/flexible_amides', False, bool)
 		self.register_widget(aim_check, 'check', 'Meeko/add_index_map', False, bool)
 		self.register_widget(rms_check, 'check', 'Meeko/remove_smiles', False, bool)
 
 		#meeko_layout.addWidget(ahc_check)
+
 		meeko_layout.addWidget(rmc_check)
 		meeko_layout.addWidget(kcr_check)
 		meeko_layout.addWidget(ker_check)
 		meeko_layout.addWidget(hyd_check)
-		meeko_layout.addWidget(knh_check)
+		#meeko_layout.addWidget(knh_check)
 		meeko_layout.addWidget(far_check)
 		meeko_layout.addWidget(aim_check)
 		meeko_layout.addWidget(rms_check)
 
+		mat_input = QLineEdit(self)
+		mat_layout = QHBoxLayout()
+		mat_layout.addWidget(QLabel("Merge these atom types:", self))
+		mat_layout.addWidget(mat_input)
+		mat_layout.addWidget(QLabel("<font color='gray'>use space to separate multiple atoms</font>", self))
+		meeko_layout.addLayout(mat_layout)
 		rbs_input = QLineEdit(self)
 		rbs_input.setPlaceholderText('Multiple values can be separated by comma')
 		rbs_layout = QHBoxLayout()
@@ -1226,6 +1233,7 @@ class LigandPrepareDialog(QDialog):
 		dbp_layout.addWidget(QLabel("<font color='gray'><small>penalty > 100 prevents breaking double bonds</small></font>"))
 		meeko_layout.addLayout(dbp_layout)
 
+		self.register_widget(mat_input, 'edit', 'Meeko/merge_these_atom_types', 'H', str)
 		self.register_widget(rbs_input, 'edit', 'Meeko/rigidify_bonds_smarts', '', str)
 		self.register_widget(rbi_input, 'edit', 'Meeko/rigidify_bonds_indices', '', str)
 		self.register_widget(ats_input, 'edit', 'Meeko/atom_type_smarts', '', str)
@@ -1322,6 +1330,17 @@ class LigandPrepareDialog(QDialog):
 		self.settings.remove('Ligand')
 		self.settings.remove('Meeko')
 		self.read_settings()
+
+class DockeyConfigDialog(QDialog):
+	def __init__(self, parent):
+		super().__init__(parent)
+
+		self.list_menu = QListWdiget(self)
+		self.list_menu.setViewMode(QListView.IconMode)
+		self.list_menu.setIconSize(QSize(96, 84))
+		self.list_menu.setMovement(QListView.Static)
+		self.list_menu.setMaximumWidth(128)
+		self.list_menu.setSpacing(12)
 
 class DownloaderDialog(QDialog):
 	title = ''

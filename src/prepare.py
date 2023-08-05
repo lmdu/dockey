@@ -16,6 +16,7 @@ from rdkit import Chem
 from rdkit.Chem import AllChem
 
 from meeko.preparation import MoleculePreparation
+from meeko.writer import PDBQTWriterLegacy
 
 from AutoDockTools.MoleculePreparation import AD4LigandPreparation
 from AutoDockTools.MoleculePreparation import AD4ReceptorPreparation
@@ -275,7 +276,8 @@ def prepare_meeko_ligand(ligand_file, ligand_pdbqt, params):
 	keep_chorded_rings = params['keep_chorded_rings']
 	keep_equivalent_rings = params['keep_equivalent_rings']
 	hydrate = params['hydrate']
-	keep_nonpolar_hydrogens = params['keep_nonpolar_hydrogens']
+	#keep_nonpolar_hydrogens = params['keep_nonpolar_hydrogens']
+	merge_these_atom_types = params['merge_these_atom_types'].split()
 	flexible_amides = params['flexible_amides']
 	add_index_map = params['add_index_map']
 	remove_smiles = params['remove_smiles']
@@ -341,7 +343,8 @@ def prepare_meeko_ligand(ligand_file, ligand_pdbqt, params):
 	mol = Chem.AddHs(mol, addCoords=True)
 
 	preparator = MoleculePreparation(
-		keep_nonpolar_hydrogens = keep_nonpolar_hydrogens,
+		#keep_nonpolar_hydrogens = keep_nonpolar_hydrogens,
+		merge_these_atom_types = merge_these_atom_types,
 		hydrate = hydrate,
 		flexible_amides = flexible_amides,
 		rigid_macrocycles = rigid_macrocycles,
@@ -355,8 +358,19 @@ def prepare_meeko_ligand(ligand_file, ligand_pdbqt, params):
 		remove_smiles = remove_smiles
 	)
 
-	preparator.prepare(mol)
-	preparator.write_pdbqt_file(ligand_pdbqt)
+	mol_setups = preparator.prepare(mol)
+	for mol_setup in mol_setups:
+		pdbqt_string, is_ok, error_msg = PDBQTWriterLegacy.write_string(mol_setup)
+
+		if is_ok:
+			with open(ligand_pdbqt, 'w') as fw:
+				fw.write(pdbqt_string)
+		else:
+			raise Exception(error_msg)
+
+		return
+
+	#preparator.write_pdbqt_file(ligand_pdbqt)
 
 def prepare_ligand(ligand_file, ligand_pdbqt, params):
 	tool = params['tool']
