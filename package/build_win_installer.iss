@@ -2,7 +2,7 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "Dockey"
-#define MyAppPublisher "Lianming Du"
+#define MyAppPublisher "DuLab"
 #define MyAppURL "https://github.com/lmdu/dockey"
 #define MyAppExeName "Dockey.exe"
 
@@ -23,7 +23,7 @@ DisableProgramGroupPage=yes
 ; Uncomment the following line to run in non administrative install mode (install for current user only.)
 ;PrivilegesRequired=lowest
 OutputDir=..\dist
-OutputBaseFilename=Dockey-v{#MyAppVersion}-win64
+OutputBaseFilename=Dockey-v{#MyAppVersion}-win64-installer
 SetupIconFile=..\src\icons\logo.ico
 Compression=lzma
 SolidCompression=yes
