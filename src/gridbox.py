@@ -1,6 +1,6 @@
-from PyQt6.QtGui import *
-from PyQt6.QtCore import *
-from PyQt6.QtWidgets import *
+from PySide6.QtGui import *
+from PySide6.QtCore import *
+from PySide6.QtWidgets import *
 
 from utils import *
 from config import *
@@ -9,7 +9,7 @@ from backend import *
 __all__ = ['GridBoxSettingPanel']
 
 class GridBoxParamter(QObject):
-	updated = pyqtSignal()
+	updated = Signal()
 
 	def __init__(self):
 		super(GridBoxParamter, self).__init__()
@@ -73,7 +73,7 @@ class GridBoxParamter(QObject):
 
 #https://www.pythonguis.com/widgets/qcolorbutton-a-color-selector-tool-for-pyqt/
 class ColorButton(QPushButton):
-	colorChanged = pyqtSignal(tuple)
+	colorChanged = Signal(tuple)
 
 	def __init__(self, *args, color=None, **kwargs):
 		super(ColorButton, self).__init__(*args, **kwargs)
@@ -114,7 +114,7 @@ class ColorButton(QPushButton):
 		return super(ColorButton, self).mousePressEvent(e)
 
 class GridBoxSettingPanel(QWidget):
-	updated = pyqtSignal()
+	updated = Signal()
 	params = GridBoxParamter()
 
 	def __init__(self, parent=None):
@@ -155,7 +155,7 @@ class GridBoxSettingPanel(QWidget):
 		self.params[k] = v
 		self.updated.emit()
 
-	@pyqtSlot()
+	@Slot()
 	def set_value(self):
 		self.size_x.setValue(self.params.x)
 		self.size_y.setValue(self.params.y)
@@ -168,7 +168,7 @@ class GridBoxSettingPanel(QWidget):
 	def create_controler(self):
 		#show box face
 		self.face = QCheckBox("Show box face", self)
-		self.face.setCheckState(Qt.CheckState.Checked)
+		self.face.setCheckState(Qt.Checked)
 		self.face.setTristate(False)
 		self.face.stateChanged.connect(lambda x: self.update_value('show_face', x))
 		self.layout.addRow(self.face)
@@ -187,7 +187,7 @@ class GridBoxSettingPanel(QWidget):
 		bg_layout.addWidget(self.bg_z)
 		self.layout.addRow(bg_layout)
 
-		self.opacity = QSlider(Qt.Orientation.Horizontal, self)
+		self.opacity = QSlider(Qt.Horizontal, self)
 		self.opacity.setRange(0, 99)
 		self.opacity.setValue(self.params.opacity)
 		self.opacity.valueChanged.connect(lambda x: self.update_value('opacity', x))
@@ -196,7 +196,7 @@ class GridBoxSettingPanel(QWidget):
 
 		#show box edge
 		self.edge = QCheckBox("Show box line", self)
-		self.edge.setCheckState(Qt.CheckState.Checked)
+		self.edge.setCheckState(Qt.Checked)
 		self.edge.setTristate(False)
 		self.edge.stateChanged.connect(lambda x: self.update_value('show_edge', x))
 		self.layout.addRow(self.edge)
@@ -292,7 +292,7 @@ class GridBoxSettingPanel(QWidget):
 		self.save_btn.clicked.connect(self.on_save)
 		self.layout.addRow(self.save_btn)
 
-	@pyqtSlot()
+	@Slot()
 	def on_save(self):
 		r = self.parent.get_current_receptor()
 

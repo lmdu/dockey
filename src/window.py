@@ -3,9 +3,9 @@ import time
 import psutil
 import multiprocessing
 
-from PyQt6.QtGui import *
-from PyQt6.QtCore import *
-from PyQt6.QtWidgets import *
+from PySide6.QtGui import *
+from PySide6.QtCore import *
+from PySide6.QtWidgets import *
 
 from pymol._gui import PyMOLDesktopGUI
 from pymol.importing import read_mol2str
@@ -23,7 +23,7 @@ from gridbox import *
 __all__ = ['DockeyMainWindow']
 
 class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
-	project_ready = pyqtSignal(bool)
+	project_ready = Signal(bool)
 
 	def __init__(self):
 		super().__init__()
@@ -40,7 +40,7 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		self.setWindowTitle("Dockey v{}".format(DOCKEY_VERSION))
 		self.setWindowIcon(QIcon(':/icons/logo.svg'))
 		self.setAcceptDrops(True)
-		self.setDockOptions(QMainWindow.DockOption.AnimatedDocks | QMainWindow.DockOption.AllowTabbedDocks)
+		self.setDockOptions(QMainWindow.AnimatedDocks | QMainWindow.AllowTabbedDocks)
 
 		self.create_pymol_viewer()
 		self.create_molecular_viewer()
@@ -207,9 +207,9 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		self.feedback_edit.setPlaceholderText("PyMOL>")
 		self.feedback_browser = FeedbackBrowser(self)
 		self.feedback_dock = QDockWidget("Feedbacks", self)
-		self.feedback_dock.setAllowedAreas(Qt.DockWidgetArea.TopDockWidgetArea | Qt.DockWidgetArea.BottomDockWidgetArea)
+		self.feedback_dock.setAllowedAreas(Qt.TopDockWidgetArea | Qt.BottomDockWidgetArea)
 		self.feedback_dock.setWidget(self.feedback_browser)
-		self.addDockWidget(Qt.DockWidgetArea.BottomDockWidgetArea, self.feedback_dock, Qt.Orientation.Vertical)
+		self.addDockWidget(Qt.BottomDockWidgetArea, self.feedback_dock, Qt.Vertical)
 		self.feedback_dock.setVisible(False)
 
 		#timer
@@ -223,11 +223,11 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		#self.interaction_title = InteractionTitleWidget(self)
 		self.interaction_dock = QDockWidget("Interactions", self)
 		#self.interaction_dock.setTitleBarWidget(self.interaction_title)
-		self.interaction_dock.setAllowedAreas(Qt.DockWidgetArea.TopDockWidgetArea | Qt.DockWidgetArea.BottomDockWidgetArea)
+		self.interaction_dock.setAllowedAreas(Qt.TopDockWidgetArea | Qt.BottomDockWidgetArea)
 		self.interaction_dock.setWidget(self.interaction_tab)
-		self.addDockWidget(Qt.DockWidgetArea.BottomDockWidgetArea, self.interaction_dock, Qt.Orientation.Vertical)
+		self.addDockWidget(Qt.BottomDockWidgetArea, self.interaction_dock, Qt.Vertical)
 
-	@pyqtSlot()
+	@Slot()
 	def execute_pymol_cmd(self):
 		cmd = self.feedback_edit.text().strip()
 
@@ -236,7 +236,7 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 			self.feedback_edit.clear()
 			self.feedback_timer.start(0)
 
-	@pyqtSlot()
+	@Slot()
 	def update_feedback(self):
 		feedbacks = self.cmd._get_feedback()
 		if feedbacks:
@@ -260,9 +260,9 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		self.mol_viewer = DockeyListView(self)
 		self.mol_viewer.clicked.connect(self.on_molecular_changed)
 		self.mol_dock = QDockWidget("Molecules", self)
-		self.mol_dock.setAllowedAreas(Qt.DockWidgetArea.LeftDockWidgetArea | Qt.DockWidgetArea.RightDockWidgetArea)
+		self.mol_dock.setAllowedAreas(Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea)
 		self.mol_dock.setWidget(self.mol_viewer)
-		self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, self.mol_dock)
+		self.addDockWidget(Qt.LeftDockWidgetArea, self.mol_dock)
 		self.mol_dock.setVisible(True)
 
 	def draw_grid_box(self, rid):
@@ -288,13 +288,13 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		elif mol_format == 'sdf':
 			self.cmd.read_sdfstr(mol_content, mol_name)
 
-	@pyqtSlot(QModelIndex)
+	@Slot(QModelIndex)
 	def on_molecular_changed(self, index):
 		self.cmd.delete('all')
 		self.cmd.initialize()
 
-		#name = index.data(Qt.ItemDataRole.DisplayRole)
-		mol_id = index.siblingAtColumn(0).data(Qt.ItemDataRole.DisplayRole)
+		#name = index.data(Qt.DisplayRole)
+		mol_id = index.siblingAtColumn(0).data(Qt.DisplayRole)
 
 		sql = "SELECT id,name,type,content,format FROM molecular WHERE id=? LIMIT 1"
 		mol = DB.get_dict(sql, (mol_id,))
@@ -304,7 +304,7 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		if mol.type == 1 and self.box_sidebar_act.isChecked():
 			self.draw_grid_box(mol.id)
 
-	@pyqtSlot(bool)
+	@Slot(bool)
 	def display_grid_box(self, flag):
 		objects = self.cmd.get_names('objects')
 
@@ -322,28 +322,28 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 	def create_gridbox_adjuster(self):
 		self.box_adjuster = GridBoxSettingPanel(self)
 		self.box_dock = QDockWidget("Grid", self)
-		self.box_dock.setAllowedAreas(Qt.DockWidgetArea.LeftDockWidgetArea | Qt.DockWidgetArea.RightDockWidgetArea)
+		self.box_dock.setAllowedAreas(Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea)
 		self.box_dock.setWidget(self.box_adjuster)
-		self.addDockWidget(Qt.DockWidgetArea.RightDockWidgetArea, self.box_dock)
+		self.addDockWidget(Qt.RightDockWidgetArea, self.box_dock)
 		self.box_dock.setVisible(False)
 
 	def create_job_table(self):
 		self.job_table = JobTableView(self)
 		self.job_table.clicked.connect(self.on_job_changed)
 		self.job_table.setItemDelegateForColumn(4, JobsTableDelegate(self))
-		self.job_table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
-		self.job_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+		self.job_table.setSelectionBehavior(QAbstractItemView.SelectRows)
+		self.job_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
 		#self.job_table.horizontalHeader().setStretchLastSection(True)
 		#self.job_table.verticalHeader().hide()
 		#self.job_table.setAlternatingRowColors(True)
 		self.job_dock = QDockWidget("Jobs", self)
 		self.job_dock.setWidget(self.job_table)
-		self.job_dock.setAllowedAreas(Qt.DockWidgetArea.TopDockWidgetArea | Qt.DockWidgetArea.BottomDockWidgetArea
-			| Qt.DockWidgetArea.LeftDockWidgetArea | Qt.DockWidgetArea.RightDockWidgetArea)
-		self.addDockWidget(Qt.DockWidgetArea.LeftDockWidgetArea, self.job_dock, Qt.Orientation.Vertical)
+		self.job_dock.setAllowedAreas(Qt.TopDockWidgetArea | Qt.BottomDockWidgetArea
+			| Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea)
+		self.addDockWidget(Qt.LeftDockWidgetArea, self.job_dock, Qt.Vertical)
 		self.job_dock.setVisible(True)
 
-	@pyqtSlot(QModelIndex)
+	@Slot(QModelIndex)
 	def on_job_changed(self, index):
 		job_id = index.row() + 1
 		sql = (
@@ -368,18 +368,18 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 
 		self.pose_dock = QDockWidget("Poses", self)
 		self.pose_dock.setWidget(self.pose_tab)
-		self.pose_dock.setAllowedAreas(Qt.DockWidgetArea.TopDockWidgetArea | Qt.DockWidgetArea.BottomDockWidgetArea)
-		self.addDockWidget(Qt.DockWidgetArea.BottomDockWidgetArea, self.pose_dock, Qt.Orientation.Vertical)
+		self.pose_dock.setAllowedAreas(Qt.TopDockWidgetArea | Qt.BottomDockWidgetArea)
+		self.addDockWidget(Qt.BottomDockWidgetArea, self.pose_dock, Qt.Vertical)
 		self.pose_dock.setVisible(True)
 
-	@pyqtSlot(QModelIndex)
+	@Slot(QModelIndex)
 	def on_task_pose_changed(self, index):
-		pid = index.siblingAtColumn(0).data(Qt.ItemDataRole.DisplayRole)
+		pid = index.siblingAtColumn(0).data(Qt.DisplayRole)
 		self.interaction_tab.change_pose(pid)
 
-	@pyqtSlot(QModelIndex)
+	@Slot(QModelIndex)
 	def on_best_pose_changed(self, index):
-		pid = index.siblingAtColumn(1).data(Qt.ItemDataRole.DisplayRole)
+		pid = index.siblingAtColumn(1).data(Qt.DisplayRole)
 		self.interaction_tab.change_pose(pid)
 
 	def create_molecular_model(self):
@@ -397,11 +397,11 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		#header.resizeSection(3, fm.maxWidth()*5)
 		#self.job_table.hideColumn(0)
 		#self.job_table.horizontalHeader().setSectionResizeMode(1, QHeaderView.Stretch)
-		header.setSectionResizeMode(0, QHeaderView.ResizeMode.ResizeToContents)
-		header.setSectionResizeMode(1, QHeaderView.ResizeMode.Stretch)
-		header.setSectionResizeMode(2, QHeaderView.ResizeMode.Stretch)
-		header.setSectionResizeMode(3, QHeaderView.ResizeMode.ResizeToContents)
-		header.setSectionResizeMode(4, QHeaderView.ResizeMode.ResizeToContents)
+		header.setSectionResizeMode(0, QHeaderView.ResizeToContents)
+		header.setSectionResizeMode(1, QHeaderView.Stretch)
+		header.setSectionResizeMode(2, QHeaderView.Stretch)
+		header.setSectionResizeMode(3, QHeaderView.ResizeToContents)
+		header.setSectionResizeMode(4, QHeaderView.ResizeToContents)
 	
 	#def create_pose_model(self):
 	#	self.pose_model = PoseTableModel()
@@ -411,30 +411,30 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 
 	def create_actions(self):
 		self.new_project_act = QAction(QIcon(':/icons/new.svg'), "&New Project", self)
-		self.new_project_act.setShortcut(QKeySequence.StandardKey.New)
+		self.new_project_act.setShortcut(QKeySequence.New)
 		self.new_project_act.triggered.connect(self.new_project)
 		self.new_project_act.setIconVisibleInMenu(False)
 
 		self.open_project_act = QAction(QIcon(':/icons/open.svg'), "&Open Project", self)
-		self.open_project_act.setShortcut(QKeySequence.StandardKey.Open)
+		self.open_project_act.setShortcut(QKeySequence.Open)
 		self.open_project_act.triggered.connect(self.open_project)
 		self.open_project_act.setIconVisibleInMenu(False)
 
 		self.save_project_act = QAction("&Save Project", self)
-		self.save_project_act.setShortcut(QKeySequence.StandardKey.Save)
+		self.save_project_act.setShortcut(QKeySequence.Save)
 		self.save_project_act.setDisabled(True)
 		self.save_project_act.triggered.connect(self.save_project)
 		self.project_ready.connect(self.save_project_act.setEnabled)
 
 		self.save_project_as_act = QAction("&Save Project As", self)
 		self.save_project_as_act.setDisabled(True)
-		self.save_project_as_act.setShortcut(QKeySequence.StandardKey.SaveAs)
+		self.save_project_as_act.setShortcut(QKeySequence.SaveAs)
 		self.save_project_as_act.triggered.connect(self.save_project_as)
 		self.project_ready.connect(self.save_project_as_act.setEnabled)
 
 		self.close_project_act = QAction("&Close Project", self)
 		self.close_project_act.setDisabled(True)
-		self.close_project_act.setShortcut(QKeySequence.StandardKey.Close)
+		self.close_project_act.setShortcut(QKeySequence.Close)
 		self.close_project_act.triggered.connect(self.close_project)
 		self.project_ready.connect(self.close_project_act.setEnabled)
 
@@ -491,17 +491,17 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		self.export_file_act.triggered.connect(self.export_as_file)
 
 		self.exit_act = QAction("&Exit", self)
-		self.exit_act.setShortcut(QKeySequence.StandardKey.Quit)
+		self.exit_act.setShortcut(QKeySequence.Quit)
 		self.exit_act.triggered.connect(self.close)
 		#triggered = lambda : print(GridBoxSettingPanel.params.spacing),
 
 		#edit actions
 		self.pymol_undo_act = QAction("Undo", self)
-		self.pymol_undo_act.setShortcut(QKeySequence.StandardKey.Undo)
+		self.pymol_undo_act.setShortcut(QKeySequence.Undo)
 		self.pymol_undo_act.triggered.connect(self.cmd.undo)
 	
 		self.pymol_redo_act = QAction("Redo", self)
-		self.pymol_redo_act.setShortcut(QKeySequence.StandardKey.Redo)
+		self.pymol_redo_act.setShortcut(QKeySequence.Redo)
 		self.pymol_redo_act.triggered.connect(self.cmd.redo)
 
 		self.all_hydro_act = QAction("Add All Hydrogens", self)
@@ -769,11 +769,11 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 	def show_message(self, msg):
 		self.statusbar.showMessage(msg)
 
-	@pyqtSlot(str)
+	@Slot(str)
 	def show_error_message(self, msg):
 		QMessageBox.critical(self, "Error", msg)
 
-	@pyqtSlot(str)
+	@Slot(str)
 	def show_popup_message(self, msg):
 		QMessageBox.information(self, "Message", msg)
 
@@ -805,10 +805,10 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 				if DB.active():
 					ret = QMessageBox.warning(self, "Warning",
 						"Are you sure you want to close the current project and open the dragged project?",
-						QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+						QMessageBox.Yes | QMessageBox.No
 					)
 
-					if ret == QMessageBox.StandardButton.No:
+					if ret == QMessageBox.No:
 						return
 					else:
 						self.close_project()
@@ -827,7 +827,7 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 	def open_job_manager_dialog(self):
 		dlg = JobManagerDialog(self)
 
-		if dlg.exec() == QDialog.DialogCode.Accepted:
+		if dlg.exec() == QDialog.Accepted:
 			if self.job_worker:
 				settings = QSettings()
 				num = settings.value('Job/concurrent', 1, int)
@@ -849,10 +849,10 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		if DB.active():
 			ret = QMessageBox.warning(self, "Warning",
 				"Are you sure you want to close the current project and create a new project?",
-				QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+				QMessageBox.Yes | QMessageBox.No
 			)
 
-			if ret == QMessageBox.StandardButton.No:
+			if ret == QMessageBox.No:
 				return
 			else:
 				self.close_project()
@@ -877,10 +877,10 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		if DB.active():
 			ret = QMessageBox.warning(self, "Warning",
 				"Are you sure you want to close the current project and open a new project?",
-				QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+				QMessageBox.Yes | QMessageBox.No
 			)
 
-			if ret == QMessageBox.StandardButton.No:
+			if ret == QMessageBox.No:
 				return
 			else:
 				self.close_project()
@@ -1087,25 +1087,25 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 
 		self.cmd.save(outfile)
 
-	#@pyqtSlot()
+	#@Slot()
 	#def pymol_undo(self):
 	#	self.cmd.undo()
 
-	#@pyqtSlot()
+	#@Slot()
 	#def pymol_redo(self):
 	#	self.cmd.redo()
 
-	@pyqtSlot()
+	@Slot()
 	def pymol_settings(self):
 		dlg = PymolSettingDialog(self)
 		dlg.exec()
 
-	@pyqtSlot()
+	@Slot()
 	def docking_tool_settings(self):
 		dlg = DockingToolSettingDialog(self)
 		dlg.exec()
 
-	@pyqtSlot()
+	@Slot()
 	def concurrent_job_number(self):
 		dlg = JobConcurrentSettingDialog(self)
 		dlg.exec()
@@ -1178,7 +1178,7 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 
 		self.cmd.select('chain {}'.format(chains[0]))
 
-		if dlg.exec() == QDialog.DialogCode.Accepted:
+		if dlg.exec() == QDialog.Accepted:
 			chain = dlg.textValue()
 			self.cmd.remove('chain {}'.format(chain))
 			self.pymol_auto_save_mol()
@@ -1241,10 +1241,10 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 	def stop_job(self, job):
 		ret = QMessageBox.warning(self, "Warning",
 			"Are you sure you want to stop this job?",
-			QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+			QMessageBox.Yes | QMessageBox.No
 		)
 
-		if ret == QMessageBox.StandardButton.No:
+		if ret == QMessageBox.No:
 			return False
 
 		if self.job_worker is not None:
@@ -1300,10 +1300,10 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		if jobs:
 			ret = QMessageBox.warning(self, "Warning",
 				"Are you sure you want to delete the previous jobs and analysis results?",
-				QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No
+				QMessageBox.Yes | QMessageBox.No
 			)
 
-			if ret == QMessageBox.StandardButton.No:
+			if ret == QMessageBox.No:
 				return False
 
 		self.job_model.clear()
@@ -1414,7 +1414,7 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 				ret = QMessageBox.question(self, "Comfirmation",
 					"Are you sure you want to remove {} ligand(s) that match the filter?".format(count))
 
-				if ret == QMessageBox.StandardButton.Yes:
+				if ret == QMessageBox.Yes:
 					DB.query("DELETE FROM molecular WHERE type=2 AND {}".format(condition))
 
 					ligand_count = int(DB.get_option('ligand_count'))

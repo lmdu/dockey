@@ -3,8 +3,8 @@ import sys
 import copy
 import psutil
 
-from PyQt6.QtCore import *
-from PyQt6.QtWidgets import *
+from PySide6.QtCore import *
+from PySide6.QtWidgets import *
 from collections import OrderedDict
 
 from utils import *
@@ -774,7 +774,7 @@ class AutodockParameterWizard(QWizard):
 	def __init__(self, parent):
 		super(AutodockParameterWizard, self).__init__(parent)
 		self.setWindowTitle("Parameter settings for AutoDock")
-		self.setWizardStyle(QWizard.WizardStyle.ModernStyle)
+		self.setWizardStyle(QWizard.ModernStyle)
 
 		self.algorithms = ["Lamarckian GA", "Genetic Algorithm",
 							"Simulated Annealing", "Local Search"]
@@ -787,7 +787,7 @@ class AutodockParameterWizard(QWizard):
 	def update_parameter(self, cmd, value, idx=-1):
 		self.params.set_value(cmd, value, idx)
 
-	@pyqtSlot(int)
+	@Slot(int)
 	def on_algorithm_changed(self, index):
 		#remove widgets
 		for i in range(self.algorithm_layout.rowCount()):
@@ -1165,7 +1165,7 @@ class AutodockVinaParameterWizard(QWizard):
 	def __init__(self, parent=None):
 		super(AutodockVinaParameterWizard, self).__init__(parent)
 		self.setWindowTitle("Run Autodock Vina")
-		self.setWizardStyle(QWizard.WizardStyle.ModernStyle)
+		self.setWizardStyle(QWizard.ModernStyle)
 
 		self.create_parameter_page()
 		self.create_finish_page()
@@ -1380,7 +1380,7 @@ class QuickVinaParameterWizard(QWizard):
 	def __init__(self, parent=None):
 		super(QuickVinaParameterWizard, self).__init__(parent)
 		self.setWindowTitle("Run QuickVina-W")
-		self.setWizardStyle(QWizard.WizardStyle.ModernStyle)
+		self.setWizardStyle(QWizard.ModernStyle)
 
 		self.create_parameter_page()
 		self.create_finish_page()

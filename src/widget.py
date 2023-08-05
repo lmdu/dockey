@@ -2,10 +2,10 @@ import os
 import json
 import psutil
 
-from PyQt6.QtGui import *
-from PyQt6.QtCore import *
-from PyQt6.QtNetwork import *
-from PyQt6.QtWidgets import *
+from PySide6.QtGui import *
+from PySide6.QtCore import *
+from PySide6.QtNetwork import *
+from PySide6.QtWidgets import *
 from plip.basic.remote import VisualizerData
 from plip.structure.preparation import PDBComplex
 
@@ -26,8 +26,8 @@ __all__ = ['BrowseInput', 'CreateProjectDialog', 'AutodockConfigDialog',
 class QHLine(QFrame):
 	def __init__(self):
 		super().__init__()
-		self.setFrameShape(QFrame.Shape.HLine)
-		self.setFrameShadow(QFrame.Shadow.Sunken)
+		self.setFrameShape(QFrame.HLine)
+		self.setFrameShadow(QFrame.Sunken)
 
 class BrowseInput(QWidget):
 	def __init__(self, parent=None, is_file=True, is_save=False, _filter=""):
@@ -55,21 +55,21 @@ class BrowseInput(QWidget):
 
 		self.setLayout(layout)
 
-	@pyqtSlot()
+	@Slot()
 	def select_save(self):
 		exe, _ = QFileDialog.getSaveFileName(self, filter=self.filter)
 
 		if exe:
 			self.input.setText(exe)
 
-	@pyqtSlot()
+	@Slot()
 	def select_file(self):
 		exe, _ = QFileDialog.getOpenFileName(self, filter=self.filter)
 
 		if exe:
 			self.input.setText(exe)
 
-	@pyqtSlot()
+	@Slot()
 	def select_folder(self):
 		folder = QFileDialog.getExistingDirectory(self)
 
@@ -98,7 +98,7 @@ class CreateProjectDialog(QDialog):
 
 		self.tip_label = QLabel(tips, self)
 
-		action_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
+		action_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
 		action_box.accepted.connect(self.check_input_name)
 		action_box.rejected.connect(self.reject)
 
@@ -110,7 +110,7 @@ class CreateProjectDialog(QDialog):
 
 		self.setLayout(layout)
 
-	@pyqtSlot()
+	@Slot()
 	def check_input_name(self):
 		name = self.name_input.text()
 		folder = self.location_input.get_text()
@@ -179,13 +179,13 @@ class DockingToolSettingDialog(QDialog):
 		self.layout.addWidget(QLabel("QuickVina-W executable", self))
 		self.layout.addWidget(self.qvina_input)
 
-		btn_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Save | QDialogButtonBox.StandardButton.Cancel)
+		btn_box = QDialogButtonBox(QDialogButtonBox.Save | QDialogButtonBox.Cancel)
 		btn_box.accepted.connect(self.save_settings)
 		btn_box.rejected.connect(self.reject)
 		self.layout.addWidget(btn_box)
 		self.setLayout(self.layout)
 
-	@pyqtSlot()
+	@Slot()
 	def save_settings(self):
 		self.settings = QSettings()
 		ad4 = self.autodock_input.get_text()
@@ -233,13 +233,13 @@ class ProgramConfigDialog(QDialog):
 				layout.addWidget(QLabel(l, self))
 				layout.addWidget(self.inputs[i])
 
-		action_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
+		action_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
 		action_box.accepted.connect(self.save_config)
 		action_box.rejected.connect(self.reject)
 
 		layout.addWidget(action_box)
 
-	@pyqtSlot()
+	@Slot()
 	def save_config(self):
 		for put in self.inputs:
 			if put is None:
@@ -329,13 +329,13 @@ class ExportImageDialog(QDialog):
 
 		layout.addRow(sub_layout)
 
-		action_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Save | QDialogButtonBox.StandardButton.Cancel)
+		action_box = QDialogButtonBox(QDialogButtonBox.Save | QDialogButtonBox.Cancel)
 		action_box.accepted.connect(self.save_image)
 		action_box.rejected.connect(self.reject)
 
 		layout.addRow(action_box)
 
-	@pyqtSlot()
+	@Slot()
 	def save_image(self):
 		image = self.file_input.get_text()
 
@@ -377,8 +377,8 @@ class GradientColorBar(QWidget):
 	def paintEvent(self, event):
 		painter = QPainter(self)
 		gradient = QLinearGradient(event.rect().topLeft(), event.rect().topRight())
-		gradient.setColorAt(0, Qt.GlobalColor.white)
-		gradient.setColorAt(1, Qt.GlobalColor.black)
+		gradient.setColorAt(0, Qt.white)
+		gradient.setColorAt(1, Qt.black)
 		painter.fillRect(event.rect(), gradient)
 
 class PymolSettingDialog(QDialog):
@@ -389,7 +389,7 @@ class PymolSettingDialog(QDialog):
 		self.setWindowTitle("Pymol Settings")
 		self.resize(QSize(400, 100))
 		self.bar = GradientColorBar(self)
-		self.slider = QSlider(Qt.Orientation.Horizontal, self)
+		self.slider = QSlider(Qt.Horizontal, self)
 		self.slider.setRange(0, 100)
 		self.slider.valueChanged.connect(self.on_color_changed)
 		self.layout = QVBoxLayout()
@@ -400,7 +400,7 @@ class PymolSettingDialog(QDialog):
 		val = self.settings.value('Pymol/background', 100, int)
 		self.slider.setValue(val)
 
-	@pyqtSlot()
+	@Slot()
 	def on_color_changed(self):
 		val = self.slider.value()
 
@@ -431,7 +431,7 @@ class JobConcurrentSettingDialog(QDialog):
 		self.layout.addWidget(self.number)
 		self.setLayout(self.layout)
 
-	@pyqtSlot()
+	@Slot()
 	def on_job_number_changed(self, num):
 		self.settings.setValue('Job/concurrent', num)
 
@@ -454,9 +454,9 @@ class PoseTabWidget(QTabWidget):
 		self.best_table.hideColumn(1)
 		self.best_table.hideColumn(2)
 		self.best_table.verticalHeader().hide()
-		self.best_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
-		self.best_table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
-		self.best_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+		self.best_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+		self.best_table.setSelectionBehavior(QAbstractItemView.SelectRows)
+		self.best_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
 		self.addTab(self.best_table, "Best poses")
 
 	def create_pose_table(self):
@@ -466,9 +466,9 @@ class PoseTabWidget(QTabWidget):
 		self.pose_table.hideColumn(0)
 		self.pose_table.hideColumn(1)
 		self.pose_table.verticalHeader().hide()
-		self.pose_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
-		self.pose_table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
-		self.pose_table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+		self.pose_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+		self.pose_table.setSelectionBehavior(QAbstractItemView.SelectRows)
+		self.pose_table.setEditTriggers(QAbstractItemView.NoEditTriggers)
 		self.addTab(self.pose_table, "Task poses")
 		self.setTabVisible(1, False)
 
@@ -561,7 +561,7 @@ class InteractionTabWidget(QTabWidget):
 		self.salt_table.setModel(self.salt_model)
 		self.addTab(self.salt_table, "Salt bridges")
 		self.salt_model.row_count.connect(lambda x: self.setTabVisible(3, x))
-		self.salt_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
+		self.salt_table.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
 		self.salt_table.horizontalHeader().setStretchLastSection(True)
 
 	def create_water_table(self):
@@ -577,7 +577,7 @@ class InteractionTabWidget(QTabWidget):
 		self.stacking_table.setModel(self.stacking_model)
 		self.addTab(self.stacking_table, "π-stacking")
 		self.stacking_model.row_count.connect(lambda x: self.setTabVisible(5, x))
-		self.stacking_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
+		self.stacking_table.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
 		self.stacking_table.horizontalHeader().setStretchLastSection(True)
 
 	def create_cation_table(self):
@@ -586,7 +586,7 @@ class InteractionTabWidget(QTabWidget):
 		self.cation_table.setModel(self.cation_model)
 		self.addTab(self.cation_table, "π-cation")
 		self.cation_model.row_count.connect(lambda x: self.setTabVisible(6, x))
-		self.cation_table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Interactive)
+		self.cation_table.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
 		self.cation_table.horizontalHeader().setStretchLastSection(True)
 
 	def create_metal_table(self):
@@ -598,9 +598,9 @@ class InteractionTabWidget(QTabWidget):
 
 	def create_site_select(self):
 		layout = QHBoxLayout()
-		layout.setAlignment(Qt.AlignmentFlag.AlignTop)
+		layout.setAlignment(Qt.AlignTop)
 		layout.setContentsMargins(0,0,0,0)
-		spacer = QSpacerItem(10, 1, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
+		spacer = QSpacerItem(10, 1, QSizePolicy.Expanding, QSizePolicy.Minimum)
 		layout.addItem(spacer)
 		self.site_select = QComboBox(self)
 		self.site_model = BindingSiteModel()
@@ -629,7 +629,7 @@ class InteractionTabWidget(QTabWidget):
 			self.parent.cmd.color('blue', 'elem N and organic')
 			self.parent.cmd.color('yellow', 'elem S and organic')
 
-	@pyqtSlot(str)
+	@Slot(str)
 	def on_binding_site_changed(self, site):
 		sql = "SELECT id FROM binding_site WHERE pid=? AND site=? LIMIT 1"
 		site_id = DB.get_one(sql, (self.pose_id, site))
@@ -661,7 +661,7 @@ class InteractionTabWidget(QTabWidget):
 			finally:
 				temp_dir.remove()
 
-	@pyqtSlot()
+	@Slot()
 	def on_interaction_changed(self):
 		if self.complex_vis:
 			interaction_visualize(self.complex_vis)
@@ -694,8 +694,8 @@ class DockingEngineDialog(QDialog):
 		self.main_layout.addWidget(QHLine())
 
 		self.btn_widget = QDialogButtonBox(
-			QDialogButtonBox.StandardButton.Ok |
-			QDialogButtonBox.StandardButton.Cancel
+			QDialogButtonBox.Ok |
+			QDialogButtonBox.Cancel
 		)
 
 		self.btn_widget.accepted.connect(self.write_settings)
@@ -782,8 +782,8 @@ class JobManagerDialog(QDialog):
 		self.main_layout.addWidget(tips_label)
 
 		self.btn_widget = QDialogButtonBox(
-			QDialogButtonBox.StandardButton.Ok |
-			QDialogButtonBox.StandardButton.Cancel
+			QDialogButtonBox.Ok |
+			QDialogButtonBox.Cancel
 		)
 
 		self.btn_widget.accepted.connect(self.write_settings)
@@ -818,13 +818,13 @@ class ReceptorPrepareDialog(QDialog):
 		self.main_layout.addWidget(QHLine())
 
 		btn_widget = QDialogButtonBox(
-			QDialogButtonBox.StandardButton.RestoreDefaults |
-			QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+			QDialogButtonBox.RestoreDefaults |
+			QDialogButtonBox.Ok | QDialogButtonBox.Cancel
 		)
 
 		btn_widget.accepted.connect(self.write_settings)
 		btn_widget.rejected.connect(self.reject)
-		btn_widget.button(QDialogButtonBox.StandardButton.RestoreDefaults).clicked.connect(self.reset_settings)
+		btn_widget.button(QDialogButtonBox.RestoreDefaults).clicked.connect(self.reset_settings)
 		self.main_layout.addWidget(btn_widget)
 
 		self.read_settings()
@@ -944,10 +944,10 @@ class ReceptorPrepareDialog(QDialog):
 					val = self.settings.value(i.option, i.default, i.convert)
 
 				if val:
-					i.widget.setCheckState(Qt.CheckState.Checked)
+					i.widget.setCheckState(Qt.Checked)
 
 				else:
-					i.widget.setCheckState(Qt.CheckState.Unchecked)
+					i.widget.setCheckState(Qt.Unchecked)
 
 			elif i.wgtype == 'edit':
 				val = self.settings.value(i.option, i.default)
@@ -1022,14 +1022,14 @@ class LigandPrepareDialog(QDialog):
 		self.main_layout.addWidget(QHLine())
 
 		btn_widget = QDialogButtonBox(
-			QDialogButtonBox.StandardButton.RestoreDefaults |
-			QDialogButtonBox.StandardButton.Ok |
-			QDialogButtonBox.StandardButton.Cancel
+			QDialogButtonBox.RestoreDefaults |
+			QDialogButtonBox.Ok |
+			QDialogButtonBox.Cancel
 		)
 
 		btn_widget.accepted.connect(self.write_settings)
 		btn_widget.rejected.connect(self.reject)
-		btn_widget.button(QDialogButtonBox.StandardButton.RestoreDefaults).clicked.connect(self.reset_settings)
+		btn_widget.button(QDialogButtonBox.RestoreDefaults).clicked.connect(self.reset_settings)
 		self.main_layout.addWidget(btn_widget)
 		
 		self.read_settings()
@@ -1269,10 +1269,10 @@ class LigandPrepareDialog(QDialog):
 					val = self.settings.value(i.option, i.default, i.convert)
 
 				if val:
-					i.widget.setCheckState(Qt.CheckState.Checked)
+					i.widget.setCheckState(Qt.Checked)
 
 				else:
-					i.widget.setCheckState(Qt.CheckState.Unchecked)
+					i.widget.setCheckState(Qt.Unchecked)
 
 			elif i.wgtype == 'edit':
 				val = self.settings.value(i.option, i.default)
@@ -1361,8 +1361,8 @@ class DownloaderDialog(QDialog):
 		self.create_widgets()
 
 		btn_box = QDialogButtonBox(
-			QDialogButtonBox.StandardButton.Ok |
-			QDialogButtonBox.StandardButton.Cancel
+			QDialogButtonBox.Ok |
+			QDialogButtonBox.Cancel
 		)
 		btn_box.accepted.connect(self.accept)
 		btn_box.rejected.connect(self.reject)
@@ -1390,7 +1390,7 @@ class DownloaderDialog(QDialog):
 
 		mol_urls = []
 
-		if dlg.exec() == QDialog.DialogCode.Accepted:
+		if dlg.exec() == QDialog.Accepted:
 			text = dlg.text_widget.toPlainText().strip()
 
 			if not text:
@@ -1465,8 +1465,8 @@ class FlexResiduesDialog(QDialog):
 		self.bond_check.stateChanged.connect(self.bond_tree.setVisible)
 
 		self.btns = QDialogButtonBox(
-			QDialogButtonBox.StandardButton.Cancel |
-			QDialogButtonBox.StandardButton.Ok
+			QDialogButtonBox.Cancel |
+			QDialogButtonBox.Ok
 		)
 		self.btns.accepted.connect(self.on_accept_clicked)
 		self.btns.rejected.connect(self.reject)
@@ -1501,19 +1501,19 @@ class FlexResiduesDialog(QDialog):
 		self.residue_checked = False
 		for res in get_molecule_residues(self.mol.content, self.mol.format):
 			item = QTreeWidgetItem(self.residue_tree, res)
-			item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
+			item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
 
 			idx = int(res[0])
 			
 			if idx in self.flex_residues:
-				item.setCheckState(0, Qt.CheckState.Checked)
+				item.setCheckState(0, Qt.Checked)
 			else:
-				item.setCheckState(0, Qt.CheckState.Unchecked)
+				item.setCheckState(0, Qt.Unchecked)
 
 			self.residue_tree.addTopLevelItem(item)
 		self.residue_checked = True
 
-	@pyqtSlot(QTreeWidgetItem, int)
+	@Slot(QTreeWidgetItem, int)
 	def on_residue_checked(self, item, column):
 		if not self.residue_checked:
 			return
@@ -1522,7 +1522,7 @@ class FlexResiduesDialog(QDialog):
 		chain = item.text(1)
 		aa = item.text(2)
 		res = item.text(3)
-		if item.checkState(0) == Qt.CheckState.Checked:
+		if item.checkState(0) == Qt.Checked:
 			if idx in self.flex_residues:
 				self.flex_residues[idx].checked = True
 				self.flex_residues[idx].bonds = set()
@@ -1536,19 +1536,19 @@ class FlexResiduesDialog(QDialog):
 			if idx in self.flex_residues:
 				self.flex_residues[idx].checked = False
 
-	@pyqtSlot(QTreeWidgetItem, int)
+	@Slot(QTreeWidgetItem, int)
 	def on_residue_clicked(self, item, column):
 		self.bond_checked = False
 		self.bond_tree.clear()
 		idx = int(item.text(0))
 		for bond in get_residue_bonds(self.mol.content, self.mol.format, idx):
 			item = QTreeWidgetItem(self.bond_tree, bond)
-			item.setFlags(item.flags() | Qt.ItemFlag.ItemIsUserCheckable)
+			item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
 
 			if idx in self.flex_residues and bond[0] in self.flex_residues[idx].bonds:
-				item.setCheckState(0, Qt.CheckState.Checked)
+				item.setCheckState(0, Qt.Checked)
 			else:
-				item.setCheckState(0, Qt.CheckState.Unchecked)
+				item.setCheckState(0, Qt.Unchecked)
 
 			for i in range(2, 5):
 				if bond[i]:
@@ -1559,7 +1559,7 @@ class FlexResiduesDialog(QDialog):
 			self.bond_tree.addTopLevelItem(item)
 		self.bond_checked = True
 
-	@pyqtSlot(QTreeWidgetItem, int)
+	@Slot(QTreeWidgetItem, int)
 	def on_bond_checked(self, item, column):
 		if not self.bond_checked:
 			return
@@ -1572,13 +1572,13 @@ class FlexResiduesDialog(QDialog):
 		if not self.flex_residues[res_idx].checked:
 			return
 
-		if item.checkState(0) == Qt.CheckState.Checked:
+		if item.checkState(0) == Qt.Checked:
 			self.flex_residues[res_idx].bonds.add(item.text(0))
 		else:
 			if item.text(0) in self.flex_residues[res_idx].bonds:
 				self.flex_residues[res_idx].bonds.remove(item.text(0))
 
-	@pyqtSlot()
+	@Slot()
 	def on_accept_clicked(self):
 		for idx, flexres in self.flex_residues.items():
 
@@ -1631,7 +1631,7 @@ class LigandFilterDialog(QDialog):
 		self.cpjoin = QComboBox(self)
 		self.cpjoin.addItems(['AND', 'OR'])
 
-		self.btns = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel)
+		self.btns = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
 		self.btns.accepted.connect(self.accept)
 		self.btns.rejected.connect(self.reject)
 
@@ -1663,7 +1663,7 @@ class LigandFilterDialog(QDialog):
 	def filter(cls, parent):
 		dlg = cls(parent)
 
-		if dlg.exec() == QDialog.DialogCode.Accepted:
+		if dlg.exec() == QDialog.Accepted:
 			mwt = dlg.weight.value()
 			mws = dlg.mwsign.currentText()
 
@@ -1713,13 +1713,13 @@ class ReceptorPreprocessDialog(QDialog):
 		self.main_layout.addWidget(QHLine())
 
 		btn_widget = QDialogButtonBox(
-			QDialogButtonBox.StandardButton.RestoreDefaults |
-			QDialogButtonBox.StandardButton.Ok | QDialogButtonBox.StandardButton.Cancel
+			QDialogButtonBox.RestoreDefaults |
+			QDialogButtonBox.Ok | QDialogButtonBox.Cancel
 		)
 
 		btn_widget.accepted.connect(self.write_settings)
 		btn_widget.rejected.connect(self.reject)
-		btn_widget.button(QDialogButtonBox.StandardButton.RestoreDefaults).clicked.connect(self.reset_settings)
+		btn_widget.button(QDialogButtonBox.RestoreDefaults).clicked.connect(self.reset_settings)
 		self.main_layout.addWidget(btn_widget)
 
 		self.read_settings()
@@ -1842,10 +1842,10 @@ class ReceptorPreprocessDialog(QDialog):
 
 			if i.wgtype == 'check':
 				if val:
-					i.widget.setCheckState(Qt.CheckState.Checked)
+					i.widget.setCheckState(Qt.Checked)
 
 				else:
-					i.widget.setCheckState(Qt.CheckState.Unchecked)
+					i.widget.setCheckState(Qt.Unchecked)
 
 			elif i.wgtype == 'spin':
 				i.widget.setValue(val)
@@ -1888,10 +1888,12 @@ class AcknowledgementDialog(QDialog):
 		layout.addWidget(info)
 
 		thanks = QTextBrowser(self)
+		thanks.setOpenLinks(True)
+		thanks.setOpenExternalLinks(True)
 		thanks.setHtml(text)
 		layout.addWidget(thanks)
 
-		btnbox = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok)
+		btnbox = QDialogButtonBox(QDialogButtonBox.Ok)
 		btnbox.accepted.connect(self.accept)
 		layout.addWidget(btnbox)
 
@@ -1920,7 +1922,7 @@ class CPUAndMemoryViewDialog(QDialog):
 		main_layout.addRow('Memory:', self.memory_usage)
 		main_layout.addRow('', self.memory_text)
 
-		btnbox = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok)
+		btnbox = QDialogButtonBox(QDialogButtonBox.Ok)
 		btnbox.accepted.connect(self.accept)
 		main_layout.addRow(btnbox)
 
@@ -1935,7 +1937,7 @@ class CPUAndMemoryViewDialog(QDialog):
 	def sizeHint(self):
 		return QSize(400, 10)
 
-	@pyqtSlot()
+	@Slot()
 	def update_resource_usage(self):
 		cpu = self.proc.cpu_percent(interval=0.1)
 		mem = self.proc.memory_info().rss

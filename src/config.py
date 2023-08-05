@@ -10,7 +10,7 @@ import pdb2pqr
 import requests
 import pdbfixer
 import openbabel
-from PyQt6.QtCore import PYQT_VERSION_STR as pyqt_version
+from PySide6.QtCore import __version__ as pyside_version
 from plip.basic.config import __version__ as plip_version
 
 __all__ = ['DOCKEY_VERSION', 'DOCKEY_BUILD', 'DOCKEY_ABOUT',
@@ -18,7 +18,7 @@ __all__ = ['DOCKEY_VERSION', 'DOCKEY_BUILD', 'DOCKEY_ABOUT',
 
 DOCKEY_VERSION = "0.9.0"
 
-DOCKEY_BUILD = "230730"
+DOCKEY_BUILD = "230830"
 
 DOCKEY_ABOUT = """
 <p>Dockey - Molecular Docking and Virtual Screening</p>
@@ -60,17 +60,17 @@ DOCKEY_THANKS = """
 				https://github.com/rogerbinns/apsw
 			</a>
 		</td>
-		<td></td>
+		<td>OSI Approved</td>
 	</tr>
 	<tr>
-		<td>PyQt</td>
-		<td>v{pyqt}</td>
+		<td>PySide6</td>
+		<td>v{pyside}</td>
 		<td>
-			<a href="https://riverbankcomputing.com/software/pyqt/">
-				https://riverbankcomputing.com/software/pyqt
+			<a href="https://doc.qt.io/qtforpython-6/">
+				https://doc.qt.io/qtforpython-6
 			</a>
 		</td>
-		<td>GPLv3</td>
+		<td>LGPL</td>
 	</tr>
 	<tr>
 		<td>Pymol</td>
@@ -170,7 +170,7 @@ DOCKEY_THANKS = """
 				https://www.poissonboltzmann.org
 			</a>
 		</td>
-		<td></td>
+		<td>BSD</td>
 	</tr>
 	<tr>
 		<td>Requests</td>
@@ -226,7 +226,7 @@ DOCKEY_THANKS = """
 """.format(
 	python = sys.version.split()[0],
 	apsw = apsw.apswversion(),
-	pyqt = pyqt_version,
+	pyside = pyside_version,
 	pymol = pymol.cmd.get_version()[0],
 	babel = openbabel.__version__,
 	rdkit = rdkit.__version__,

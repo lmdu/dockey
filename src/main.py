@@ -3,15 +3,15 @@ import sys
 import rc_icons
 import multiprocessing
 
-from PyQt6.QtGui import *
-from PyQt6.QtCore import *
-from PyQt6.QtWidgets import *
+from PySide6.QtGui import *
+from PySide6.QtCore import *
+from PySide6.QtWidgets import *
 
 from config import *
 from window import *
 
 class DockeyApplication(QApplication):
-	osx_open_with = pyqtSignal(str)
+	osx_open_with = Signal(str)
 
 	def __init__(self, argv):
 		super().__init__(argv)
@@ -36,7 +36,7 @@ if __name__ == '__main__':
 	QCoreApplication.setOrganizationDomain("big.cdu.edu.cn")
 	QCoreApplication.setApplicationName("Dockey")
 	QCoreApplication.setApplicationVersion(DOCKEY_VERSION)
-	QSettings.setDefaultFormat(QSettings.Format.IniFormat)
+	QSettings.setDefaultFormat(QSettings.IniFormat)
 
 	app = DockeyApplication(sys.argv)
 	win = DockeyMainWindow()
