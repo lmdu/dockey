@@ -34,7 +34,8 @@ jobs:
           $line = Select-String -Path src\config.py -Pattern 'DOCKEY_VERSION =' | Out-String
           $version = $line.Split('"')[1]
           iscc /DMyAppVersion=$version package/build_win_installer.iss
-          7z a Dockey-v$version-win64-portable.7z dist/Dockey
+          cd dist
+          7z a Dockey-v$version-win64-portable.7z Dockey
 
       - uses: actions/upload-artifact@v3
         with:
