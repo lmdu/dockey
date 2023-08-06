@@ -336,7 +336,7 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		#self.job_table.horizontalHeader().setStretchLastSection(True)
 		#self.job_table.verticalHeader().hide()
 		#self.job_table.setAlternatingRowColors(True)
-		self.job_dock = QDockWidget("Jobs", self)
+		self.job_dock = QDockWidget("Tasks", self)
 		self.job_dock.setWidget(self.job_table)
 		self.job_dock.setAllowedAreas(Qt.TopDockWidgetArea | Qt.BottomDockWidgetArea
 			| Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea)
@@ -533,20 +533,8 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		#self.job_num_act = QAction("Concurrent execution", self)
 		#self.job_num_act.triggered.connect(self.concurrent_job_number)
 
-		self.engine_act = QAction("Docking Engine Settings", self)
-		self.engine_act.triggered.connect(self.open_engine_settings_dialog)
-
-		self.repprep_act = QAction("Receptor Preprocessing Settings", self)
-		self.repprep_act.triggered.connect(self.open_receptor_preprocess_dialog)
-
-		self.recprep_act = QAction("Receptor Preparation Settings", self)
-		self.recprep_act.triggered.connect(self.open_receptor_prepare_dialog)
-
-		self.ligprep_act = QAction("Ligand Preparation Settings", self)
-		self.ligprep_act.triggered.connect(self.open_ligand_prepare_dialog)
-
-		self.job_act = QAction("Concurrent Job Manager", self)
-		self.job_act.triggered.connect(self.open_job_manager_dialog)
+		self.task_act = QAction("Concurrent Task Manager", self)
+		self.task_act.triggered.connect(self.open_job_manager_dialog)
 
 		#view actions
 		#pymol sidebar
@@ -711,18 +699,10 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		self.run_menu.addAction(self.run_vina_act)
 		self.run_menu.addAction(self.run_qvina_act)
 
-		self.pymol_menu = self.menuBar().addMenu("&PyMOL")
+		self.task_menu = self.menuBar().addMenu("&Task")
+		self.task_menu.addAction(self.task_act)
 
-		self.prefer_menu = self.menuBar().addMenu("&Preference")
-		#self.prefer_menu.addAction(self.dock_tool_act)
-		#self.prefer_menu.addAction(self.job_num_act)
-		self.prefer_menu.addAction(self.engine_act)
-		self.prefer_menu.addSeparator()
-		self.prefer_menu.addAction(self.repprep_act)
-		self.prefer_menu.addAction(self.recprep_act)
-		self.prefer_menu.addAction(self.ligprep_act)
-		self.prefer_menu.addSeparator()
-		self.prefer_menu.addAction(self.job_act)
+		self.pymol_menu = self.menuBar().addMenu("&PyMOL")
 
 		self.help_menu = self.menuBar().addMenu("&Help")
 		self.help_menu.addAction(self.about_act)
@@ -795,6 +775,8 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		self.pose_tab.select()
 		self.project_ready.emit(True)
 
+		self.setWindowTitle("{} - Dockey".format(db_file))
+
 	def dragEnterEvent(self, event):
 		event.acceptProposedAction()
 
@@ -829,30 +811,14 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		dlg = DockeyConfigDialog(self)
 		dlg.exec()
 
-	def open_engine_settings_dialog(self):
-		dlg = DockingEngineDialog(self)
-		dlg.exec()
-
 	def open_job_manager_dialog(self):
-		dlg = JobManagerDialog(self)
+		dlg = TaskManagerDialog(self)
 
 		if dlg.exec() == QDialog.Accepted:
 			if self.job_worker:
 				settings = QSettings()
 				num = settings.value('Job/concurrent', 1, int)
 				self.job_worker.signals.threads.emit(num)
-
-	def open_receptor_prepare_dialog(self):
-		dlg = ReceptorPrepareDialog(self)
-		dlg.exec()
-
-	def open_receptor_preprocess_dialog(self):
-		dlg = ReceptorPreprocessDialog(self)
-		dlg.exec()
-
-	def open_ligand_prepare_dialog(self):
-		dlg = LigandPrepareDialog(self)
-		dlg.exec()
 
 	def new_project(self):
 		if DB.active():
@@ -921,7 +887,6 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 
 	def close_project(self):
 		if DB.changed():
-			'''
 			ret = QMessageBox.question(self, "Confirmation",
 				"Would you like to save project before closing project",
 				QMessageBox.Yes | QMessageBox.No | QMessageBox.Cancel
@@ -932,7 +897,6 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 
 			elif ret == QMessageBox.Yes:
 				self.save_project()
-			'''
 
 		self.mol_model.reset()
 		self.job_model.reset()
@@ -945,6 +909,8 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 
 		DB.close()
 		self.project_ready.emit(False)
+
+		self.setWindowTitle("Dockey v{}".format(DOCKEY_VERSION))
 
 	def import_moleculars(self, mols, _type=1):
 		sql = "INSERT INTO molecular VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)"

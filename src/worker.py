@@ -326,7 +326,7 @@ class BaseWorker(QRunnable):
 			self.settings.beginGroup('Ligand')
 			lig_params = dict(
 				tool = 'prepare_ligand4',
-				repairs = self.settings.value('repairs', ''),
+				repairs = self.settings.value('repairs', 'bonds_hydrogens'),
 				charges_to_add = self.settings.value('charges_to_add', 'gasteiger'),
 				#preserve_charge_types = self.settings.value('preserve_charge_types', ''),
 				cleanup = self.settings.value('cleanup', 'nphs_lps'),
@@ -360,7 +360,7 @@ class BaseWorker(QRunnable):
 
 		self.settings.beginGroup('Receptor')
 		rep_params = dict(
-			repairs = self.settings.value('repairs', ''),
+			repairs = self.settings.value('repairs', 'bonds_hydrogens'),
 			charges_to_add = self.settings.value('charges_to_add', 'gasteiger'),
 			#preserve_charge_types = self.settings.value('preserve_charge_types', ''),
 			cleanup = self.settings.value('cleanup', 'nphs_lps_waters_nonstdres'),

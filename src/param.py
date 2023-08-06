@@ -1,8 +1,9 @@
 import os
 import sys
-import copy
+#import copy
 import psutil
 
+from PySide6.QtGui import *
 from PySide6.QtCore import *
 from PySide6.QtWidgets import *
 from collections import OrderedDict
@@ -10,9 +11,49 @@ from collections import OrderedDict
 from utils import *
 from backend import *
 
-__all__ = ['AutogridParameter', 'AutodockParameterWizard', 'AutodockVinaParameterWizard',
-	'QuickVinaParameterWizard'
+__all__ = ['AutogridParameter', 'AutodockParameterWizard',
+	'AutodockVinaParameterWizard', 'QuickVinaParameterWizard'
 ]
+
+class BrowseLineEdit(QWidget):
+	text_changed = Signal(str)
+
+	def __init__(self, parent=None):
+		super().__init__(parent)
+	
+		self.input = QLineEdit(self)
+		self.input.setReadOnly(True)
+		self.browse = QPushButton(self)
+		self.browse.setFlat(True)
+		self.browse.setIcon(QIcon(":/icons/folder.svg"))
+
+		self.input.textChanged.connect(self.on_text_chanaged)
+		self.browse.clicked.connect(self.select_file)
+
+		layout = QHBoxLayout()
+		layout.setSpacing(0)
+		layout.setContentsMargins(0,0,0,0)
+		layout.addWidget(self.input)
+		layout.addWidget(self.browse)
+
+		self.setLayout(layout)
+
+	@Slot()
+	def on_text_chanaged(self, text):
+		self.text_changed.emit(text)
+
+	@Slot()
+	def select_file(self):
+		pfile, _ = QFileDialog.getOpenFileName(self)
+
+		if pfile:
+			self.input.setText(pfile)
+
+	def get_text(self):
+		return self.input.text()
+
+	def set_text(self, text):
+		self.input.setText(text)
 
 class AutogridParameter:
 	comments = {
@@ -896,6 +937,11 @@ class AutodockParameterWizard(QWizard):
 				btn_group.setExclusive(True)
 				layout.addRow(m.comment, btn_layout)
 
+			elif p == 'parameter_file':
+				editor = BrowseLineEdit(self)
+				editor.text_changed.connect(lambda x: self.update_parameter('parameter_file', x))
+				layout.addRow(m.comment, editor)
+
 			elif m.type is bool:
 				editor = QCheckBox(self)
 				editor.setChecked(m.value)
@@ -950,6 +996,7 @@ class AutodockParameterWizard(QWizard):
 		self.docking_layout = QFormLayout()
 		self.docking_page.setLayout(self.docking_layout)
 		self.create_parameter_widgets(self.docking_layout)
+		#self.docking_layout.setEnabled(False)
 
 	def create_finish_page(self):
 		self.finish_page = QWizardPage(self)

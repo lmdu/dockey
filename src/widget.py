@@ -4,7 +4,6 @@ import psutil
 
 from PySide6.QtGui import *
 from PySide6.QtCore import *
-from PySide6.QtNetwork import *
 from PySide6.QtWidgets import *
 from plip.basic.remote import VisualizerData
 from plip.structure.preparation import PDBComplex
@@ -14,14 +13,13 @@ from table import *
 from backend import *
 
 __all__ = ['BrowseInput', 'CreateProjectDialog', 'AutodockConfigDialog',
-			'AutodockVinaConfigDialog', 'ExportImageDialog', 'FeedbackBrowser',
-			'PymolSettingDialog', 'DockingEngineDialog', 'InteractionTabWidget',
-			'JobManagerDialog', 'PDBDownloadDialog', 'ReceptorPreprocessDialog',
-			'ZINCDownloadDialog', 'QuickVinaConfigDialog', 'PoseTabWidget',
-			'ReceptorPrepareDialog', 'FlexResiduesDialog', 'LigandFilterDialog',
-			'PubchemDownloadDialog', 'ChemblDownloadDialog', 'LigandPrepareDialog',
-			'AcknowledgementDialog', 'CPUAndMemoryViewDialog', 'DockeyConfigDialog'
-			]
+	'AutodockVinaConfigDialog', 'ExportImageDialog', 'FeedbackBrowser',
+	'PymolSettingDialog', 'InteractionTabWidget', 'PoseTabWidget',
+	'TaskManagerDialog', 'PDBDownloadDialog', 'ZINCDownloadDialog',
+	'QuickVinaConfigDialog', 'LigandFilterDialog', 'FlexResiduesDialog',
+	'PubchemDownloadDialog', 'ChemblDownloadDialog', 'DockeyConfigDialog',
+	'AcknowledgementDialog', 'CPUAndMemoryViewDialog'
+]
 
 class QHLine(QFrame):
 	def __init__(self):
@@ -30,6 +28,8 @@ class QHLine(QFrame):
 		self.setFrameShadow(QFrame.Sunken)
 
 class BrowseInput(QWidget):
+	text_changed = Signal(str)
+
 	def __init__(self, parent=None, is_file=True, is_save=False, _filter=""):
 		super().__init__(parent)
 		self.filter = _filter
@@ -38,6 +38,8 @@ class BrowseInput(QWidget):
 		self.browse = QPushButton(self)
 		self.browse.setFlat(True)
 		self.browse.setIcon(QIcon(":/icons/folder.svg"))
+
+		self.input.textChanged.connect(self.on_text_chanaged)
 
 		if is_file:
 			if is_save:
@@ -54,6 +56,10 @@ class BrowseInput(QWidget):
 		layout.addWidget(self.browse)
 
 		self.setLayout(layout)
+
+	@Slot()
+	def on_text_chanaged(self, text):
+		self.text_changed.emit(text)
 
 	@Slot()
 	def select_save(self):
@@ -414,26 +420,26 @@ class PymolSettingDialog(QDialog):
 		self.parent.cmd.bg_color(color)
 		self.settings.setValue('Pymol/background', val)
 
-class JobConcurrentSettingDialog(QDialog):
-	def __init__(self, parent=None):
-		super().__init__(parent)
-		self.parent = parent
-		self.setWindowTitle("Concurrent Job Setting")
-		self.settings = QSettings()
-		self.job_num = self.settings.value('Job/concurrent', 1, int)
-		self.layout = QVBoxLayout()
-		self.label = QLabel("Number of concurrent running jobs", self)
-		self.number = QSpinBox(self)
-		self.number.setValue(self.job_num)
-		self.number.setRange(1, max(1, psutil.cpu_count()-2))
-		self.number.valueChanged.connect(self.on_job_number_changed)
-		self.layout.addWidget(self.label)
-		self.layout.addWidget(self.number)
-		self.setLayout(self.layout)
-
-	@Slot()
-	def on_job_number_changed(self, num):
-		self.settings.setValue('Job/concurrent', num)
+#class JobConcurrentSettingDialog(QDialog):
+#	def __init__(self, parent=None):
+#		super().__init__(parent)
+#		self.parent = parent
+#		self.setWindowTitle("Concurrent Job Setting")
+#		self.settings = QSettings()
+#		self.job_num = self.settings.value('Job/concurrent', 1, int)
+#		self.layout = QVBoxLayout()
+#		self.label = QLabel("Number of concurrent running jobs", self)
+#		self.number = QSpinBox(self)
+#		self.number.setValue(self.job_num)
+#		self.number.setRange(1, max(1, psutil.cpu_count()-2))
+#		self.number.valueChanged.connect(self.on_job_number_changed)
+#		self.layout.addWidget(self.label)
+#		self.layout.addWidget(self.number)
+#		self.setLayout(self.layout)
+#
+#	@Slot()
+#	def on_job_number_changed(self, num):
+#		self.settings.setValue('Job/concurrent', num)
 
 class PoseTabWidget(QTabWidget):
 	def __init__(self, parent=None):
@@ -678,51 +684,45 @@ class InteractionTabWidget(QTabWidget):
 		for i in range(8):
 			self.widget(i).model().reset()
 
-class DockingEngineDialog(QDialog):
+class DockeyConfigPage(QWidget):
 	def __init__(self, parent):
 		super().__init__(parent)
-		self.setWindowTitle("Docking engine settings")
-		self.resize(QSize(550, 100))
 		self.input_widgets = []
 		self.settings = QSettings()
+
 		self.main_layout = QVBoxLayout()
-		self.main_layout.setContentsMargins(20, 20, 20, 20)
-		self.main_layout.setSpacing(10)
 		self.setLayout(self.main_layout)
 
-		self.create_engine_inputs()
-		self.main_layout.addWidget(QHLine())
-
-		self.btn_widget = QDialogButtonBox(
-			QDialogButtonBox.Ok |
-			QDialogButtonBox.Cancel
-		)
-
-		self.btn_widget.accepted.connect(self.write_settings)
-		self.btn_widget.rejected.connect(self.reject)
-		self.main_layout.addWidget(self.btn_widget)
-
+		self.create_config_inputs()
 		self.read_settings()
 
-	def register_widget(self, option, widget, wgtype, default='', convert=str):
+	def create_config_inputs(self):
+		pass
+
+	def read_settings(self):
+		pass
+
+	def register_widget(self, widget, wgtype, option, default, convert):
 		self.input_widgets.append(AttrDict(
 			widget = widget,
-			option = option,
 			wgtype = wgtype,
+			option = option,
 			default = default,
 			convert = convert
 		))
 
-	def create_engine_inputs(self):
+
+class DockingToolConfigPage(DockeyConfigPage):
+	def create_config_inputs(self):
 		self.autodock_input = BrowseInput(self)
 		self.autogrid_input = BrowseInput(self)
 		self.vina_input = BrowseInput(self)
 		self.qvina_input = BrowseInput(self)
 
-		self.register_widget('Tools/autodock_4', self.autodock_input, 'browse')
-		self.register_widget('Tools/autogrid_4', self.autogrid_input, 'browse')
-		self.register_widget('Tools/autodock_vina', self.vina_input, 'browse')
-		self.register_widget('Tools/quick_vina_w', self.qvina_input, 'browse')
+		self.register_widget(self.autodock_input, 'browse', 'Tools/autodock_4', '', str)
+		self.register_widget(self.autogrid_input, 'browse', 'Tools/autogrid_4', '', str)
+		self.register_widget(self.vina_input, 'browse', 'Tools/autodock_vina',  '', str)
+		self.register_widget(self.qvina_input, 'browse', 'Tools/quick_vina_w', '', str)
                           
 		self.main_layout.addWidget(QLabel("Autogrid4 executable", self))
 		self.main_layout.addWidget(self.autogrid_input)
@@ -732,6 +732,8 @@ class DockingEngineDialog(QDialog):
 		self.main_layout.addWidget(self.vina_input)
 		self.main_layout.addWidget(QLabel("QuickVina-W executable", self))
 		self.main_layout.addWidget(self.qvina_input)
+
+		self.main_layout.addStretch(1)
 
 	def read_settings(self):
 		for i in self.input_widgets:
@@ -743,12 +745,10 @@ class DockingEngineDialog(QDialog):
 			val = i.widget.get_text()
 			self.settings.setValue(i.option, val)
 
-		self.accept()
-
-class JobManagerDialog(QDialog):
+class TaskManagerDialog(QDialog):
 	def __init__(self, parent):
 		super().__init__(parent)
-		self.setWindowTitle("Concurrent job manager")
+		self.setWindowTitle("Concurrent task manager")
 		self.settings = QSettings()
 
 		self.main_layout = QVBoxLayout()
@@ -759,7 +759,7 @@ class JobManagerDialog(QDialog):
 		job_layout = QGridLayout()
 		job_layout.setColumnStretch(1, 1)
 		self.main_layout.addLayout(job_layout)
-		job_label = QLabel("Number of concurrent running jobs:", self)
+		job_label = QLabel("Number of concurrent running tasks:", self)
 		job_layout.addWidget(job_label, 0, 0)
 
 		sys_cpus = psutil.cpu_count()
@@ -772,10 +772,10 @@ class JobManagerDialog(QDialog):
 
 		self.main_layout.addWidget(QLabel("<b>Tips:</b>", self))
 		tips = (
-			"<p>1. You can set the number of jobs that can run concurrently to improve the docking speed.</p>"
-			"<p>2. Limiting the number of concurrent jobs helps you reduce CPU consumption.</p>"
-			"<p>3. You can set the number of concurrent jobs to any number from 1 to maximum CPU threads.</p>"
-			"<p>4. For AutoDock Vina or QuickVina-W, the total CPU consumed is job number x vina CPU number.</p>"
+			"<p>1. You can set the number of tasks that can run concurrently to improve the docking speed.</p>"
+			"<p>2. Limiting the number of concurrent tasks helps you reduce CPU consumption.</p>"
+			"<p>3. You can set the number of concurrent tasks to any number from 1 to maximum CPU threads.</p>"
+			"<p>4. For AutoDock Vina or QuickVina-W, the total CPU consumed is task number x vina CPU number.</p>"
 		)
 		tips_label = QLabel(tips, self)
 
@@ -802,43 +802,153 @@ class JobManagerDialog(QDialog):
 		self.settings.setValue('Job/concurrent', val)
 		self.accept()
 
-class ReceptorPrepareDialog(QDialog):
-	def __init__(self, parent=None):
-		super().__init__(parent)
-		self.setWindowTitle("Receptor preparation settings")
+class ReceptorPreprocessConfigPage(DockeyConfigPage):
+	def create_config_inputs(self):
+		self.create_pdbfix_widgets()
+		self.main_layout.addSpacing(20)
+		self.create_pdbpqr_widgets()
+		self.main_layout.addStretch(1)
 
-		self.input_widgets = []
-		self.settings = QSettings()
-		self.main_layout = QVBoxLayout()
-		self.main_layout.setContentsMargins(20,20,20,20)
-		self.main_layout.setSpacing(10)
-		self.setLayout(self.main_layout)
+	def create_pdbfix_widgets(self):
+		pdbfix_grid = QGridLayout()
+		pdbfix_grid.setColumnStretch(1, 1)
+		pdbfix_grid.setColumnStretch(2, 1)
+		self.main_layout.addLayout(pdbfix_grid)
+		pdbfix_label = QLabel("<b>Use PDBFixer to fix receptor PDB file</b>", self)
+		use_pdbfix = QCheckBox(self)
+		self.register_widget(use_pdbfix, 'check', 'PDBFixer/use_pdbfix', True, bool)
 
-		self.create_receptor_tab()
-		self.main_layout.addWidget(QHLine())
+		pdbfix_grid.addWidget(use_pdbfix, 0, 0)
+		pdbfix_grid.addWidget(pdbfix_label, 0, 1)
+		
+		replace_nonres = QCheckBox("Replace non-standard residues", self)
+		self.register_widget(replace_nonres, 'check', 'PDBFixer/replace_nonres', True, bool)
+		pdbfix_grid.addWidget(replace_nonres, 1, 1)
+		use_pdbfix.stateChanged.connect(replace_nonres.setEnabled)
 
-		btn_widget = QDialogButtonBox(
-			QDialogButtonBox.RestoreDefaults |
-			QDialogButtonBox.Ok | QDialogButtonBox.Cancel
-		)
+		remove_heterogen = QCheckBox("Remove all heterogens including water", self)
+		self.register_widget(remove_heterogen, 'check', 'PDBFixer/remove_heterogen', True, bool)
+		pdbfix_grid.addWidget(remove_heterogen, 2, 1)
+		use_pdbfix.stateChanged.connect(remove_heterogen.setEnabled)
 
-		btn_widget.accepted.connect(self.write_settings)
-		btn_widget.rejected.connect(self.reject)
-		btn_widget.button(QDialogButtonBox.RestoreDefaults).clicked.connect(self.reset_settings)
-		self.main_layout.addWidget(btn_widget)
+		add_misheavy = QCheckBox("Add missing heavy atoms", self)
+		self.register_widget(add_misheavy, 'check', 'PDBFixer/add_misheavy', True, bool)
+		pdbfix_grid.addWidget(add_misheavy, 3, 1)
+		use_pdbfix.stateChanged.connect(add_misheavy.setEnabled)
 
+		add_mishydrogen = QCheckBox("Add missing hydrogen atoms, the pH to use for adding hydrogens:", self)
+		self.register_widget(add_mishydrogen, 'check', 'PDBFixer/add_mishydrogen', True, bool)
+		pdbfix_grid.addWidget(add_mishydrogen, 4, 1)
+		mishydrogen_ph = QDoubleSpinBox(self)
+		mishydrogen_ph.setRange(0, 14)
+		mishydrogen_ph.setDecimals(1)
+		self.register_widget(mishydrogen_ph, 'spin', 'PDBFixer/mishydrogen_ph', 7.0, float)
+		pdbfix_grid.addWidget(mishydrogen_ph, 4, 2)
+		use_pdbfix.stateChanged.connect(add_mishydrogen.setEnabled)
+		use_pdbfix.stateChanged.connect(mishydrogen_ph.setEnabled)
+
+	def create_pdbpqr_widgets(self):
+		pdbpqr_grid = QGridLayout()
+		pdbpqr_grid.setColumnStretch(1, 1)
+		pdbpqr_grid.setColumnStretch(2, 1)
+		self.main_layout.addLayout(pdbpqr_grid)
+		pdbpqr_label = QLabel("<b>Use PDB2PQR to convert PDB file to PQR file</b>", self)
+		use_pdbpqr = QCheckBox(self)
+		self.register_widget(use_pdbpqr, 'check', 'PDB2PQR/use_pdbpqr', False, bool)
+
+		pdbpqr_grid.addWidget(use_pdbpqr, 0, 0)
+		pdbpqr_grid.addWidget(pdbpqr_label, 0, 1)
+
+		pdbpqr_grid.addWidget(QLabel("choose a forcefield to use:", self), 1, 1)
+		force_field = QComboBox(self)
+		force_field.addItems(['AMBER', 'CHARMM', 'PEOEPB', 'PARSE', 'SWANSON', 'TYL06'])
+		force_field.setCurrentIndex(3)
+		force_field.setEnabled(False)
+		pdbpqr_grid.addWidget(force_field, 1, 2)
+		self.register_widget(force_field, 'select', 'PDB2PQR/force_field', 'PARSE', str)
+		use_pdbpqr.stateChanged.connect(force_field.setEnabled)
+
+		use_propka = QCheckBox("Use PROPKA to assign protonation states at provided pH:", self)
+		use_propka.setEnabled(False)
+		use_pdbpqr.stateChanged.connect(use_propka.setEnabled)
+		pdbpqr_grid.addWidget(use_propka, 2, 1)
+		self.register_widget(use_propka, 'check', 'PDB2PQR/use_propka', True, bool)
+
+		propka_ph = QDoubleSpinBox(self)
+		propka_ph.setRange(0, 14)
+		propka_ph.setDecimals(1)
+		propka_ph.setEnabled(False)
+		use_pdbpqr.stateChanged.connect(propka_ph.setEnabled)
+		self.register_widget(propka_ph, 'spin', 'PDB2PQR/propka_ph', 7.0, float)
+		pdbpqr_grid.addWidget(propka_ph, 2, 2)
+
+		node_bump = QCheckBox("Ensure that new atoms are not rebuilt too close to existing atoms", self)
+		node_bump.setEnabled(False)
+		use_pdbpqr.stateChanged.connect(node_bump.setEnabled)
+		pdbpqr_grid.addWidget(node_bump, 3, 1, 1, 2)
+		self.register_widget(node_bump, 'check', 'PDB2PQR/node_bump', False, bool)
+
+		no_hopt = QCheckBox("Optimize the hydrogen bonding network", self)
+		no_hopt.setEnabled(False)
+		use_pdbpqr.stateChanged.connect(no_hopt.setEnabled)
+		pdbpqr_grid.addWidget(no_hopt, 4, 1)
+		self.register_widget(no_hopt, 'check', 'PDB2PQR/no_hopt', False, bool)
+
+		remove_water = QCheckBox("Remove the waters from the output file", self)
+		remove_water.setEnabled(False)
+		use_pdbpqr.stateChanged.connect(remove_water.setEnabled)
+		pdbpqr_grid.addWidget(remove_water, 5, 1)
+		self.register_widget(remove_water, 'check', 'PDB2PQR/remove_water', True, bool)
+
+		neutraln = QCheckBox("Make the N-terminus of a protein neutral (only for PARSE)", self)
+		neutraln.setEnabled(False)
+		use_pdbpqr.stateChanged.connect(neutraln.setEnabled)
+		pdbpqr_grid.addWidget(neutraln, 6, 1)
+		self.register_widget(neutraln, 'check', 'PDB2PQR/neutraln', False, bool)
+
+		neutralc = QCheckBox("Make the C-terminus of a protein neutral (only for PARSE)", self)
+		neutralc.setEnabled(False)
+		use_pdbpqr.stateChanged.connect(neutralc.setEnabled)
+		pdbpqr_grid.addWidget(neutralc, 7, 1)
+		self.register_widget(neutralc, 'check', 'PDB2PQR/neutralc', False, bool)
+
+	def read_settings(self):
+		for i in self.input_widgets:
+			val = self.settings.value(i.option, i.default, i.convert)
+
+			if i.wgtype == 'check':
+				if val:
+					i.widget.setCheckState(Qt.Checked)
+
+				else:
+					i.widget.setCheckState(Qt.Unchecked)
+
+			elif i.wgtype == 'spin':
+				i.widget.setValue(val)
+
+			elif i.wgtype == 'select':
+				i.widget.setCurrentIndex(i.widget.findText(val))
+
+	def write_settings(self):
+		for i in self.input_widgets:
+			if i.wgtype == 'check':
+				val = i.widget.isChecked()
+
+			elif i.wgtype == 'spin':
+				val = i.widget.value()
+
+			elif i.wgtype == 'select':
+				val = i.widget.currentText()
+
+			self.settings.setValue(i.option, val)
+
+	def reset_settings(self):
+		self.settings.remove('PDBFixer')
+		self.settings.remove('PDB2PQR')
 		self.read_settings()
 
-	def register_widget(self, widget, wgtype, option, default, convert):
-		self.input_widgets.append(AttrDict(
-			widget = widget,
-			wgtype = wgtype,
-			option = option,
-			default = default,
-			convert = convert
-		))
-
-	def create_receptor_tab(self):
+class ReceptorPreparationConfigPage(DockeyConfigPage):
+	def create_config_inputs(self):
 		b_h_radio = QRadioButton('Build bonds and add hydrogens', self)
 		b_radio = QRadioButton('Build a single bond from each atom with no bonds to its closest neighbor', self)
 		h_radio = QRadioButton('Add hydrogens', self)
@@ -918,7 +1028,7 @@ class ReceptorPrepareDialog(QDialog):
 		for i in self.input_widgets:
 			if i.wgtype == 'radio':
 				if 'repairs' in i.option:
-					val = self.settings.value(i.option, '')
+					val = self.settings.value(i.option, 'bonds_hydrogens')
 
 				elif 'charges_to_add' in i.option:
 					val = self.settings.value(i.option, 'gasteiger')
@@ -999,51 +1109,13 @@ class ReceptorPrepareDialog(QDialog):
 				val = i.widget.currentText()
 				self.settings.setValue(i.option, val)
 
-		self.accept()
-
 	def reset_settings(self):
 		self.settings.remove('Receptor')
 		self.read_settings()
 
-class LigandPrepareDialog(QDialog):
-	def __init__(self, parent=None):
-		super().__init__(parent)
-		self.setWindowTitle("Ligand preparation settings")
 
-		self.input_widgets = []
-		self.settings = QSettings()
-		self.main_layout = QVBoxLayout()
-		self.main_layout.setContentsMargins(20,20,20,20)
-		self.main_layout.setSpacing(10)
-
-		self.setLayout(self.main_layout)
-		
-		self.create_ligand_tab()
-		self.main_layout.addWidget(QHLine())
-
-		btn_widget = QDialogButtonBox(
-			QDialogButtonBox.RestoreDefaults |
-			QDialogButtonBox.Ok |
-			QDialogButtonBox.Cancel
-		)
-
-		btn_widget.accepted.connect(self.write_settings)
-		btn_widget.rejected.connect(self.reject)
-		btn_widget.button(QDialogButtonBox.RestoreDefaults).clicked.connect(self.reset_settings)
-		self.main_layout.addWidget(btn_widget)
-		
-		self.read_settings()
-
-	def register_widget(self, widget, wgtype, option, default, convert):
-		self.input_widgets.append(AttrDict(
-			widget = widget,
-			wgtype = wgtype,
-			option = option,
-			default = default,
-			convert = convert
-		))
-
-	def create_ligand_tab(self):
+class LigandPreparationConfigPage(DockeyConfigPage):
+	def create_config_inputs(self):
 		tool_select = QComboBox(self)
 		tool_select.addItems(["prepare_ligand4", "meeko"])
 		stack_widget = QStackedWidget(self)
@@ -1052,7 +1124,7 @@ class LigandPrepareDialog(QDialog):
 		self.register_widget(tool_select, 'select', 'Ligand/prepare_tool', 'prepare_ligand4', str)
 
 		tool_layout = QHBoxLayout()
-		tool_layout.addWidget(QLabel("Select a ligand preparation tool:"))
+		tool_layout.addWidget(QLabel("Select ligand preparation tool:"))
 		tool_layout.addWidget(tool_select)
 
 		self.main_layout.addLayout(tool_layout)
@@ -1108,20 +1180,6 @@ class LigandPrepareDialog(QDialog):
 		charge_layout.addWidget(n_c_radio)
 		prelig_layout.addWidget(QLabel("<b>Charges:</b>", self))
 		prelig_layout.addLayout(charge_layout)
-
-		"""
-		c_a_input = QLineEdit(self)
-
-		self.register_widget(c_a_input, 'edit', 'Ligand/preserve_charge_types', '', str)
-
-		atom_layout = QHBoxLayout()
-		atom_layout.addWidget(QLabel("Preserve input charges on specific atom types:", self))
-		atom_layout.addWidget(c_a_input)
-		prelig_layout.addLayout(atom_layout)
-		note_label = QLabel("<font color='gray'>Multiple atoms can be separated by comma, e.g. Zn,Fe</font>", self)
-		note_label.setAlignment(Qt.AlignRight)
-		prelig_layout.addWidget(note_label)
-		"""
 
 		nphs_check = QCheckBox("Merge charges and remove non-polar hydrogens")
 		lps_check = QCheckBox("Merge charges and remove lone pairs")
@@ -1243,7 +1301,7 @@ class LigandPrepareDialog(QDialog):
 		for i in self.input_widgets:
 			if i.wgtype == 'radio':
 				if 'repairs' in i.option:
-					val = self.settings.value(i.option, '')
+					val = self.settings.value(i.option, 'bonds_hydrogens')
 
 				elif 'charges_to_add' in i.option:
 					val = self.settings.value(i.option, 'gasteiger')
@@ -1324,8 +1382,6 @@ class LigandPrepareDialog(QDialog):
 				val = i.widget.currentText()
 				self.settings.setValue(i.option, val)
 
-		self.accept()
-
 	def reset_settings(self):
 		self.settings.remove('Ligand')
 		self.settings.remove('Meeko')
@@ -1334,74 +1390,43 @@ class LigandPrepareDialog(QDialog):
 class DockeyConfigDialog(QDialog):
 	def __init__(self, parent):
 		super().__init__(parent)
-		self.settings = QSettings()
+		self.setWindowTitle("Settings")
 
-		self.list_menu = QListWidget(self)
-		self.list_menu.setViewMode(QListView.IconMode)
-		self.list_menu.setIconSize(QSize(24, 24))
-		self.list_menu.setMovement(QListView.Static)
-		self.list_menu.setMaximumWidth(128)
-		self.list_menu.setSpacing(12)
+		self.tab_widget = QTabWidget(self)
+		self.docking_tool_tab = DockingToolConfigPage(self)
+		self.receptor_preprocess_tab = ReceptorPreprocessConfigPage(self)
+		self.receptor_prepare_tab = ReceptorPreparationConfigPage(self)
+		self.ligand_prepare_tab = LigandPreparationConfigPage(self)
+		self.tab_widget.addTab(self.docking_tool_tab, "Docking tools")
+		self.tab_widget.addTab(self.receptor_preprocess_tab, "Receptor preprocessing")
+		self.tab_widget.addTab(self.receptor_prepare_tab, "Receptor preparation")
+		self.tab_widget.addTab(self.ligand_prepare_tab, "Ligand preparation")
 
-		self.list_page = QStackedWidget(self)
-
-		self.btns_box = QDialogButtonBox(
-			QDialogButtonBox.RestoreDefaults |
-			QDialogButtonBox.Ok |
-			QDialogButtonBox.Cancel |
-			QDialogButtonBox.Apply
-		)
-
-		self.btns_box.accepted.connect(self.accept)
-		self.btns_box.rejected.connect(self.reject)
-		self.btns_box.button(QDialogButtonBox.Apply).clicked.connect(self.write_settings)
-		self.btns_box.button(QDialogButtonBox.RestoreDefaults).clicked.connect(self.reset_settings)
-		
-		page_layout = QHBoxLayout()
-		page_layout.addWidget(self.list_menu)
-		page_layout.addWidget(self.list_page, 1)
+		self.btn_box = QDialogButtonBox(QDialogButtonBox.RestoreDefaults | QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+		self.btn_box.accepted.connect(self.save_settings)
+		self.btn_box.rejected.connect(self.reject)
+		self.btn_box.button(QDialogButtonBox.RestoreDefaults).clicked.connect(self.reset_settings)
 
 		main_layout = QVBoxLayout()
-		main_layout.addLayout(page_layout)
-		main_layout.addWidget(self.btns_box)
+		main_layout.addWidget(self.tab_widget)
+		main_layout.addWidget(self.btn_box)
 		self.setLayout(main_layout)
 
-		self.create_list_menu()
-
-	def create_list_menu(self):
-		docking_menu = QListWidgetItem(self.list_menu)
-		docking_menu.setIcon(QIcon('icons/docker.svg'))
-		docking_menu.setText('Docking tools')
-		docking_menu.setTextAlignment(Qt.AlignCenter)
-		docking_menu.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
-
-		receptor_menu = QListWidgetItem(self.list_menu)
-		receptor_menu.setIcon(QIcon('icons/virus.svg'))
-		receptor_menu.setText('Receptor')
-		receptor_menu.setTextAlignment(Qt.AlignCenter)
-		receptor_menu.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
-
-		ligand_menu = QListWidgetItem(self.list_menu)
-		ligand_menu.setIcon(QIcon('icons/capsule.svg'))
-		ligand_menu.setText('Ligand')
-		ligand_menu.setTextAlignment(Qt.AlignCenter)
-		ligand_menu.setFlags(Qt.ItemIsSelectable | Qt.ItemIsEnabled)
-
-		self.list_menu.currentItemChanged.connect(self.change_menu_page)
-
-	@Slot()
-	def change_menu_page(self):
-		pass
-
-	def read_settings(self):
-		pass
-
 	def write_settings(self):
-		pass
+		self.docking_tool_tab.write_settings()
+		self.receptor_prepare_tab.write_settings()
+		self.receptor_preprocess_tab.write_settings()
+		self.ligand_prepare_tab.write_settings()
+
+	def save_settings(self):
+		self.write_settings()
+		self.accept()
 
 	def reset_settings(self):
-		self.read_settings()
-
+		#self.docking_tool_tab.reset_settings()
+		self.receptor_prepare_tab.reset_settings()
+		self.receptor_preprocess_tab.reset_settings()
+		self.ligand_prepare_tab.reset_settings()
 
 class DownloaderDialog(QDialog):
 	title = ''
@@ -1755,184 +1780,6 @@ class LigandFilterDialog(QDialog):
 
 			return ''.join(conditions)
 
-
-class ReceptorPreprocessDialog(QDialog):
-	def __init__(self, parent):
-		super().__init__(parent)
-		self.setWindowTitle("Receptor preprocessing settings")
-
-		self.input_widgets = []
-		self.settings = QSettings()
-		self.main_layout = QVBoxLayout()
-		self.main_layout.setContentsMargins(20, 20, 20, 20)
-		self.main_layout.setSpacing(10)
-		self.setLayout(self.main_layout)
-
-		self.create_pdbfix_widgets()
-		self.create_pdbpqr_widgets()
-
-		self.main_layout.addWidget(QHLine())
-
-		btn_widget = QDialogButtonBox(
-			QDialogButtonBox.RestoreDefaults |
-			QDialogButtonBox.Ok | QDialogButtonBox.Cancel
-		)
-
-		btn_widget.accepted.connect(self.write_settings)
-		btn_widget.rejected.connect(self.reject)
-		btn_widget.button(QDialogButtonBox.RestoreDefaults).clicked.connect(self.reset_settings)
-		self.main_layout.addWidget(btn_widget)
-
-		self.read_settings()
-
-	def register_widget(self, widget, wgtype, option, default, convert):
-		self.input_widgets.append(AttrDict(
-			widget = widget,
-			wgtype = wgtype,
-			option = option,
-			default = default,
-			convert = convert
-		))
-
-	def create_pdbfix_widgets(self):
-		pdbfix_grid = QGridLayout()
-		pdbfix_grid.setColumnStretch(1, 1)
-		pdbfix_grid.setColumnStretch(2, 1)
-		self.main_layout.addLayout(pdbfix_grid)
-		pdbfix_label = QLabel("<b>Use PDBFixer to fix receptor PDB file</b>", self)
-		use_pdbfix = QCheckBox(self)
-		self.register_widget(use_pdbfix, 'check', 'PDBFixer/use_pdbfix', True, bool)
-
-		pdbfix_grid.addWidget(use_pdbfix, 0, 0)
-		pdbfix_grid.addWidget(pdbfix_label, 0, 1)
-		
-		replace_nonres = QCheckBox("Replace non-standard residues", self)
-		self.register_widget(replace_nonres, 'check', 'PDBFixer/replace_nonres', True, bool)
-		pdbfix_grid.addWidget(replace_nonres, 1, 1)
-		use_pdbfix.stateChanged.connect(replace_nonres.setEnabled)
-
-		remove_heterogen = QCheckBox("Remove all heterogens including water", self)
-		self.register_widget(remove_heterogen, 'check', 'PDBFixer/remove_heterogen', True, bool)
-		pdbfix_grid.addWidget(remove_heterogen, 2, 1)
-		use_pdbfix.stateChanged.connect(remove_heterogen.setEnabled)
-
-		add_misheavy = QCheckBox("Add missing heavy atoms", self)
-		self.register_widget(add_misheavy, 'check', 'PDBFixer/add_misheavy', True, bool)
-		pdbfix_grid.addWidget(add_misheavy, 3, 1)
-		use_pdbfix.stateChanged.connect(add_misheavy.setEnabled)
-
-		add_mishydrogen = QCheckBox("Add missing hydrogen atoms, the pH to use for adding hydrogens:", self)
-		self.register_widget(add_mishydrogen, 'check', 'PDBFixer/add_mishydrogen', True, bool)
-		pdbfix_grid.addWidget(add_mishydrogen, 4, 1)
-		mishydrogen_ph = QDoubleSpinBox(self)
-		mishydrogen_ph.setRange(0, 14)
-		mishydrogen_ph.setDecimals(1)
-		self.register_widget(mishydrogen_ph, 'spin', 'PDBFixer/mishydrogen_ph', 7.0, float)
-		pdbfix_grid.addWidget(mishydrogen_ph, 4, 2)
-		use_pdbfix.stateChanged.connect(add_mishydrogen.setEnabled)
-		use_pdbfix.stateChanged.connect(mishydrogen_ph.setEnabled)
-
-	def create_pdbpqr_widgets(self):
-		pdbpqr_grid = QGridLayout()
-		pdbpqr_grid.setColumnStretch(1, 1)
-		pdbpqr_grid.setColumnStretch(2, 1)
-		self.main_layout.addLayout(pdbpqr_grid)
-		pdbpqr_label = QLabel("<b>Use PDB2PQR to convert PDB file to PQR file</b>", self)
-		use_pdbpqr = QCheckBox(self)
-		self.register_widget(use_pdbpqr, 'check', 'PDB2PQR/use_pdbpqr', False, bool)
-
-		pdbpqr_grid.addWidget(use_pdbpqr, 0, 0)
-		pdbpqr_grid.addWidget(pdbpqr_label, 0, 1)
-
-		pdbpqr_grid.addWidget(QLabel("choose a forcefield to use:", self), 1, 1)
-		force_field = QComboBox(self)
-		force_field.addItems(['AMBER', 'CHARMM', 'PEOEPB', 'PARSE', 'SWANSON', 'TYL06'])
-		force_field.setCurrentIndex(3)
-		force_field.setEnabled(False)
-		pdbpqr_grid.addWidget(force_field, 1, 2)
-		self.register_widget(force_field, 'select', 'PDB2PQR/force_field', 'PARSE', str)
-		use_pdbpqr.stateChanged.connect(force_field.setEnabled)
-
-		use_propka = QCheckBox("Use PROPKA to assign protonation states at provided pH:", self)
-		use_propka.setEnabled(False)
-		use_pdbpqr.stateChanged.connect(use_propka.setEnabled)
-		pdbpqr_grid.addWidget(use_propka, 2, 1)
-		self.register_widget(use_propka, 'check', 'PDB2PQR/use_propka', True, bool)
-
-		propka_ph = QDoubleSpinBox(self)
-		propka_ph.setRange(0, 14)
-		propka_ph.setDecimals(1)
-		propka_ph.setEnabled(False)
-		use_pdbpqr.stateChanged.connect(propka_ph.setEnabled)
-		self.register_widget(propka_ph, 'spin', 'PDB2PQR/propka_ph', 7.0, float)
-		pdbpqr_grid.addWidget(propka_ph, 2, 2)
-
-		node_bump = QCheckBox("Ensure that new atoms are not rebuilt too close to existing atoms", self)
-		node_bump.setEnabled(False)
-		use_pdbpqr.stateChanged.connect(node_bump.setEnabled)
-		pdbpqr_grid.addWidget(node_bump, 3, 1, 1, 2)
-		self.register_widget(node_bump, 'check', 'PDB2PQR/node_bump', False, bool)
-
-		no_hopt = QCheckBox("Optimize the hydrogen bonding network", self)
-		no_hopt.setEnabled(False)
-		use_pdbpqr.stateChanged.connect(no_hopt.setEnabled)
-		pdbpqr_grid.addWidget(no_hopt, 4, 1)
-		self.register_widget(no_hopt, 'check', 'PDB2PQR/no_hopt', False, bool)
-
-		remove_water = QCheckBox("Remove the waters from the output file", self)
-		remove_water.setEnabled(False)
-		use_pdbpqr.stateChanged.connect(remove_water.setEnabled)
-		pdbpqr_grid.addWidget(remove_water, 5, 1)
-		self.register_widget(remove_water, 'check', 'PDB2PQR/remove_water', True, bool)
-
-		neutraln = QCheckBox("Make the N-terminus of a protein neutral (only for PARSE)", self)
-		neutraln.setEnabled(False)
-		use_pdbpqr.stateChanged.connect(neutraln.setEnabled)
-		pdbpqr_grid.addWidget(neutraln, 6, 1)
-		self.register_widget(neutraln, 'check', 'PDB2PQR/neutraln', False, bool)
-
-		neutralc = QCheckBox("Make the C-terminus of a protein neutral (only for PARSE)", self)
-		neutralc.setEnabled(False)
-		use_pdbpqr.stateChanged.connect(neutralc.setEnabled)
-		pdbpqr_grid.addWidget(neutralc, 7, 1)
-		self.register_widget(neutralc, 'check', 'PDB2PQR/neutralc', False, bool)
-
-	def read_settings(self):
-		for i in self.input_widgets:
-			val = self.settings.value(i.option, i.default, i.convert)
-
-			if i.wgtype == 'check':
-				if val:
-					i.widget.setCheckState(Qt.Checked)
-
-				else:
-					i.widget.setCheckState(Qt.Unchecked)
-
-			elif i.wgtype == 'spin':
-				i.widget.setValue(val)
-
-			elif i.wgtype == 'select':
-				i.widget.setCurrentIndex(i.widget.findText(val))
-
-	def write_settings(self):
-		for i in self.input_widgets:
-			if i.wgtype == 'check':
-				val = i.widget.isChecked()
-
-			elif i.wgtype == 'spin':
-				val = i.widget.value()
-
-			elif i.wgtype == 'select':
-				val = i.widget.currentText()
-
-			self.settings.setValue(i.option, val)
-
-		self.accept()
-
-	def reset_settings(self):
-		self.settings.remove('PDBFixer')
-		self.settings.remove('PDB2PQR')
-		self.read_settings()
 
 class AcknowledgementDialog(QDialog):
 	def __init__(self, parent, text):
