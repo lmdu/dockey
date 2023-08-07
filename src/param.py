@@ -841,6 +841,8 @@ class AutodockParameterWizard(QWizard):
 
 	def create_select_page(self):
 		tips = QLabel((
+			"<p><b>Select a property search algorithm</b></p>"
+			"<p></p>"
 			"<p><b>Lamarckian Genetic Algorithm</b> provides the most efficient "
 			"search for general applications, and in most cases will be the technique "
 			"used. It is typically effective for systems with about 10 rotatable bonds "
@@ -849,31 +851,54 @@ class AutodockParameterWizard(QWizard):
 			"combination.</p><p><b>Simulated Annealing</b> is also less efficient that the "
 			"Lamarckian Genetic Algorithm, but it can be useful in applications where search "
 			"starting from a given point is desired.</p><p><b>Local Search</b> may be used "
-			"to optimize a molecule in its local environment.</p><p></p>"
-		), self)
+			"to optimize a molecule in its local environment.</p>"
+		))
 		tips.setWordWrap(True)
 
-		self.select_page = QWizardPage(self)
-		self.select_page.setTitle("Select a property search algorithm")
-		self.addPage(self.select_page)
-		self.select_layout = QVBoxLayout()
-		self.select_page.setLayout(self.select_layout)
-		self.select_layout.addWidget(tips)
-		self.select_layout.addWidget(QLabel("<b>Select search algorithm</b>", self))
-		self.select_input = QComboBox(self)
-		self.select_input.addItems(self.algorithms)
-		self.select_layout.addWidget(self.select_input)
-		self.select_input.currentIndexChanged.connect(self.on_algorithm_changed)
+		select_page = QWizardPage(self)
+		self.addPage(select_page)
+		
+		select_layout = QVBoxLayout()
+		select_layout.setSpacing(10)
+		select_page.setLayout(select_layout)
+
+		select_layout.addWidget(tips)
+		select_layout.addWidget(QLabel("<b>Select search algorithm</b>"))
+		select_input = QComboBox()
+		select_input.addItems(self.algorithms)
+		select_layout.addWidget(select_input)
+		select_input.currentIndexChanged.connect(self.on_algorithm_changed)
 
 	def create_algorithm_page(self):
-		self.algorithm_page = QWizardPage(self)
-		self.addPage(self.algorithm_page)
+		algorithm_page = QWizardPage(self)
+		self.addPage(algorithm_page)
+
+		self.algorithm_title = QLabel()
+
+		algorithm_layout = QVBoxLayout()
+		algorithm_layout.setSpacing(10)
+
+		use_default = QCheckBox("Use default parameters")
+		param_widget = QWidget()
+		use_default.stateChanged.connect(param_widget.setDisabled)
+		use_default.setChecked(True)
+
+		algorithm_layout.addWidget(self.algorithm_title)
+		algorithm_layout.addWidget(use_default)
+		algorithm_layout.addWidget(param_widget)
+
+		algorithm_page.setLayout(algorithm_layout)
+
 		self.algorithm_layout = QFormLayout()
-		self.algorithm_page.setLayout(self.algorithm_layout)
+		self.algorithm_layout.setContentsMargins(0, 0, 0, 0)
+		param_widget.setLayout(self.algorithm_layout)
+		
 		self.create_algorithm_widgets()
 
 	def create_algorithm_widgets(self, index=0):
-		self.algorithm_page.setTitle("Set parameters for {} algorithm".format(self.algorithms[index]))
+		#self.algorithm_page.setTitle("Set parameters for {} algorithm".format(self.algorithms[index]))
+		self.algorithm_title.setText("<b>Set parameters for {} algorithm</b>".format(self.algorithms[index]))
+
 		scope = ['LGA', 'GA', 'SA', 'LS'][index]
 		self.create_parameter_widgets(self.algorithm_layout, scope)
 
@@ -990,35 +1015,56 @@ class AutodockParameterWizard(QWizard):
 				layout.addRow(QLabel(m.comment))
 
 	def create_docking_page(self):
-		self.docking_page = QWizardPage(self)
-		self.docking_page.setTitle("Set other docking parameters")
-		self.addPage(self.docking_page)
-		self.docking_layout = QFormLayout()
-		self.docking_page.setLayout(self.docking_layout)
-		self.create_parameter_widgets(self.docking_layout)
-		#self.docking_layout.setEnabled(False)
+		docking_page = QWizardPage(self)
+		#docking_page.setTitle("Set other docking parameters")
+		self.addPage(docking_page)
+
+		docking_layout = QVBoxLayout()
+		docking_layout.setSpacing(10)
+		docking_page.setLayout(docking_layout)
+
+		docking_layout.addWidget(QLabel("<b>Set other docking parameters</b>"))
+
+		param_widget = QWidget(self)
+		default_check = QCheckBox("Use default parameters")
+		default_check.stateChanged.connect(param_widget.setDisabled)
+		default_check.setChecked(True)
+
+		docking_layout.addWidget(default_check)
+		docking_layout.addWidget(param_widget)
+
+		param_layout = QFormLayout()
+		param_layout.setContentsMargins(0, 0, 0, 0)
+		param_widget.setLayout(param_layout)
+		self.create_parameter_widgets(param_layout)
 
 	def create_finish_page(self):
-		self.finish_page = QWizardPage(self)
-		self.finish_page.setTitle("Start Autodock")
-		self.addPage(self.finish_page)
-		self.finish_layout = QVBoxLayout()
-		self.finish_page.setLayout(self.finish_layout)
+		finish_page = QWizardPage(self)
+		#finish_page.setTitle("Start Autodock4")
+		self.addPage(finish_page)
+		
+		finish_layout = QVBoxLayout()
+		finish_page.setLayout(finish_layout)
+		
 		rnum = int(DB.get_option('receptor_count'))
 		lnum = int(DB.get_option('ligand_count'))
 		lig_tool = QSettings().value('Ligand/prepare_tool', 'prepare_ligand4')
+		
 		info_wdg = QLabel((
-			"<p>Everything is ready, please confirm the docking jobs<p>"
+			"<p><b>Start Autodock4</b></p>"
+			"<p></p>"
+			"<p>Everything is ready, please confirm the docking tasks<p>"
 			"<p>The number of receptors: <b>{}</b></p>"
 			"<p>The number of ligands: <b>{}</b></p>"
-			"<p>The number of jobs will be generated: <b>{}</b></p>"
+			"<p>The number of tasks will be generated: <b>{}</b></p>"
 			"<p>Selected search algorithm: <b>{}</b></p>"
 			"<p>Selected ligand preparation tool: <b>{}</b></p>"
-			"<p>Click <b>Finish</b> button to submit and start docking jobs</p>".format(
+			"<p>Click <b>Finish</b> button to submit and start docking tasks</p>".format(
 				rnum, lnum, rnum*lnum, self.algorithms[self.params.algorithm], lig_tool
 			)
 		), self)
-		self.finish_layout.addWidget(info_wdg)
+		
+		finish_layout.addWidget(info_wdg)
 
 class AutodockVinaParameter(Parameter):
 	def __init__(self):
@@ -1210,7 +1256,7 @@ class AutodockVinaParameterWizard(QWizard):
 	params = AutodockVinaParameter()
 
 	def __init__(self, parent=None):
-		super(AutodockVinaParameterWizard, self).__init__(parent)
+		super().__init__(parent)
 		self.setWindowTitle("Run Autodock Vina")
 		self.setWizardStyle(QWizard.ModernStyle)
 
@@ -1224,14 +1270,26 @@ class AutodockVinaParameterWizard(QWizard):
 		self.params[key]['value'] = val
 
 	def create_parameter_page(self):
-		self.parameter_page = QWizardPage(self)
-		self.parameter_page.setTitle("Parameter settings for Autodock Vina")
-		self.addPage(self.parameter_page)
-		self.parameter_layout = QFormLayout()
-		self.parameter_page.setLayout(self.parameter_layout)
-		self.create_parameter_widgets()
+		param_page = QWizardPage(self)
+		self.addPage(param_page)
 
-	def create_parameter_widgets(self):
+		use_default = QCheckBox("Use default parameters")
+		param_widget = QWidget()
+		use_default.stateChanged.connect(param_widget.setDisabled)
+		use_default.setChecked(True)
+
+		page_layout = QVBoxLayout()
+		param_page.setLayout(page_layout)
+		page_layout.setSpacing(10)
+		page_layout.addWidget(QLabel("<b>Parameter settings for Autodock Vina</b>"))
+		page_layout.addWidget(use_default)
+		page_layout.addWidget(param_widget)
+
+		param_layout = QFormLayout()
+		param_widget.setLayout(param_layout)
+		self.create_parameter_widgets(param_layout)
+
+	def create_parameter_widgets(self, param_layout):
 		for p, m in self.params.items():
 			if not m.user:
 				continue
@@ -1245,7 +1303,7 @@ class AutodockVinaParameterWizard(QWizard):
 
 				editor.setValue(m.value)
 				editor.valueChanged.connect(lambda x, p=p: self.update_parameter(p, x))
-				self.parameter_layout.addRow(m.comment, editor)
+				param_layout.addRow(m.comment, editor)
 
 			elif m.type is float:
 				editor = QDoubleSpinBox(self)
@@ -1256,36 +1314,41 @@ class AutodockVinaParameterWizard(QWizard):
 
 				editor.setValue(m.value)
 				editor.valueChanged.connect(lambda x, p=p: self.update_parameter(p, x))
-				self.parameter_layout.addRow(m.comment, editor)
+				param_layout.addRow(m.comment, editor)
 
 			elif p == 'scoring':
 				editor = QComboBox(self)
 				editor.addItems(m.choices)
 				editor.setCurrentIndex(0)
 				editor.currentTextChanged.connect(lambda x, p=p: self.update_parameter(p, x))
-				self.parameter_layout.addRow(m.comment, editor)
+				param_layout.addRow(m.comment, editor)
 
 	def create_finish_page(self):
-		self.finish_page = QWizardPage(self)
-		self.finish_page.setTitle("Start Autodock Vina")
-		self.addPage(self.finish_page)
-		self.finish_layout = QVBoxLayout()
-		self.finish_page.setLayout(self.finish_layout)
+		finish_page = QWizardPage(self)
+		self.addPage(finish_page)
+
+		finish_layout = QVBoxLayout()
+		finish_page.setLayout(finish_layout)
+
 		rnum = int(DB.get_option('receptor_count'))
 		lnum = int(DB.get_option('ligand_count'))
 		lig_tool = QSettings().value('Ligand/prepare_tool', 'prepare_ligand4')
+		
 		info_wdg = QLabel((
-			"<p>Everything is ready, please confirm the docking jobs<p>"
+			"<p><b>Start Autodock Vina</b></p>"
+			"<p></p>"
+			"<p>Everything is ready, please confirm the docking tasks<p>"
 			"<p>The number of receptors: <b>{}</b></p>"
 			"<p>The number of ligands: <b>{}</b></p>"
-			"<p>The number of jobs will be generated: <b>{}</b></p>"
+			"<p>The number of tasks will be generated: <b>{}</b></p>"
 			"<p>Selected scoring function: <b>{}</b></p>"
 			"<p>Selected ligand preparation tool: <b>{}</b></p>"
-			"<p>Click <b>Finish</b> button to submit and start docking jobs</p>".format(
+			"<p>Click <b>Finish</b> button to submit and start docking tasks</p>".format(
 				rnum, lnum, rnum*lnum, self.params.scoring.value, lig_tool
 			)
 		), self)
-		self.finish_layout.addWidget(info_wdg)
+		
+		finish_layout.addWidget(info_wdg)
 
 class QuickVinaParameter(Parameter):
 	def __init__(self):
@@ -1436,14 +1499,26 @@ class QuickVinaParameterWizard(QWizard):
 		self.params[key]['value'] = val
 
 	def create_parameter_page(self):
-		self.parameter_page = QWizardPage(self)
-		self.parameter_page.setTitle("Parameter settings for QuickVina-W")
-		self.addPage(self.parameter_page)
-		self.parameter_layout = QFormLayout()
-		self.parameter_page.setLayout(self.parameter_layout)
-		self.create_parameter_widgets()
+		param_page = QWizardPage(self)
+		self.addPage(param_page)
 
-	def create_parameter_widgets(self):
+		use_default = QCheckBox("Use default parameters")
+		param_widget = QWidget()
+		use_default.stateChanged.connect(param_widget.setDisabled)
+		use_default.setChecked(True)
+
+		page_layout = QVBoxLayout()
+		param_page.setLayout(page_layout)
+		page_layout.setSpacing(10)
+		page_layout.addWidget(QLabel("<b>Parameter settings for QuickVina-W</b>"))
+		page_layout.addWidget(use_default)
+		page_layout.addWidget(param_widget)
+
+		param_layout = QFormLayout()
+		param_widget.setLayout(param_layout)
+		self.create_parameter_widgets(param_layout)
+
+	def create_parameter_widgets(self, param_layout):
 		for p, m in self.params.items():
 			if not m.user:
 				continue
@@ -1457,7 +1532,7 @@ class QuickVinaParameterWizard(QWizard):
 
 				editor.setValue(m.value)
 				editor.valueChanged.connect(lambda x, p=p: self.update_parameter(p, x))
-				self.parameter_layout.addRow(m.comment, editor)
+				param_layout.addRow(m.comment, editor)
 
 			elif m.type is float:
 				editor = QDoubleSpinBox(self)
@@ -1468,26 +1543,31 @@ class QuickVinaParameterWizard(QWizard):
 
 				editor.setValue(m.value)
 				editor.valueChanged.connect(lambda x, p=p: self.update_parameter(p, x))
-				self.parameter_layout.addRow(m.comment, editor)
+				param_layout.addRow(m.comment, editor)
 
 	def create_finish_page(self):
-		self.finish_page = QWizardPage(self)
-		self.finish_page.setTitle("Start QuickVina-W")
-		self.addPage(self.finish_page)
-		self.finish_layout = QVBoxLayout()
-		self.finish_page.setLayout(self.finish_layout)
+		finish_page = QWizardPage(self)
+		self.addPage(finish_page)
+		
+		finish_layout = QVBoxLayout()
+		finish_page.setLayout(finish_layout)
+		
 		rnum = int(DB.get_option('receptor_count'))
 		lnum = int(DB.get_option('ligand_count'))
 		lig_tool = QSettings().value('Ligand/prepare_tool', 'prepare_ligand4')
+		
 		info_wdg = QLabel((
-			"<p>Everything is ready, please confirm the docking jobs<p>"
+			"<p><b>Start QuickVina-W</b></p>"
+			"<p></p>"
+			"<p>Everything is ready, please confirm the docking tasks<p>"
 			"<p>The number of receptors: <b>{}</b></p>"
 			"<p>The number of ligands: <b>{}</b></p>"
-			"<p>The number of jobs will be generated: <b>{}</b></p>"
+			"<p>The number of tasks will be generated: <b>{}</b></p>"
 			"<p>Selected ligand preparation tool: <b>{}</b></p>"
-			"<p>Click <b>Finish</b> button to submit and start docking jobs</p>".format(
+			"<p>Click <b>Finish</b> button to submit and start docking tasks</p>".format(
 				rnum, lnum, rnum*lnum, lig_tool
 			)
-		), self)
-		self.finish_layout.addWidget(info_wdg)
+		))
+
+		finish_layout.addWidget(info_wdg)
 

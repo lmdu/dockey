@@ -1,6 +1,7 @@
 import os
 import json
 import psutil
+import multiprocessing
 
 from PySide6.QtGui import *
 from PySide6.QtCore import *
@@ -1816,12 +1817,12 @@ class AcknowledgementDialog(QDialog):
 class CPUAndMemoryViewDialog(QDialog):
 	def __init__(self, parent):
 		super().__init__(parent)
-		self.setWindowTitle("CPU and Memory Usage")
+		self.setWindowTitle("Computing resource usage")
 		self.proc = psutil.Process(os.getpid())
 
 		main_layout = QFormLayout()
 		main_layout.setVerticalSpacing(20)
-		main_layout.addRow(QLabel("Computing resoure usage:", self))
+		main_layout.addRow(QLabel("CPU and memory used by Dockey", self))
 
 		self.cpu_usage = QProgressBar(self)
 		self.memory_usage = QProgressBar(self)
@@ -1847,21 +1848,21 @@ class CPUAndMemoryViewDialog(QDialog):
 
 	@Slot()
 	def update_resource_usage(self):
-		cpu = self.proc.cpu_percent(interval=0.1)
-		mem = self.proc.memory_info().rss
-		memp = self.proc.memory_percent()
+		process_count = 1
+		cpu_percent = self.proc.cpu_percent(interval=0.1)
+		memory_size = self.proc.memory_info().rss
+		memory_percent = self.proc.memory_percent()
 
-		for child in self.proc.children():
-			cpu += child.cpu_percent(interval=0.1)
-			mem += child.memory_info().rss
-			memp += child.memory_percent()
+		for child in self.proc.children(recursive=True):
+			process_count += 1
+			cpu_percent += child.cpu_percent(interval=0.1)
+			memory_size += child.memory_info().rss
+			memory_percent += child.memory_percent()
 
-		cpu = int(cpu)
-		memp = int(memp)
-		mem = memory_format(mem)
-
-		self.cpu_usage.setValue(cpu)
-		self.memory_usage.setValue(memp)
-		self.memory_text.setText(mem)
+		self.cpu_usage.setValue(int(cpu_percent/psutil.cpu_count(False)))
+		self.memory_usage.setValue(int(memory_percent))
+		self.memory_text.setText("Memory: {} \t Running processes: {}".format(
+			memory_format(memory_size), process_count
+		))
 
 
