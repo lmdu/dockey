@@ -475,8 +475,6 @@ class BaseWorker(QRunnable):
 				)
 			)
 
-		print(temp_dir.path())
-
 		return temp_dir
 
 	def start_process(self, jid):
@@ -506,7 +504,7 @@ class BaseWorker(QRunnable):
 
 	def delete_job(self, job):
 		obj = self.jobs.pop(job)
-		obj.tempdir.remove()
+		#obj.tempdir.remove()
 
 	def stop_job(self, job):
 		if job not in self.jobs:
@@ -581,7 +579,8 @@ class BaseWorker(QRunnable):
 
 		finally:
 			for job in self.jobs:
-				self.jobs[job].tempdir.remove()
+				#self.jobs[job].tempdir.remove()
+				pass
 
 			self.signals.finished.emit()
 			#self.signals.progress.emit(100)
