@@ -632,6 +632,10 @@ class AutodockVinaProcess(BaseProcess):
 					lines.append(line)
 					mode = convert_pdbqt_to_pdb(''.join(lines))
 					modes[idx] = mode
+
+				elif line.startswith('\x00'):
+					pass
+
 				else:
 					lines.append(line)
 
@@ -756,6 +760,10 @@ class QuickVinaProcess(BaseProcess):
 					lines.append(line)
 					mode = convert_pdbqt_to_pdb(''.join(lines))
 					modes[idx] = mode
+
+				elif line.startswith('\x00'):
+					pass
+
 				else:
 					lines.append(line)
 
