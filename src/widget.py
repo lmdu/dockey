@@ -724,17 +724,32 @@ class DockingToolConfigPage(DockeyConfigPage):
 		self.register_widget(self.autogrid_input, 'browse', 'Tools/autogrid_4', '', str)
 		self.register_widget(self.vina_input, 'browse', 'Tools/autodock_vina',  '', str)
 		self.register_widget(self.qvina_input, 'browse', 'Tools/quick_vina_w', '', str)
-                          
+
+		self.main_layout.addWidget(QLabel("<b>1.</b>", self))
 		self.main_layout.addWidget(QLabel("Autogrid4 executable", self))
 		self.main_layout.addWidget(self.autogrid_input)
 		self.main_layout.addWidget(QLabel("Autodock4 executable", self))
 		self.main_layout.addWidget(self.autodock_input)
+
+		self.main_layout.addSpacing(20)
+		self.main_layout.addWidget(QHLine())
+		self.main_layout.addSpacing(20)
+
+		self.main_layout.addWidget(QLabel("<b>2.</b>", self))
 		self.main_layout.addWidget(QLabel("Autodock Vina executable", self))
 		self.main_layout.addWidget(self.vina_input)
+
+		self.main_layout.addSpacing(20)
+		self.main_layout.addWidget(QHLine())
+		self.main_layout.addSpacing(20)
+
+		self.main_layout.addWidget(QLabel("<b>3.</b>", self))
 		self.main_layout.addWidget(QLabel("QuickVina-W executable", self))
 		self.main_layout.addWidget(self.qvina_input)
 
 		self.main_layout.addStretch(1)
+
+		self.main_layout.addWidget(QLabel("<font color='red'>Tips: you are allowed to specify location for any one of these tools or for all tools</font>"))
 
 	def read_settings(self):
 		for i in self.input_widgets:
@@ -1125,7 +1140,7 @@ class LigandPreparationConfigPage(DockeyConfigPage):
 		self.register_widget(tool_select, 'select', 'Ligand/prepare_tool', 'prepare_ligand4', str)
 
 		tool_layout = QHBoxLayout()
-		tool_layout.addWidget(QLabel("Select ligand preparation tool:"))
+		tool_layout.addWidget(QLabel("<b>Select ligand preparation tool:</b>"))
 		tool_layout.addWidget(tool_select)
 
 		self.main_layout.addLayout(tool_layout)
