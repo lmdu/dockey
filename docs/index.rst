@@ -3,17 +3,13 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-.. rst-class:: wy-text-center
+Dockey
+======
 
-	|logo|
+Molecular docking and virtual screening
+---------------------------------------
 
-	Dockey
-	======
-
-	Molecular docking and virtual screening
-	---------------------------------------
-
-	**Du et al. Dockey: a modern integrated tool for molecular docking and virtual screening.**
+**Du et al. Dockey: a modern integrated tool for molecular docking and virtual screening.**
 
 .. toctree::
    :maxdepth: 2
@@ -29,9 +25,6 @@
    pose
    interaction
    visualization
-
-.. |logo| image:: _static/logo.png
-   :width: 150
 
 Indices and tables
 ==================
