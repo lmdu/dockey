@@ -24,7 +24,7 @@ Go to **View** menu -> **Show Pymol feedback** to show pymol output messages.
 	|pymolfb|
 
 .. |pymol| image:: _static/pymol.png
-.. |pymolcmd| image:: _static/cmd.png
+.. |pymolcmd| image:: _static/cmd.svg
 	:width: 24
 .. |pymolin| image:: _static/pymolin.png
 .. |pymolfb| image:: _static/pymolfb.png

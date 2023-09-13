@@ -14,6 +14,7 @@ Overview
 	* |box| a toggle button to show or hide grid box adjusting panel
 	* |share| click to draw a bounding grid box
 	* |save| save the pymol view to a png file
+	* |cpu| view the CPU and memory usage during docking
 	* |cmd| a toggle button to show or hide pymol command input
 
 **2. Molecular list**
@@ -46,23 +47,25 @@ Overview
 	* Go to **View** menu -> **Show Interaction Table** to show or hide this table
 
 .. |overview| image:: _static/overview.png
-.. |new| image:: _static/new.png
+.. |new| image:: _static/new.svg
 	:width: 28
-.. |open| image:: _static/open.png
+.. |open| image:: _static/open.svg
 	:width: 28
-.. |mol| image:: _static/molecular.png
+.. |mol| image:: _static/molecular.svg
 	:width: 28
-.. |job| image:: _static/job.png
+.. |job| image:: _static/job.svg
 	:width: 28
-.. |pose| image:: _static/pose.png
+.. |pose| image:: _static/pose.svg
 	:width: 28
-.. |share| image:: _static/share.png
+.. |share| image:: _static/share.svg
 	:width: 28
-.. |box| image:: _static/box.png
+.. |box| image:: _static/box.svg
 	:width: 28
-.. |grid| image:: _static/bounding.png
+.. |grid| image:: _static/bounding.svg
 	:width: 28
-.. |save| image:: _static/image.png
+.. |save| image:: _static/image.svg
 	:width: 28
-.. |cmd| image:: _static/cmd.png
+.. |cpu| image:: _static/cpu.svg
+	:width: 28
+.. |cmd| image:: _static/cmd.svg
 	:width: 28

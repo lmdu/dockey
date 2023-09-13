@@ -10,22 +10,67 @@ After creating or opening project file, you will be allowed to import receptors 
 Import Receptors
 ----------------
 
-#. Go **File** menu -> **Import Receptors** to select receptor files and import to Dockey.
-#. Go **File** menu -> **Import Receptor from PDB** to open a dialog, and then input an PDB ID and click ``Import`` button. The Dockey will automatically download the molecule from `RCSB PDB <https://www.rcsb.org/>`_ database and import it.
+Import from local file
+^^^^^^^^^^^^^^^^^^^^^^
+
+Go **File** menu -> **Import Receptors** to select receptor files and click **Open** to import into Dockey.
+
+Import from PDB database
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Go **File** menu -> **Import Receptor from Database** -> **PDB** to open a dialog:
 
 .. rst-class:: wy-text-center
 
 	|pdb|
 
+Then input PDB IDs using comma to separate multiple ones and click ``OK`` button. The Dockey will automatically download the molecule from `RCSB PDB <https://www.rcsb.org/>`_ database and import it.
+
 Import Ligands
 --------------
 
-#. Go **File** menu -> **Import Ligands** to select ligand files and import to Dockey.
-#. Go **File** menu -> **Import Ligand from Zinc** to open a dialog, and then input an Zinc ID, select Zinc version (15 or 20), and click ``Import`` button. The Dockey will automatically download the molecule from `Zinc <https://zinc.docking.org/>`_ database and import it.
+Import from local file
+^^^^^^^^^^^^^^^^^^^^^^
+
+Go **File** menu -> **Import Ligands** to select ligand files and import to Dockey.
+
+Import from SDF file
+^^^^^^^^^^^^^^^^^^^^
+
+If you want to import all ligands from SDF file database. You can go to **File** menu -> **Import Ligand from Database** -> **SDF** to select the sdf file with multiple molecules to import.
+
+Import from Zinc database
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Go **File** menu -> **Import Ligand from Database** -> **Zinc** to open a dialog:
 
 .. rst-class:: wy-text-center
 
 	|zinc|
+
+Then input Zinc IDs using comma to separate multiple ones and click ``OK`` button. The Dockey will automatically download the molecule from `Zinc <https://zinc.docking.org/>`_ database and import it.
+
+Import from PubChem database
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Go **File** menu -> **Import Ligand from Database** -> **PubChem** to open a dialog:
+
+.. rst-class:: wy-text-center
+
+	|pubchem|
+
+Then input PubChem IDs using comma to separate multiple ones and click ``OK`` button. The Dockey will automatically download the molecule from `PubChem <https://pubchem.ncbi.nlm.nih.gov/>`_ database and import it.
+
+Import from ChEMBL database
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Go **File** menu -> **Import Ligand from Database** -> **ChEMBL** to open a dialog:
+
+.. rst-class:: wy-text-center
+
+	|chembl|
+
+Then input ChEMBL IDs using comma to separate multiple ones and click ``OK`` button. The Dockey will automatically download the molecule from `ChEMBL <https://www.ebi.ac.uk/chembl/>`_ database and import it.
 
 Molecular List
 --------------
@@ -53,6 +98,10 @@ You can use **View Details** to obtain detailed information of molecule includin
 .. |pdb| image:: _static/pdb.png
 	:width: 400
 .. |zinc| image:: _static/zinc.png
+	:width: 400
+.. |pubchem| image:: _static/pubchem.png
+	:width: 400
+.. |chembl| image:: _static/chembl.png
 	:width: 400
 .. |mol| image:: _static/molecules.png
 	:width: 400

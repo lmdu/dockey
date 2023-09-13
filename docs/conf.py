@@ -25,7 +25,7 @@ version = __version__
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
 extensions = ['sphinx_rtd_size']
-sphinx_rtd_size_width = "90%"
+sphinx_rtd_size_width = "80%"
 
 templates_path = ['_templates']
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']

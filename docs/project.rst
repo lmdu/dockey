@@ -1,5 +1,5 @@
-Project Manage
-==============
+Project Management
+==================
 
 Dockey use a project file to store molecules and docking results. The project file is actually a SQLite3 database file with `.dock` extension.
 
@@ -23,8 +23,8 @@ Close Project
 
 You can also go to **File** menu -> **Close Project** to close the opened project file.
 
-.. |new| image:: _static/new.png
+.. |new| image:: _static/new.svg
 	:width: 22
 
-.. |open| image:: _static/open.png
+.. |open| image:: _static/open.svg
 	:width: 22
