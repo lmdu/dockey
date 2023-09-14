@@ -6,11 +6,13 @@ Docking engines
 
 Firstly, you should specify the location of docking engines to ensure that the Dockey can invoke the docking engines.
 
-Go to **Edit** menu -> **Settings** -> **Docking Tools** tab to open the docking engine setting dialog in where you can select the path of docking engines.
+Go to **Edit** menu -> **Settings** -> **Docking tools** tab to open the docking engine setting dialog in where you can select the path of docking engines.
 
 .. rst-class:: wy-text-center
 
 	|docker|
+
+You can click on |folder| to select the executable binary file for tools. You are allowed to select any of Autodock4, Autodock Vina and QuickVina-W to specify the location of tool. For Autodock4, you must specify the location of autodock4 and autogrid4.
 
 Search space
 ------------
@@ -25,7 +27,7 @@ Before running molecular docking, you can specify search space for receptor by a
 
 	|grid|
 
-In gridbox panel, you can change the face color and border width of box. The value of spacing, number of points in each dimension (x, y, z), centre coordinates (x, y, z) can be increased and decreased with mouse wheel while hovering over or focusing on input field. 
+In gridbox panel, you can change the face color and border width of box. The value of spacing, number of points in each dimension (x, y, z), centre coordinates (x, y, z) can be increased and decreased with mouse wheel while hovering over or focusing on input field.
 
 You are allowed to observe the box size and position in PyMOL view.
 
@@ -33,8 +35,8 @@ You are allowed to observe the box size and position in PyMOL view.
 
 	The value of points in each dimension must be even number.
 
-Perform docking
----------------
+Performing basic docking
+------------------------
 
 Currently, Dockey supports three docking engines: AutoDock4, AutoDock Vina and QuickVina-W. You can only select one of them to perform docking. When docking finished, if you select another engine to dock, the previous docked results will be automatically deleted.
 
@@ -59,7 +61,7 @@ There are four steps to start AutoDock4. You can click ``<Back`` or ``Next>`` bu
 
 	Lamarckian GA is most widely used search algorithm.
 
-**Step 2**, set parameters for selected algorithm.
+**Step 2**, set parameters for selected algorithm. You can use default parameters or uncheck ``Use default paramters`` to adjust parameters. 
 
 .. rst-class:: wy-text-center
 
@@ -86,7 +88,7 @@ Run AutoDock Vina
 
 AudoDock Vina is more simple than AutoDock4, only two steps need to start Vina.
 
-**Step 1**, set docking parameters for AutoDock Vina.
+**Step 1**, set docking parameters for AutoDock Vina. Using default parameters is Ok.
 
 .. rst-class:: wy-text-center
 
@@ -103,7 +105,7 @@ Run QuickVina-W
 
 Similar to AutoDock Vina, QuickVina-W also needs two steps.
 
-**Step 1**, set docking parameters for QuickVina-W.
+**Step 1**, set docking parameters for QuickVina-W. Using default parameters is Ok.
 
 .. rst-class:: wy-text-center
 
@@ -114,6 +116,25 @@ Similar to AutoDock Vina, QuickVina-W also needs two steps.
 .. rst-class:: wy-text-center
 
 	|qvinaw2|
+
+Performing flexible docking
+---------------------------
+
+Before performing flexible docking, you should specify flex residues for receptors. In molecular list, right-click a receptor, go to ``Set Flexible Residues`` menu to open dialog:
+
+.. rst-class:: wy-text-center
+
+	|flexres|
+
+In the residule list, select residues as flexible residues. In addition, you can check ``Select bonds to disallowed`` and click a flexible residue to select bonds to disallowed.
+
+.. rst-class:: wy-text-center
+
+	|flexbond|
+
+The Dockey will automatically split the receptor coordinates into two PDBQT files (one for the rigid portion and one for the flexible side chains) according to the selected flexible residues.
+
+After specification of flexible residues, you can follow the performing basic docking steps to start flexible docking.
 
 Docking Jobs
 ------------
@@ -132,16 +153,10 @@ You are allowed to view the start time and end time of job by using **View Detai
 
 	|jobdt|
 
-You are also allowed to view the log files, config files and output files generated during job running.
-
-.. rst-class:: wy-text-center
-
-	|joblog|
-
 Parallel docking
 ----------------
 
-The Dockey allows more than one job to run concurrently. You can go to **Edit** menu -> **Settings** -> **Job Manager** tab to set the number of jobs that can run concurrently.
+The Dockey allows more than one job to run concurrently. You can go to **Task** menu -> **Settings** -> **Concurrent Task Manager** to open setting dialog and then set the number of jobs that can run concurrently.
 
 .. rst-class:: wy-text-center
 
@@ -151,6 +166,17 @@ The Dockey allows more than one job to run concurrently. You can go to **Edit** 
 
 	The more concurrent running jobs will consume more computing resources including CPUs and Memory. Generally, the number of parallel jobs is less than the maximum number of CPUs.
 
+CPU and memory usage
+--------------------
+
+Go to **Toolbar** -> click |cpu| to open computing resource usage dialog where you can view the CPU and memory used by Dockey.
+
+.. rst-class:: wy-text-center
+
+	|cpumem|
+
+.. |folder| image:: _static/folder.svg
+	:width: 24
 .. |grid| image:: _static/grid.png
 	:width: 600
 .. |taskdlg| image:: _static/taskdlg.png
@@ -181,3 +207,11 @@ The Dockey allows more than one job to run concurrently. You can go to **Edit** 
 	:width: 500
 .. |jobmg| image:: _static/jobmg.png
 	:width: 500
+.. |flexres| image:: _static/flexres.png
+	:width: 500
+.. |flexbond| image:: _static/flexbond.png
+	:width: 500
+.. |cpumem| image:: _static/cpumem.png
+	:width: 500
+.. |cpu| image:: _static/cpu.svg
+	:width: 24
