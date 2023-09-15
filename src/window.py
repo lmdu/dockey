@@ -554,7 +554,7 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		self.pymol_cmd_act.setChecked(False)
 		self.pymol_cmd_act.setIconVisibleInMenu(False)
 
-		self.check_cpu_act = QAction(QIcon(':/icons/cpu.svg'), "View CPU Consumption", self)
+		self.check_cpu_act = QAction(QIcon(':/icons/cpu.svg'), "CPU and Memory Usage", self)
 		self.check_cpu_act.setIconVisibleInMenu(False)
 		self.check_cpu_act.triggered.connect(self.view_cpu_consumption)
 
@@ -701,6 +701,7 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 
 		self.task_menu = self.menuBar().addMenu("&Task")
 		self.task_menu.addAction(self.task_act)
+		self.task_menu.addAction(self.check_cpu_act)
 
 		self.pymol_menu = self.menuBar().addMenu("&PyMOL")
 

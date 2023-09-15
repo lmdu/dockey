@@ -1864,20 +1864,35 @@ class CPUAndMemoryViewDialog(QDialog):
 	@Slot()
 	def update_resource_usage(self):
 		process_count = 1
-		cpu_percent = self.proc.cpu_percent(interval=0.1)
-		memory_size = self.proc.memory_info().rss
-		memory_percent = self.proc.memory_percent()
+		cpu_percent = 0
+		memory_size = 0
+		memory_percent = 0
 
-		for child in self.proc.children(recursive=True):
-			process_count += 1
-			cpu_percent += child.cpu_percent(interval=0.1)
-			memory_size += child.memory_info().rss
-			memory_percent += child.memory_percent()
+		try:
+			with self.proc.oneshot():
+				cpu_percent = self.proc.cpu_percent(interval=0.1)
+				memory_size = self.proc.memory_info().rss
+				memory_percent = self.proc.memory_percent()
+		except psutil.NoSuchProcess:
+			pass
 
-		self.cpu_usage.setValue(int(cpu_percent/psutil.cpu_count(False)))
+		try:
+			children = self.proc.children(recursive=True)
+		except psutil.NoSuchProcess:
+			children = []
+
+		for child in children:
+			try:
+				with child.oneshot():
+					process_count += 1
+					cpu_percent += child.cpu_percent(interval=0.1)
+					memory_size += child.memory_info().rss
+					memory_percent += child.memory_percent()
+			except psutil.NoSuchProcess:
+				pass
+
+		self.cpu_usage.setValue(int(cpu_percent/psutil.cpu_count()))
 		self.memory_usage.setValue(int(memory_percent))
 		self.memory_text.setText("Memory: {} \t Running processes: {}".format(
 			memory_format(memory_size), process_count
 		))
-
-

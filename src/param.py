@@ -157,7 +157,7 @@ class AutodockParameter(Parameter):
 			type = str,
 			default = '',
 			value = '',
-			comment = 'Parameter library filename',
+			comment = 'Parameter library file',
 			scope = 'global',
 			required = False,
 			user = True
@@ -787,6 +787,14 @@ class AutodockParameter(Parameter):
 			if k == 'map':
 				for m in v.value:
 					rows.append("map {}".format(m))
+
+			if k == 'parameter_file':
+				if os.path.isfile(v):
+					plf = os.path.join(os.path.dirname(receptor_file), "param_library.dat")
+					with open(v) as fh, open(plf, 'w') as fw:
+						fw.write(fh.read())
+
+					rows.append("parameter_file param_library.dat")
 
 			elif v.type in (int, str):
 				rows.append("{} {}".format(k, v.value))
