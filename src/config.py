@@ -16,7 +16,7 @@ from plip.basic.config import __version__ as plip_version
 __all__ = ['DOCKEY_VERSION', 'DOCKEY_BUILD', 'DOCKEY_ABOUT',
 			'DOCKEY_THANKS']
 
-DOCKEY_VERSION = "0.9.0"
+DOCKEY_VERSION = "0.9.1"
 
 DOCKEY_BUILD = "230915"
 
