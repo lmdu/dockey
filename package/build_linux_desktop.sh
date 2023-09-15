@@ -70,9 +70,9 @@ uver=$(cat /etc/issue | cut -d " " -f2 | cut -d "." -f1)
 
 if [ "$uver" = "20" ]
 then
-  linux="linux"
+  linux="ubuntu20.04"
 else
-  linux="linux-modern"
+  linux="ubuntu22.04"
 fi
 
 ./nfpm pkg -t Dockey-v$version-$linux.deb
