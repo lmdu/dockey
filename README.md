@@ -34,6 +34,7 @@ Computer-aided drug design (CADD) has become one of the most efficient methods t
 
 - Support for pdb, mol, mol2, sdf and other formats that can be identified by OpenBabel
 - Support for Windows, Linux and MacOS systems
+- Support for basic docking and flexible docking
 - Applicable to AutoDock4, AutoDock Vina and QuickVina-W
 - Automatically dock thousands of ligands to multiple receptors in parallel
 - Detection of non-covalent protein-ligand interactions
@@ -47,6 +48,8 @@ Computer-aided drug design (CADD) has become one of the most efficient methods t
 - [RDKit](https://www.rdkit.org)
 - [Meeko](https://github.com/forlilab/Meeko)
 - [Plip](https://github.com/pharmai/plip)
+- [PDBFixer](https://github.com/openmm/pdbfixer)
+- [PDB2PQR](https://github.com/Electrostatics/pdb2pqr)
 - [AutoDockTools](https://github.com/lmdu/AutoDockTools_py3)
 
 ## Docking engines
@@ -63,4 +66,4 @@ The documentation is available here: [https://dockey.readthedocs.io/en/latest](h
 
 You can download the latest installer for Windows, Linux and MacOS from [https://github.com/lmdu/dockey/releases](https://github.com/lmdu/dockey/releases)
 
-中国镜像下载地址: [http://big.cdu.edu.cn/post/dockey.html](http://big.cdu.edu.cn/post/dockey.html)
+中国镜像下载地址: [https://big.cdu.edu.cn/software/dockey](https://big.cdu.edu.cn/software/dockey)
