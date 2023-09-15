@@ -35,7 +35,7 @@ jobs:
           $version = $line.Split('"')[1]
           iscc /DMyAppVersion=$version package/build_win_installer.iss
           cd dist
-          7z a Dockey-v$version-win64-portable.7z Dockey
+          7z a Dockey-v$version-win64.7z Dockey
 
       - uses: actions/upload-artifact@v3
         with:
@@ -103,7 +103,9 @@ jobs:
         with:
           name: Dockey-ubuntu20.04
           path: |
+            dist/*.deb
             dist/*.tar.gz
+            dist/*.AppImage
 
       - uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
@@ -165,7 +167,9 @@ jobs:
         with:
           name: Dockey-ubuntu22.04
           path: |
+            dist/*.deb
             dist/*.tar.gz
+            dist/*.AppImage
 
       - uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
@@ -208,13 +212,18 @@ jobs:
           cd dist
           create-dmg Dockey.app || true
           mv "Dockey 0.0.0.dmg" Dockey-v${version}-macos.dmg
+          tar -czvf Dockey-v${version}-macos.tar.gz Dockey.app
 
       - uses: actions/upload-artifact@v3
         with:
           name: Dockey-macos
-          path: dist/*.dmg
+          path: |
+            dist/*.dmg
+            dist/*.tar.gz
 
       - uses: softprops/action-gh-release@v1
         if: startsWith(github.ref, 'refs/tags/')
         with:
-          files: dist/*.dmg
+          files: |
+            dist/*.dmg
+            dist/*.tar.gz

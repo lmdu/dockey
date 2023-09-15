@@ -23,7 +23,7 @@ DisableProgramGroupPage=yes
 ; Uncomment the following line to run in non administrative install mode (install for current user only.)
 ;PrivilegesRequired=lowest
 OutputDir=..\dist
-OutputBaseFilename=Dockey-v{#MyAppVersion}-win64-installer
+OutputBaseFilename=Dockey-v{#MyAppVersion}-win64
 SetupIconFile=..\src\icons\logo.ico
 Compression=lzma
 SolidCompression=yes

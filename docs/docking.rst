@@ -176,7 +176,7 @@ Go to **Toolbar** -> click |cpu| to open computing resource usage dialog where y
 	|cpumem|
 
 .. |folder| image:: _static/folder.svg
-	:width: 24
+	:width: 16
 .. |grid| image:: _static/grid.png
 	:width: 600
 .. |taskdlg| image:: _static/taskdlg.png

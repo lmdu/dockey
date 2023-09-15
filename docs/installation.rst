@@ -43,9 +43,9 @@ The QuickVina homepage only provide linux executable. For Windows, you can insta
 
 **Install Dockey:**
 
-#. Go to `https://github.com/lmdu/dockey/releases <https://github.com/lmdu/dockey/releases>`_ page, click on ``Dockey-version-win64-installer.exe`` to download it. Then double click the downloaded installer to install the program following the on-screen instructions.
+#. Go to `https://github.com/lmdu/dockey/releases <https://github.com/lmdu/dockey/releases>`_ page, click on ``Dockey-version-win64.exe`` to download it. Then double click the downloaded installer to install the program following the on-screen instructions.
 
-#. Or, you can click on ``Dockey-version-win64-portable.7z`` to download it. Then uncompress the 7z file using `7-zip <https://www.7-zip.org/>`_ and double click the Dockey.exe to run it.
+#. Or, you can click on ``Dockey-version-win64.7z`` to download it. Then uncompress the 7z file using `7-zip <https://www.7-zip.org/>`_ and double click the Dockey.exe to run it.
 
 On Linux
 --------
@@ -79,25 +79,25 @@ Go to `https://qvina.github.io/ <https://qvina.github.io/>`_ page, and then clic
 
 	Currently, we only tested Dockey on Ubuntu systems. It may also support other Linux systems based on Debian, for example, Deepin.
 
-#. Go to `https://github.com/lmdu/dockey/releases <https://github.com/lmdu/dockey/releases>`_ page, click on ``Dockey-version-amd64.deb`` to download it. Then double click the downloaded installer to install the program following the on-screen instructions.
+#. Go to `https://github.com/lmdu/dockey/releases <https://github.com/lmdu/dockey/releases>`_ page, click on ``Dockey-version-ubuntu.deb`` to download it. Then double click the downloaded installer to install the program following the on-screen instructions.
 
-#. Or, you can click on ``Dockey-version-linux.AppImage`` to download it and run it like this:
+#. Or, you can click on ``Dockey-version-ubuntu.AppImage`` to download it and run it like this:
 
 	.. code:: shell
 
-		chmod +x Dockey-version-linux.AppImage
-		./Dockey-version-linux.AppImage
+		chmod +x Dockey-version-ubuntu.AppImage
+		./Dockey-version-ubuntu.AppImage
 
-#. Or, you can click on ``Dockey-version-linux.tar.gz`` to download the compressed package, and then uncompress it to run Dockey:
+#. Or, you can click on ``Dockey-version-ubuntu.tar.gz`` to download the compressed package, and then uncompress it to run Dockey:
 
 .. code:: shell
 
-	tar xzvf Dockey-version-linux.tar.gz
+	tar xzvf Dockey-version-ubuntu.tar.gz
 	cd Dockey
 	./Dockey
 
 .. note::
-	The installation file with ``-linux`` can only run on Ubuntu 20.04, while file with ``-linux-morden`` can run on Ubuntu >= 22.04
+	The installation file with ``-ubuntu20.04`` can only run on Ubuntu 20.04, while file with ``-ubuntu22.04`` can run on Ubuntu >= 22.04
 
 MacOS
 -----
