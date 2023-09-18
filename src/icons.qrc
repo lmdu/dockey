@@ -25,5 +25,9 @@
 	<file>icons/yes.svg</file>
 	<file>icons/no.svg</file>
 	<file>icons/cpu.svg</file>
+	<file>icons/zinc.png</file>
+	<file>icons/chembl.png</file>
+	<file>icons/pdb.png</file>
+	<file>icons/pubchem.png</file>
 </qresource>
 </RCC>

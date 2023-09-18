@@ -1511,13 +1511,13 @@ class DownloaderDialog(QDialog):
 
 class PDBDownloadDialog(DownloaderDialog):
 	title = "Import Receptors from PDB Database"
-	logo = 'icons/pdb.png'
+	logo = ':/icons/pdb.png'
 	id_label = "PDB ID:"
 	base_url = "https://files.rcsb.org/download/{}.pdb"
 
 class ZINCDownloadDialog(DownloaderDialog):
 	title = "Import Ligands from ZINC Database"
-	logo = "icons/zinc.png"
+	logo = ":/icons/zinc.png"
 	id_label = "ZINC IDs:"
 	mol_type = 2
 	mol_fmt = 'sdf'
@@ -1525,7 +1525,7 @@ class ZINCDownloadDialog(DownloaderDialog):
 
 class PubchemDownloadDialog(DownloaderDialog):
 	title = "Import Ligand from PubChem Database"
-	logo = "icons/pubchem.png"
+	logo = ":/icons/pubchem.png"
 	id_label = "PubChem CIDs:"
 	mol_type = 2
 	mol_fmt = 'sdf'
@@ -1533,7 +1533,7 @@ class PubchemDownloadDialog(DownloaderDialog):
 
 class ChemblDownloadDialog(DownloaderDialog):
 	title = "Import Ligand from ChEMBL Database"
-	logo = "icons/chembl.png"
+	logo = ":/icons/chembl.png"
 	id_label = "ChEMBL IDs:"
 	mol_type = 2
 	mol_fmt = 'sdf'
