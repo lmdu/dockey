@@ -16,9 +16,9 @@ from plip.basic.config import __version__ as plip_version
 __all__ = ['DOCKEY_VERSION', 'DOCKEY_BUILD', 'DOCKEY_ABOUT',
 			'DOCKEY_THANKS']
 
-DOCKEY_VERSION = "0.9.2"
+DOCKEY_VERSION = "0.9.3"
 
-DOCKEY_BUILD = "230915"
+DOCKEY_BUILD = "230918"
 
 DOCKEY_ABOUT = """
 <p>Dockey - Molecular Docking and Virtual Screening</p>
