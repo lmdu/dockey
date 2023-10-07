@@ -17,14 +17,13 @@ jobs:
 
       - name: Install requirements
         run: |
-          pip install -r requirements.txt
-          python package\slim_meeko.py
-          pip install plip==2.2.2 --no-deps
           pip install git+https://github.com/lmdu/AutoDockTools_py3
           pip install https://github.com/lmdu/pymol-wheel/releases/download/2.6.0.post4/pymol-2.6.0a0-cp310-cp310-win_amd64.whl
           pip install https://github.com/lmdu/openbabel-wheel/releases/download/3.1.1.post8/openbabel-3.1.1-cp310-cp310-win_amd64.whl
           pip install https://github.com/lmdu/openmm-wheel/releases/download/8.0.0.post1/OpenMM-8.0.0-cp310-cp310-win_amd64.whl
           pip install https://github.com/openmm/pdbfixer/archive/refs/tags/1.9.tar.gz
+          pip install -r requirements.txt
+          python package\slim_meeko.py
 
       - name: Build executable
         run: pyinstaller package/build.spec
@@ -80,14 +79,13 @@ jobs:
 
       - name: Install build requirements
         run: |
-          pip3 install -r requirements.txt
-          pip3 install plip==2.2.2 --no-deps
-          python3 package/slim_meeko.py
           pip3 install git+https://github.com/lmdu/AutoDockTools_py3
           pip3 install https://github.com/lmdu/pymol-wheel/releases/download/2.6.0.post4/pymol-2.6.0a0-cp310-cp310-manylinux_2_28_x86_64.whl
           pip3 install https://github.com/lmdu/openbabel-wheel/releases/download/3.1.1.post8/openbabel-3.1.1-cp310-cp310-manylinux_2_28_x86_64.whl
           pip3 install https://github.com/lmdu/openmm-wheel/releases/download/8.0.0.post1/OpenMM-8.0.0-cp310-cp310-manylinux_2_28_x86_64.whl
           pip3 install https://github.com/openmm/pdbfixer/archive/refs/tags/1.9.tar.gz
+          pip3 install -r requirements.txt
+          python3 package/slim_meeko.py
 
       - name: Build executable
         run: pyinstaller package/build.spec
@@ -144,14 +142,13 @@ jobs:
 
       - name: Install build requirements
         run: |
-          pip3 install -r requirements.txt
-          pip3 install plip==2.2.2 --no-deps
-          python3 package/slim_meeko.py
           pip3 install git+https://github.com/lmdu/AutoDockTools_py3
           pip3 install https://github.com/lmdu/pymol-wheel/releases/download/2.6.0.post4/pymol-2.6.0a0-cp310-cp310-manylinux_2_28_x86_64.whl
           pip3 install https://github.com/lmdu/openbabel-wheel/releases/download/3.1.1.post8/openbabel-3.1.1-cp310-cp310-manylinux_2_28_x86_64.whl
           pip3 install https://github.com/lmdu/openmm-wheel/releases/download/8.0.0.post1/OpenMM-8.0.0-cp310-cp310-manylinux_2_28_x86_64.whl
           pip3 install https://github.com/openmm/pdbfixer/archive/refs/tags/1.9.tar.gz
+          pip3 install -r requirements.txt
+          python3 package/slim_meeko.py
 
       - name: Build executable
         run: pyinstaller package/build.spec
@@ -193,14 +190,13 @@ jobs:
 
       - name: Install requirements
         run: |
-          pip3 install -r requirements.txt
-          pip3 install plip==2.2.2 --no-deps
-          python3 package/slim_meeko.py
           pip3 install git+https://github.com/lmdu/AutoDockTools_py3
           pip3 install https://github.com/lmdu/pymol-wheel/releases/download/2.6.0.post4/pymol-2.6.0a0-cp310-cp310-macosx_10_9_x86_64.whl
           pip3 install https://github.com/lmdu/openbabel-wheel/releases/download/3.1.1.post8/openbabel-3.1.1-cp310-cp310-macosx_11_0_x86_64.whl
           pip3 install https://github.com/lmdu/openmm-wheel/releases/download/8.0.0.post1/OpenMM-8.0.0-cp310-cp310-macosx_10_9_x86_64.whl
           pip3 install https://github.com/openmm/pdbfixer/archive/refs/tags/1.9.tar.gz
+          pip3 install -r requirements.txt
+          python3 package/slim_meeko.py
 
       - name: Build executable
         run: pyinstaller package/build.spec

@@ -5,5 +5,6 @@ psutil==5.9.5
 meeko==0.5.0
 rdkit==2023.3.2
 pdb2pqr==3.6.1
+plip==2.3.0
 PySide6-Essentials==6.4.3
 pyinstaller==5.13.2
