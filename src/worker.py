@@ -194,6 +194,18 @@ class JobListGenerator(QRunnable):
 		self.signals.success.emit()
 		self.signals.progress.emit(100)
 
+class ManagerSignals(QObject):
+	pass
+
+class WorkerManager(QRunnable):
+	def __init__(self):
+		super().__init__()
+		self.setAutoDelete(True)
+
+	def run(self):
+		pass
+		
+
 class WorkerSignals(QObject):
 	finished = Signal()
 	refresh = Signal(int)
@@ -208,6 +220,7 @@ class BaseWorker(QRunnable):
 
 	def __init__(self, params):
 		super(BaseWorker, self).__init__()
+		self.setAutoDelete(True)
 		self.jobs = {}
 		self.params = params
 		self.signals = WorkerSignals()
@@ -217,7 +230,6 @@ class BaseWorker(QRunnable):
 		self.job_num = self.settings.value('Job/concurrent', 1, int)
 		self.signals.threads.connect(self.change_job_numbers)
 		self.signals.stopjob.connect(self.stop_job)
-		self.setAutoDelete(True)
 		self.progress = 0
 		self.job_total = 0
 		self.job_finish = 0
@@ -576,6 +588,7 @@ class BaseWorker(QRunnable):
 			error = traceback.format_exc()
 			self.signals.message.emit(error)
 			print(error)
+
 
 		finally:
 			for job in self.jobs:

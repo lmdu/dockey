@@ -525,7 +525,7 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		#preferences actions
 		self.setting_act = QAction("Settings", self)
 		self.setting_act.triggered.connect(self.open_setting_dialog)
-		self.setting_act.setShortcut(QKeySequence.Preferences)
+		#self.setting_act.setShortcut(QKeySequence.Preferences)
 
 		#self.dock_tool_act = QAction("Docking Tools", self)
 		#self.dock_tool_act.triggered.connect(self.docking_tool_settings)
