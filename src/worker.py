@@ -198,45 +198,18 @@ class ManagerSignals(QObject):
 	pass
 
 class WorkerManager(QRunnable):
-	def __init__(self):
+	def __init__(self, dock_params):
 		super().__init__()
 		self.setAutoDelete(True)
-
-	def run(self):
-		pass
-		
-
-class WorkerSignals(QObject):
-	finished = Signal()
-	refresh = Signal(int)
-	message = Signal(str)
-	failure = Signal(str)
-	threads = Signal(int)
-	stopjob = Signal(int)
-	progress = Signal(int)
-
-class BaseWorker(QRunnable):
-	processer = None
-
-	def __init__(self, params):
-		super(BaseWorker, self).__init__()
-		self.setAutoDelete(True)
-		self.jobs = {}
-		self.params = params
-		self.signals = WorkerSignals()
 		self.settings = QSettings()
-		self.consumer, self.producer = multiprocessing.Pipe(duplex=False)
+		self.dock_params = dock_params
 		self.job_query = None
 		self.job_num = self.settings.value('Job/concurrent', 1, int)
-		self.signals.threads.connect(self.change_job_numbers)
-		self.signals.stopjob.connect(self.stop_job)
-		self.progress = 0
-		self.job_total = 0
-		self.job_finish = 0
+		self.job_list = {}
 
-	def exit(self):
-		self.job_query = None
-		self.producer.close()
+	def before_run(self):
+		self.job_total = int(DB.get_option('job_count'))
+		self.job_query = DB.query("SELECT id FROM jobs")
 
 	def get_job(self, jid):
 		job = DB.get_dict("SELECT * FROM jobs WHERE id=? LIMIT 1", (jid,))
@@ -290,48 +263,7 @@ class BaseWorker(QRunnable):
 			'flex': residues
 		})
 
-	#@Slot(int)
-	def change_job_numbers(self, num):
-		self.job_num = num
-		num = len(self.jobs)
-
-		if self.job_num > num:
-			for i in range(self.job_num - num):
-				self.submit_job()
-
-	def update_progress(self, data):
-		sql = "UPDATE jobs SET progress=? WHERE id=?"
-		DB.query(sql, (data['message'], data['job']))
-		self.signals.refresh.emit(data['job'])
-
-	def update_started(self, data):
-		sql = "UPDATE jobs SET status=?,progress=?,started=? WHERE id=?"
-		DB.query(sql, (2, 0, data['message'], data['job']))
-		self.signals.refresh.emit(data['job'])
-
-	def update_finished(self, data):
-		sql = "UPDATE jobs SET progress=?,finished=? WHERE id=?"
-		DB.query(sql, (100, data['message'], data['job']))
-		self.signals.refresh.emit(data['job'])
-		self.signals.finished.emit()
-
-		self.job_finish += 1
-		p = int(self.job_finish/self.job_total*100)
-		if p > self.progress:
-			self.signals.progress.emit(p)
-			self.progress = p
-
-	def update_success(self, data):
-		sql = "UPDATE jobs SET status=?,message=? WHERE id=?"
-		DB.query(sql, (1, data['message'], data['job']))
-		self.signals.refresh.emit(data['job'])
-
-	def update_error(self, data):
-		sql = "UPDATE jobs SET status=?,message=? WHERE id=?"
-		DB.query(sql, (0, data['message'], data['job']))
-		self.signals.refresh.emit(data['job'])
-
-	def get_prepare_params(self):
+		def get_prepare_params(self):
 		tool = self.settings.value('Ligand/prepare_tool', 'prepare_ligand4')
 
 		if tool == 'prepare_ligand4':
@@ -413,7 +345,99 @@ class BaseWorker(QRunnable):
 
 	def get_all_params(self):
 		lig_params, rep_params, pre_params = self.get_prepare_params()
-		return [self.params, lig_params, rep_params, pre_params]
+		return [self.dock_params, lig_params, rep_params, pre_params]
+
+	def start_job(self, jid):
+		params = self.get_all_params()
+
+	def submit_job(self):
+		if self.job_query is None:
+			return
+
+		if len(self.job_list) >= self.job_num:
+			return
+
+		row = self.job_query.fetchone()
+
+		if row:
+			self.start_job(row[0])
+
+	#@Slot(int)
+	def change_job_numbers(self, num):
+		self.job_num = num
+		num = len(self.jobs)
+
+		if self.job_num > num:
+			for i in range(self.job_num - num):
+				self.submit_job()
+
+	def run(self):
+		pass
+		
+
+class WorkerSignals(QObject):
+	finished = Signal()
+	refresh = Signal(int)
+	message = Signal(str)
+	failure = Signal(str)
+	threads = Signal(int)
+	stopjob = Signal(int)
+	progress = Signal(int)
+
+class BaseWorker(QRunnable):
+	processer = None
+
+	def __init__(self, params, job):
+		super().__init__()
+		self.setAutoDelete(True)
+		self.job = job
+		self.params = params
+		self.signals = WorkerSignals()
+		self.settings = QSettings()
+		self.pipe = multiprocessing.SimpleQueue()
+		self.tempdir = None
+		self.process = None
+
+		#self.signals.threads.connect(self.change_job_numbers)
+		#self.signals.stopjob.connect(self.stop_job)
+		#self.progress = 0
+		#self.job_total = 0
+		#self.job_finish = 0
+
+	#def exit(self):
+	#	self.job_query = None
+	#	self.producer.close()
+
+	def update_progress(self, data):
+		sql = "UPDATE jobs SET progress=? WHERE id=?"
+		DB.query(sql, (data['message'], self.job.id))
+		self.signals.refresh.emit(self.job.id)
+
+	def update_started(self):
+		sql = "UPDATE jobs SET status=?,progress=?,started=? WHERE id=?"
+		DB.query(sql, (2, 0, int(time.time()), self.job.id))
+		self.signals.refresh.emit(self.job.id)
+
+	def update_stopped(self):
+		sql = "UPDATE jobs SET status=? WHERE id=?"
+		DB.query(sql, (3, self.job.id))
+		self.signals.refresh.emit(self.job.id)
+
+	def update_finished(self):
+		sql = "UPDATE jobs SET progress=?,finished=? WHERE id=?"
+		DB.query(sql, (100, int(time.time()), self.job.id))
+		self.signals.refresh.emit(self.job.id)
+		self.signals.finished.emit()
+
+	def update_success(self):
+		sql = "UPDATE jobs SET status=? WHERE id=?"
+		DB.query(sql, (1, self.job.id))
+		self.signals.refresh.emit(self.job.id)
+
+	def update_error(self, data):
+		sql = "UPDATE jobs SET status=?,message=? WHERE id=?"
+		DB.query(sql, (0, data['message'] self.job.id))
+		self.signals.refresh.emit(self.job.id)
 
 	def write_pose_interactions(self, data):
 		jid = data['job']
@@ -477,125 +501,68 @@ class BaseWorker(QRunnable):
 			DB.insert_rows(sql, interactions[k])
 
 	def make_temp_dir(self):
-		temp_dir = QTemporaryDir()
-		temp_dir.setAutoRemove(False)
+		self.tempdir = QTemporaryDir()
+		self.tempdir.setAutoRemove(False)
 
-		if not temp_dir.isValid():
+		if not self.tempdir.isValid():
 			raise Exception(
 				"Could not create temporary work directory, {}".format(
-					temp_dir.errorString()
+					self.tempdir.errorString()
 				)
 			)
 
-		return temp_dir
+		return self.tempdir.path()
 
-	def start_process(self, jid):
-		temp_dir = self.make_temp_dir()
-		params = self.get_all_params()
+	def get_commands(self):
+		pass
+
+	def start_process(self):
+		tmpdir = self.make_temp_dir()
 		cmds = self.get_commands()
-		job = self.get_job(jid)
-		proc = self.processer(job, params, cmds, temp_dir.path(), self.producer)
-		proc.start()
-
-		self.jobs[job.id] = AttrDict(
-			tempdir = temp_dir,
-			process = proc
-		)
-
-	def submit_job(self):
-		if self.job_query is None:
-			return
-
-		if len(self.jobs) > self.job_num:
-			return
-
-		row = self.job_query.fetchone()
-
-		if row:
-			self.start_process(row[0])
-
-	def delete_job(self, job):
-		obj = self.jobs.pop(job)
-		obj.tempdir.remove()
+		self.process = self.processer(self.job, self.params, cmds, tmpdir, self.pipe)
+		self.process.start()
+		self.update_started()
 
 	def stop_job(self, job):
-		if job not in self.jobs:
-			return
-
-		obj = self.jobs.pop(job)
-
-		parent = psutil.Process(obj.process.pid)
-		children = parent.children(recursive=True)
+		children = self.process.children(recursive=True)
 
 		for child in children:
 			child.kill()
 
-		obj.process.join()
-		obj.tempdir.remove()
+		self.process.join()
+		self.update_stopped()
+		self.pipe.close()
 
-		if len(self.jobs) < self.job_num:
-			self.submit_job()
+	def call_response(self, data):
+		if data['action'] == 'progress':
+			self.update_progress(data)
 
-	def get_job_pid(self, job):
-		if job not in self.jobs:
-			return
+		elif data['action'] == 'result':
+			self.write_pose_interactions(data)
 
-		return self.jobs[job].process.pid
+		elif data['action'] == 'error':
+			self.update_error(data)
 
-	#@Slot()
+		elif data['action'] == 'success':
+			self.update_success()
+
+		#elif data['action'] == 'finish':
+		#	self.update_finished(data)
+
+	@Slot()
 	def run(self):
-		self.job_total = int(DB.get_option('job_count'))
-		self.job_query = DB.query("SELECT id FROM jobs")
-		self.signals.progress.emit(0)
+		self.start_process()
 
-		try:
-			for i in range(self.job_num):
-				self.submit_job()
+		while True:
+			try:
+				data = self.pipe.get()
+				self.call_response(data)
 
-			while 1:
-				try:
-					data = self.consumer.recv()
+			except:
+				break
 
-					if data['action'] == 'start':
-						self.update_started(data)
-
-					elif data['action'] == 'progress':
-						self.update_progress(data)
-
-					elif data['action'] == 'error':
-						self.update_error(data)
-
-					elif data['action'] == 'success':
-						self.update_success(data)
-
-					elif data['action'] == 'result':
-						self.write_pose_interactions(data)
-
-					elif data['action'] == 'finish':
-						self.update_finished(data)
-						self.delete_job(data['job'])
-						self.submit_job()
-
-				except EOFError:
-					break
-
-				except:
-					error = traceback.format_exc()
-					raise Exception(error)
-					break
-
-		except:
-			error = traceback.format_exc()
-			self.signals.message.emit(error)
-			print(error)
-
-
-		finally:
-			for job in self.jobs:
-				self.jobs[job].tempdir.remove()
-
-			self.signals.finished.emit()
-			#self.signals.progress.emit(100)
+			finally:
+				self.update_finished()
 
 class AutodockWorker(BaseWorker):
 	processer = AutodockProcess
