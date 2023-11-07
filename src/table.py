@@ -187,15 +187,15 @@ class DockeyListView(QListView):
 		#	triggered = self.add_ligands
 		#)
 
-		rep_f_act = QAction("Set Flexible Residues", self)
+		rep_f_act = QAction("Specify Flexible Residues", self)
 		rep_f_act.triggered.connect(self.set_flex_residules)
 		rep_f_act.setEnabled(self.current_index.isValid() and self.current_index.siblingAtColumn(2).data() == 1)
 
-		lig_f_act = QAction("Ligand Filter", self)
+		lig_f_act = QAction("Filter and Remove Ligands", self)
 		lig_f_act.triggered.connect(self.ligand_filter)
 		lig_f_act.setEnabled(DB.active())
 
-		del_m_act = QAction("Delete Select", self)
+		del_m_act = QAction("Delete Current Molecule", self)
 		del_m_act.triggered.connect(self.delete_molecular)
 		del_m_act.setEnabled(self.current_index.isValid())
 
@@ -211,7 +211,7 @@ class DockeyListView(QListView):
 		clr_m_act.triggered.connect(self.delete_all)
 		clr_m_act.setEnabled(DB.active())
 
-		view_act = QAction("View Molecule Details", self)
+		view_act = QAction("View Current Molecule", self)
 		view_act.triggered.connect(self.view_details)
 		view_act.setEnabled(self.current_index.isValid())
 
@@ -225,6 +225,7 @@ class DockeyListView(QListView):
 		#menu.addAction(self.parent.import_receptor_act)
 		#menu.addAction(self.parent.import_ligand_act)
 		menu.addAction(rep_f_act)
+		menu.addSeparator()
 		menu.addAction(lig_f_act)
 		menu.addSeparator()
 		menu.addAction(del_m_act)
@@ -233,6 +234,7 @@ class DockeyListView(QListView):
 		menu.addAction(clr_m_act)
 		menu.addSeparator()
 		menu.addAction(view_act)
+		menu.addSeparator()
 		menu.addAction(stat_act)
 		menu.popup(self.mapToGlobal(pos))
 
@@ -614,23 +616,24 @@ class JobsTableModel(DockeyTableModel):
 	statuses = {
 		0: 'Failure',
 		1: 'Success',
-		2: 'Running',
-		3: 'Waiting',
-		4: 'Stopped'
+		2: 'Stopped',
+		3: 'Running',
+		4: 'Waiting'
+		
 	}
 	status_colors = {
 		0: QColor(220, 53, 69),
 		1: QColor(25, 135, 84),
-		2: QColor(13, 110, 253),
-		3: QColor(255, 193, 7),
-		4: QColor(188, 188, 188)
+		2: QColor(188, 188, 188),
+		3: QColor(13, 110, 253),
+		4: QColor(255, 193, 7)
 	}
 	status_icons = {
 		0: QIcon(':/icons/error.svg'),
 		1: QIcon(':/icons/success.svg'),
-		2: QIcon(':/icons/run.svg'),
-		3: QIcon(':/icons/pend.svg'),
-		4: QIcon(':/icons/queue.svg')
+		2: QIcon(':/icons/queue.svg'),
+		3: QIcon(':/icons/run.svg'),
+		4: QIcon(':/icons/pend.svg')
 	}
 
 	def get_total(self):
@@ -1010,11 +1013,11 @@ class JobTableView(QTableView):
 	def on_custom_menu(self, pos):
 		self.current_index = self.indexAt(pos)
 
-		view_detail_act = QAction("View Job Details", self)
+		view_detail_act = QAction("View Current Task", self)
 		view_detail_act.triggered.connect(self.view_job_details)
 		view_detail_act.setEnabled(self.current_index.isValid())
 
-		view_status_act = QAction("View Job Counts", self)
+		view_status_act = QAction("View Task Counts", self)
 		view_status_act.triggered.connect(self.view_job_statuses)
 		view_status_act.setDisabled(not DB.active())
 
@@ -1022,7 +1025,7 @@ class JobTableView(QTableView):
 		#	triggered = self.view_logs
 		#)
 		#view_logs_act.setEnabled(self.current_index.isValid())
-		stop_job_act = QAction("Stop Select Job", self)
+		stop_job_act = QAction("Stop Current Task", self)
 		stop_job_act.triggered.connect(self.stop_select_job)
 		stop_job_act.setEnabled(False)
 
@@ -1032,14 +1035,15 @@ class JobTableView(QTableView):
 			if status == 'Running':
 				stop_job_act.setEnabled(True)
 
-		export_act = QAction("Export Table", self)
+		export_act = QAction("Export Task Table", self)
 		export_act.triggered.connect(self.export_table)
 
 		menu = QMenu(self)
 		menu.addAction(view_detail_act)
-		menu.addAction(view_status_act)
-		menu.addSeparator()
 		menu.addAction(stop_job_act)
+		menu.addSeparator()
+		menu.addAction(view_status_act)
+
 		#menu.addAction(view_logs_act)
 		menu.addSeparator()
 		menu.addAction(export_act)
@@ -1072,9 +1076,9 @@ class JobTableView(QTableView):
 		statuses = [
 			'<font color="red">Failure</font>',
 			'<font color="green">Success</font>',
+			'<font color="gray">Stopped</font>',
 			'<font color="blue">Running</font>',
-			'<font color="orange">Waiting</font>',
-			'<font color="black">Stopped</font>',
+			'<font color="orange">Waiting</font>'
 		]
 
 		pid = self.get_pid(jid)
@@ -1091,7 +1095,7 @@ class JobTableView(QTableView):
 
 	@Slot()
 	def view_job_statuses(self):
-		statuses = ['Failure', 'Success', 'Running', 'Waiting', 'Stopped']
+		statuses = ['Failure', 'Success', 'Stopped', 'Running', 'Waiting']
 		sql = "SELECT status, COUNT(1) from jobs group by status"
 
 		total = 0

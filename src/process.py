@@ -163,7 +163,7 @@ class JobListProcess(multiprocessing.Process):
 
 		for r in self.rids:
 			for l in self.lids:
-				self.job_list.append((None, r, l, 3, 0, 0, 0, ''))
+				self.job_list.append((None, r, l, 4, 0, 0, 0, ''))
 
 				if len(self.job_list) == 200:
 					self.write()
@@ -186,11 +186,11 @@ class JobListProcess(multiprocessing.Process):
 			self.producer.close()
 
 class BaseProcess(multiprocessing.Process):
-	def __init__(self, job, params, cmds, work_dir, producer):
+	def __init__(self, job, params, cmds, work_dir, pipe):
 		super(BaseProcess, self).__init__()
 		self.daemon = True
 		self.job = job
-		self.producer = producer
+		self.pipe = pipe
 		self.cmds = cmds
 		self.work_dir = work_dir
 		self.dock_params = params[0]
@@ -220,7 +220,7 @@ class BaseProcess(multiprocessing.Process):
 				e = pose[3]
 				best = i
 
-		self.producer.send({
+		self.pipe.put({
 			'job': self.job.id,
 			'action': 'result',
 			'best': best,
@@ -228,8 +228,8 @@ class BaseProcess(multiprocessing.Process):
 			'interactions': interactions
 		})
 
-	def send_message(self, mtype, message):
-		self.producer.send({
+	def send_message(self, mtype, message=None):
+		self.pipe.put({
 			'job': self.job.id,
 			'action': mtype,
 			'message': message
@@ -239,18 +239,16 @@ class BaseProcess(multiprocessing.Process):
 		self.send_message('progress', progress)
 
 	def update_started(self):
-		started = int(time.time())
-		self.send_message('start', started)
+		self.send_message('start')
 
 	def update_finished(self):
-		finished = int(time.time())
-		self.send_message('finish', finished)
+		self.send_message('finish')
 
 	def update_error(self, error):
 		self.send_message('error', error)
 
 	def update_success(self):
-		self.send_message('success', 'Done')
+		self.send_message('success')
 
 	def prepare_receptor(self):
 		rpdbqt = os.path.join(self.work_dir, "{}.pdbqt".format(self.job.rn))
@@ -327,7 +325,6 @@ class BaseProcess(multiprocessing.Process):
 
 		finally:
 			self.update_finished()
-			self.producer.close()
 
 class AutodockProcess(BaseProcess):
 	def do(self):

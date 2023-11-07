@@ -18,7 +18,7 @@ from prepare import *
 __all__ = ['AutodockWorker', 'AutodockVinaWorker', 'QuickVinaWorker',
 	'ImportFileWorker', 'ImportFolderWorker', 'JobListGenerator',
 	'PoseInteractionExportWorker', 'BestInteractionExportWorker',
-	'ImportSDFWorker', 'ImportURLWorker'
+	'ImportSDFWorker', 'ImportURLWorker', 'WorkerManager'
 ]
 
 class ImportSignals(QObject):
@@ -195,17 +195,24 @@ class JobListGenerator(QRunnable):
 		self.signals.progress.emit(100)
 
 class ManagerSignals(QObject):
-	pass
+	finished = Signal()
+	updated = Signal(int)
+	progress = Signal(int)
 
 class WorkerManager(QRunnable):
-	def __init__(self, dock_params):
+	def __init__(self, dock_worker, dock_params):
 		super().__init__()
 		self.setAutoDelete(True)
+		self.pool = QThreadPool()
 		self.settings = QSettings()
+		self.signals = ManagerSignals()
+		self.dock_worker = dock_worker
 		self.dock_params = dock_params
 		self.job_query = None
-		self.job_num = self.settings.value('Job/concurrent', 1, int)
+		self.job_thread = self.settings.value('Job/concurrent', 1, int)
 		self.job_list = {}
+		self.job_count = 0
+		self.job_params = self.get_all_params()
 
 	def before_run(self):
 		self.job_total = int(DB.get_option('job_count'))
@@ -263,8 +270,8 @@ class WorkerManager(QRunnable):
 			'flex': residues
 		})
 
-		def get_prepare_params(self):
-		tool = self.settings.value('Ligand/prepare_tool', 'prepare_ligand4')
+	def get_prepare_params(self):
+		tool = self.settings.value('Ligand/prepare_tool', 'meeko')
 
 		if tool == 'prepare_ligand4':
 			self.settings.beginGroup('Ligand')
@@ -348,41 +355,69 @@ class WorkerManager(QRunnable):
 		return [self.dock_params, lig_params, rep_params, pre_params]
 
 	def start_job(self, jid):
-		params = self.get_all_params()
-
-	def submit_job(self):
-		if self.job_query is None:
-			return
-
-		if len(self.job_list) >= self.job_num:
-			return
-
-		row = self.job_query.fetchone()
-
-		if row:
-			self.start_job(row[0])
+		job = self.get_job(jid)
+		self.job_list[jid] = self.dock_worker(self.job_params, job)
+		self.job_list[jid].signals.finished.connect(self.remove_job, Qt.DirectConnection)
+		self.job_list[jid].signals.changed.connect(self.signals.updated, Qt.DirectConnection)
+		#QThreadPool.globalInstance().start(worker)
+		self.pool.start(self.job_list[jid])
 
 	#@Slot(int)
-	def change_job_numbers(self, num):
-		self.job_num = num
-		num = len(self.jobs)
+	#def update_job(self, jid):
+	#	self.updated.emit(jid)
+	#	print('update', jid)
 
-		if self.job_num > num:
-			for i in range(self.job_num - num):
-				self.submit_job()
+	@Slot(int)
+	def remove_job(self, jid):
+		if jid in self.job_list:
+			self.job_list.pop(jid)
+
+			self.job_count += 1
+			p = int(self.job_count/self.job_total*100)
+			self.signals.progress.emit(p)
+
+	def stop_job(self, jid):
+		if jid in self.job_list:
+			self.job_list[jid].stop()
+			self.job_list.pop(jid)
+			self.job_count += 1
+
+	def stop_jobs(self):
+		self.job_thread = 0
+		self.job_query = None
+
+		for jid in self.job_list:
+			self.job_list[jid].stop()
+
+	def set_thread(self, num):
+		self.job_thread = num
 
 	def run(self):
-		pass
-		
+		self.signals.progress.emit(0)
+		self.before_run()
+
+		while True:
+			if self.job_query is None:
+				break
+
+			if len(self.job_list) >= self.job_thread:
+				QThread.msleep(10)
+				continue
+
+			row = self.job_query.fetchone()
+
+			if row:
+				self.start_job(row[0])
+
+			if not self.job_list:
+				break
+
+		self.signals.progress.emit(100)
+		self.signals.finished.emit()
 
 class WorkerSignals(QObject):
-	finished = Signal()
-	refresh = Signal(int)
-	message = Signal(str)
-	failure = Signal(str)
-	threads = Signal(int)
-	stopjob = Signal(int)
-	progress = Signal(int)
+	finished = Signal(int)
+	changed = Signal(int)
 
 class BaseWorker(QRunnable):
 	processer = None
@@ -411,33 +446,33 @@ class BaseWorker(QRunnable):
 	def update_progress(self, data):
 		sql = "UPDATE jobs SET progress=? WHERE id=?"
 		DB.query(sql, (data['message'], self.job.id))
-		self.signals.refresh.emit(self.job.id)
+		self.signals.changed.emit(self.job.id)
 
 	def update_started(self):
 		sql = "UPDATE jobs SET status=?,progress=?,started=? WHERE id=?"
-		DB.query(sql, (2, 0, int(time.time()), self.job.id))
-		self.signals.refresh.emit(self.job.id)
+		DB.query(sql, (3, 0, int(time.time()), self.job.id))
+		self.signals.changed.emit(self.job.id)
 
 	def update_stopped(self):
 		sql = "UPDATE jobs SET status=? WHERE id=?"
-		DB.query(sql, (3, self.job.id))
-		self.signals.refresh.emit(self.job.id)
+		DB.query(sql, (2, self.job.id))
+		self.signals.changed.emit(self.job.id)
 
 	def update_finished(self):
 		sql = "UPDATE jobs SET progress=?,finished=? WHERE id=?"
 		DB.query(sql, (100, int(time.time()), self.job.id))
-		self.signals.refresh.emit(self.job.id)
-		self.signals.finished.emit()
+		self.signals.changed.emit(self.job.id)
+		self.signals.finished.emit(self.job.id)
 
 	def update_success(self):
 		sql = "UPDATE jobs SET status=? WHERE id=?"
 		DB.query(sql, (1, self.job.id))
-		self.signals.refresh.emit(self.job.id)
+		self.signals.changed.emit(self.job.id)
 
 	def update_error(self, data):
 		sql = "UPDATE jobs SET status=?,message=? WHERE id=?"
-		DB.query(sql, (0, data['message'] self.job.id))
-		self.signals.refresh.emit(self.job.id)
+		DB.query(sql, (0, data['message'], self.job.id))
+		self.signals.changed.emit(self.job.id)
 
 	def write_pose_interactions(self, data):
 		jid = data['job']
@@ -521,15 +556,13 @@ class BaseWorker(QRunnable):
 		cmds = self.get_commands()
 		self.process = self.processer(self.job, self.params, cmds, tmpdir, self.pipe)
 		self.process.start()
-		self.update_started()
 
-	def stop_job(self, job):
-		children = self.process.children(recursive=True)
+	def stop(self):
+		proc = psutil.Process(self.process.pid)
 
-		for child in children:
+		for child in proc.children(recursive=True):
 			child.kill()
 
-		self.process.join()
 		self.update_stopped()
 		self.pipe.close()
 
@@ -546,12 +579,17 @@ class BaseWorker(QRunnable):
 		elif data['action'] == 'success':
 			self.update_success()
 
-		#elif data['action'] == 'finish':
-		#	self.update_finished(data)
+		elif data['action'] == 'finish':
+			while True:
+				if self.pipe.empty():
+					self.pipe.close()
+
+				QThread.msleep(10)
 
 	@Slot()
 	def run(self):
 		self.start_process()
+		self.update_started()
 
 		while True:
 			try:
@@ -561,8 +599,7 @@ class BaseWorker(QRunnable):
 			except:
 				break
 
-			finally:
-				self.update_finished()
+		self.update_finished()
 
 class AutodockWorker(BaseWorker):
 	processer = AutodockProcess

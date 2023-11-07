@@ -832,30 +832,35 @@ class ReceptorPreprocessConfigPage(DockeyConfigPage):
 		self.main_layout.addLayout(pdbfix_grid)
 		pdbfix_label = QLabel("<b>Use PDBFixer to fix receptor PDB file</b>", self)
 		use_pdbfix = QCheckBox(self)
-		self.register_widget(use_pdbfix, 'check', 'PDBFixer/use_pdbfix', True, bool)
+		self.register_widget(use_pdbfix, 'check', 'PDBFixer/use_pdbfix', False, bool)
 
 		pdbfix_grid.addWidget(use_pdbfix, 0, 0)
 		pdbfix_grid.addWidget(pdbfix_label, 0, 1)
 		
 		replace_nonres = QCheckBox("Replace non-standard residues", self)
+		replace_nonres.setEnabled(False)
 		self.register_widget(replace_nonres, 'check', 'PDBFixer/replace_nonres', True, bool)
 		pdbfix_grid.addWidget(replace_nonres, 1, 1)
 		use_pdbfix.stateChanged.connect(replace_nonres.setEnabled)
 
 		remove_heterogen = QCheckBox("Remove all heterogens including water", self)
+		remove_heterogen.setEnabled(False)
 		self.register_widget(remove_heterogen, 'check', 'PDBFixer/remove_heterogen', True, bool)
 		pdbfix_grid.addWidget(remove_heterogen, 2, 1)
 		use_pdbfix.stateChanged.connect(remove_heterogen.setEnabled)
 
 		add_misheavy = QCheckBox("Add missing heavy atoms", self)
+		add_misheavy.setEnabled(False)
 		self.register_widget(add_misheavy, 'check', 'PDBFixer/add_misheavy', True, bool)
 		pdbfix_grid.addWidget(add_misheavy, 3, 1)
 		use_pdbfix.stateChanged.connect(add_misheavy.setEnabled)
 
 		add_mishydrogen = QCheckBox("Add missing hydrogen atoms, the pH to use for adding hydrogens:", self)
+		add_mishydrogen.setEnabled(False)
 		self.register_widget(add_mishydrogen, 'check', 'PDBFixer/add_mishydrogen', True, bool)
 		pdbfix_grid.addWidget(add_mishydrogen, 4, 1)
 		mishydrogen_ph = QDoubleSpinBox(self)
+		mishydrogen_ph.setEnabled(False)
 		mishydrogen_ph.setRange(0, 14)
 		mishydrogen_ph.setDecimals(1)
 		self.register_widget(mishydrogen_ph, 'spin', 'PDBFixer/mishydrogen_ph', 7.0, float)
@@ -868,7 +873,7 @@ class ReceptorPreprocessConfigPage(DockeyConfigPage):
 		pdbpqr_grid.setColumnStretch(1, 1)
 		pdbpqr_grid.setColumnStretch(2, 1)
 		self.main_layout.addLayout(pdbpqr_grid)
-		pdbpqr_label = QLabel("<b>Use PDB2PQR to convert PDB file to PQR file</b>", self)
+		pdbpqr_label = QLabel("<b>Use PDB2PQR to convert receptor PDB file to PQR file</b>", self)
 		use_pdbpqr = QCheckBox(self)
 		self.register_widget(use_pdbpqr, 'check', 'PDB2PQR/use_pdbpqr', False, bool)
 
@@ -1137,7 +1142,7 @@ class LigandPreparationConfigPage(DockeyConfigPage):
 		stack_widget = QStackedWidget(self)
 		tool_select.currentIndexChanged.connect(stack_widget.setCurrentIndex)
 
-		self.register_widget(tool_select, 'select', 'Ligand/prepare_tool', 'prepare_ligand4', str)
+		self.register_widget(tool_select, 'select', 'Ligand/prepare_tool', 'meeko', str)
 
 		tool_layout = QHBoxLayout()
 		tool_layout.addWidget(QLabel("<b>Select ligand preparation tool:</b>"))
@@ -1708,7 +1713,7 @@ class FlexResiduesDialog(QDialog):
 class LigandFilterDialog(QDialog):
 	def __init__(self, parent):
 		super().__init__(parent)
-		self.setWindowTitle("Perform Ligand Filter")
+		self.setWindowTitle("Filter and Remove Ligands")
 		self.weight = QDoubleSpinBox(self)
 		self.weight.setRange(0, 100000)
 		self.weight.setDecimals(3)
@@ -1753,13 +1758,14 @@ class LigandFilterDialog(QDialog):
 		grid_layout.addWidget(self.clogp, 2, 3)
 
 		self.layout = QVBoxLayout()
-		self.layout.addWidget(QLabel("<b>Remove ligands that match the filter:</b>", self))
+		self.setLayout(self.layout)
+		self.layout.addWidget(QLabel("<b>Remove ligands that match these filters:</b>", self))
 		self.layout.addLayout(grid_layout)
 		self.layout.addSpacing(20)
 		self.layout.addWidget(self.btns)
 
 	def sizeHint(self):
-		return QSize(400, 100)
+		return QSize(450, 100)
 
 	@classmethod
 	def filter(cls, parent):
@@ -1806,7 +1812,7 @@ class AcknowledgementDialog(QDialog):
 		self.setLayout(layout)
 
 		info = QLabel(
-			"Dockey has integrated a plenty of external useful tools "
+			"Dockey has integrated several external useful tools "
 			"and denpends on preinstallation of docking engines"
 		, self)
 		layout.addWidget(info)

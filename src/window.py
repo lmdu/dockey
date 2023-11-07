@@ -67,15 +67,12 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 	def closeEvent(self, event):
 		self.write_settings()
 
-		#kill all subprocess
-		parent = psutil.Process(os.getpid())
-		children = parent.children(recursive=True)
-		
-		for child in children:
-			child.kill()
+		if DB.active():
+			sql = "UPDATE jobs SET status=? WHERE status>2"
+			DB.query(sql, (2,))
 
 		if self.job_worker:
-			self.job_worker.exit()
+			self.job_worker.stop_jobs()
 
 		event.accept()
 
@@ -590,6 +587,9 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		self.bounding_box_act.triggered.connect(self.draw_bounding_box)
 		self.bounding_box_act.setIconVisibleInMenu(False)
 
+		self.centered_box_act = QAction("Draw Residue Centered Box", self)
+		self.centered_box_act.triggered.connect(self.draw_centered_box)
+
 		self.custom_box_act = QAction("Draw Custom Box", self)
 		self.custom_box_act.triggered.connect(self.draw_custom_box)
 
@@ -688,6 +688,7 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 
 		self.grid_menu = self.menuBar().addMenu("&Grid")
 		self.grid_menu.addAction(self.bounding_box_act)
+		self.grid_menu.addAction(self.centered_box_act)
 		self.grid_menu.addAction(self.custom_box_act)
 		self.grid_menu.addSeparator()
 		self.grid_menu.addAction(self.delete_box_act)
@@ -816,10 +817,11 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		dlg = TaskManagerDialog(self)
 
 		if dlg.exec() == QDialog.Accepted:
+			settings = QSettings()
+			num = settings.value('Job/concurrent', 1, int)
+
 			if self.job_worker:
-				settings = QSettings()
-				num = settings.value('Job/concurrent', 1, int)
-				self.job_worker.signals.threads.emit(num)
+				self.job_worker.set_thread(num)
 
 	def new_project(self):
 		if DB.active():
@@ -1176,19 +1178,30 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 	def draw_bounding_box(self):
 		r = self.get_current_receptor()
 
-		if not r:
-			return
+		if not r: return
 
 		points = self.cmd.get_extent(r.name)
 		self.box_adjuster.params.update_dimension(points)
 		draw_gridbox(self.cmd, self.box_adjuster.params)
 		self.box_dock.setVisible(True)
 
+	def draw_centered_box(self):
+		r = self.get_current_receptor()
+
+		if not r: return
+		residues = self.cmd.iterate('resn')
+
+		print(residues)
+
+		#points = self.cmd.get_extent()
+		#self.box_adjuster.params.update_dimension(points)
+		#draw_gridbox(self.cmd, self.box_adjuster.params)
+		#self.box_dock.setVisible(True)
+
 	def draw_custom_box(self):
 		r = self.get_current_receptor()
 
-		if not r:
-			return
+		if not r: return
 
 		self.box_adjuster.params.custom()
 		draw_gridbox(self.cmd, self.box_adjuster.params)
@@ -1226,30 +1239,43 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		if self.job_worker is not None:
 			self.job_worker.stop_job(job)
 
-		sql = "UPDATE jobs SET status=?,message=? WHERE id=?"
-		DB.query(sql, (4, 'Stopped', job))
-		self.job_model.update_row(job)
+		#sql = "UPDATE jobs SET status=?,message=? WHERE id=?"
+		#DB.query(sql, (4, 'Stopped', job))
+		#self.job_model.update_row(job)
 
 	def start_jobs(self):
 		ret = DB.get_one("SELECT 1 FROM jobs LIMIT 1")
 
-		if not ret:
-			return
+		if not ret: return
 
 		params = self.job_params.deep_copy()
 
 		if self.job_engine == 'autodock':
-			self.job_worker = AutodockWorker(params)
-		elif self.job_engine == 'vina':
-			self.job_worker = AutodockVinaWorker(params)
-		elif self.job_engine == 'qvina':
-			self.job_worker = QuickVinaWorker(params)
+			#self.job_worker = AutodockWorker(params)
+			self.job_worker = WorkerManager(AutodockWorker, params)
 
-		self.job_worker.signals.refresh.connect(self.job_model.update_row)
-		self.job_worker.signals.failure.connect(self.show_error_message)
+		elif self.job_engine == 'vina':
+			#self.job_worker = AutodockVinaWorker(params)
+			self.job_worker = WorkerManager(AutodockVinaWorker, params)
+
+		elif self.job_engine == 'qvina':
+			#self.job_worker = QuickVinaWorker(params)
+			self.job_worker = WorkerManager(QuickVinaWorker, params)
+
+		#self.job_worker.signals.refresh.connect(self.job_model.update_row)
+		#self.job_worker.signals.failure.connect(self.show_error_message)
+		#self.job_worker.signals.finished.connect(self.pose_tab.select)
+		#self.job_worker.signals.progress.connect(self.progressbar.setValue)
+
+		self.job_worker.signals.updated.connect(self.job_model.update_row)
 		self.job_worker.signals.finished.connect(self.pose_tab.select)
 		self.job_worker.signals.progress.connect(self.progressbar.setValue)
-
+		#self.job_thread = QThread(self)
+		#self.job_thread.started.connect(self.job_worker.run)
+		#self.job_worker.finished.connect(self.job_thread.quit)
+		#self.job_worker.finished.connect(self.job_worker.deleteLater)
+		#self.job_worker.moveToThread(self.job_thread)
+		#self.job_thread.start()
 		QThreadPool.globalInstance().start(self.job_worker)
 
 	def check_mols(self):
@@ -1384,11 +1410,11 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 			count = DB.get_one(sql)
 
 			if count == 0:
-				QMessageBox.warning(self, "Warning", "No molecules match the filter.")
+				QMessageBox.warning(self, "Warning", "No molecules match these filters")
 
 			else:
 				ret = QMessageBox.question(self, "Comfirmation",
-					"Are you sure you want to remove {} ligand(s) that match the filter?".format(count))
+					"Are you sure you want to remove {} ligand(s) that match these filters?".format(count))
 
 				if ret == QMessageBox.Yes:
 					DB.query("DELETE FROM molecular WHERE type=2 AND {}".format(condition))
