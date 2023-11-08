@@ -1189,14 +1189,22 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		r = self.get_current_receptor()
 
 		if not r: return
-		residues = self.cmd.iterate('resn')
 
-		print(residues)
+		items = []
+		for res in get_molecule_residues(r.content, r.format):
+			items.append("Chain {}, {}-{}".format(res[1], res[2].capitalize(), res[3]))
 
-		#points = self.cmd.get_extent()
-		#self.box_adjuster.params.update_dimension(points)
-		#draw_gridbox(self.cmd, self.box_adjuster.params)
-		#self.box_dock.setVisible(True)
+		res, ok = QInputDialog.getItem(self, "Select a residue", "Draw grid box centered on a selected residue:", items)
+
+		if not ok: return
+
+		sel = res.replace(', ', ' and resn ').replace('-', ' and resi ')
+		
+
+		points = self.cmd.get_extent(sel)
+		self.box_adjuster.params.update_dimension(points)
+		draw_gridbox(self.cmd, self.box_adjuster.params)
+		self.box_dock.setVisible(True)
 
 	def draw_custom_box(self):
 		r = self.get_current_receptor()

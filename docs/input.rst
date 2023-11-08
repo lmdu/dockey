@@ -81,19 +81,51 @@ The imported ligands and receptors will be separately displayed in molecular lis
 
 	|mol|
 
-The molecular list has right-click menu. You can use **Import Receptors** and **Import Ligands** in menu list to import receptor and ligand files.
+The molecular list has right-click menu.
 
 .. rst-class:: wy-text-center
 
 	|molmenu|
 
-You also allowed to use **Delete** to remove current selected molecule and **Delete All** to remove all molecules from Dockey.
+Delete molecules
+^^^^^^^^^^^^^^^^
 
-You can use **View Details** to obtain detailed information of molecule including number of atoms, bonds, heavy atoms, residues and rotors, formula, molecular weight as well as calculated *logp*.
+You are allowed to use:
+
+1. **Delete Current Molecule** to remove current selected molecule.
+2. **Delete All Receptors** to remove all receptors from molecular list.
+3. **Delete All Ligands** to remove all ligands from molecular list.
+4. **Delete All Molecules** to remove all receptors and ligands from molecular list.
+
+Filter and remove ligands
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+You are also allowed to use filter conditions to find molecules and remove them from molecular list.
+
+.. rst-class:: wy-text-center
+
+	|ligfilter|
+
+You can use **molecular weight**, **number of rotatable bonds** and **calculated logP** to filter ligands. The ligands that math these filters will be removed from molecular list.
+
+View molecule details
+^^^^^^^^^^^^^^^^^^^^^
+
+You can use **View Current Molecule** to obtain detailed information of molecule including number of atoms, bonds, heavy atoms, residues and rotors, formula, molecular weight as well as calculated *logp*.
 
 .. rst-class:: wy-text-center
 
 	|molinfo|
+
+View molecule counts
+^^^^^^^^^^^^^^^^^^^^
+
+You can use **View Molecule Counts** to view the number of receptors and ligands.
+
+.. rst-class:: wy-text-center
+
+	|molnum|
+
 
 .. |pdb| image:: _static/pdb.png
 	:width: 400
@@ -108,4 +140,8 @@ You can use **View Details** to obtain detailed information of molecule includin
 .. |molmenu| image:: _static/molmenus.png
 	:width: 400
 .. |molinfo| image:: _static/molinfo.png
+	:width: 400
+.. |ligfilter| image:: _static/ligfilter.png
+	:width: 500
+.. |molnum| image:: _static/molnum.png
 	:width: 400

@@ -443,6 +443,10 @@ class BaseWorker(QRunnable):
 	#	self.job_query = None
 	#	self.producer.close()
 
+	#def __del__(self):
+	#	if self.tempdir and self.tempdir.isValid():
+	#		self.tempdir.remove()
+
 	def update_progress(self, data):
 		sql = "UPDATE jobs SET progress=? WHERE id=?"
 		DB.query(sql, (data['message'], self.job.id))
@@ -537,7 +541,7 @@ class BaseWorker(QRunnable):
 
 	def make_temp_dir(self):
 		self.tempdir = QTemporaryDir()
-		self.tempdir.setAutoRemove(False)
+		#self.tempdir.setAutoRemove(False)
 
 		if not self.tempdir.isValid():
 			raise Exception(

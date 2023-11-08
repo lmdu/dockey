@@ -21,6 +21,8 @@ Before running molecular docking, you can specify search space for receptor by a
 
 #. You can go to **Grid** menu -> **Draw Bounding Box** to draw a grid box enveloping the whole receptor.
 
+#. You can go to **Grid** menu -> **Draw Residue Centered Box** to select a residue and draw a grid box centered on that residue.
+
 #. You can also go to **Grid** menu -> **Draw Custom Box** to draw a grid box whose size and position can be adjusted through gridbox panel.
 
 .. rst-class:: wy-text-center
@@ -33,7 +35,7 @@ You are allowed to observe the box size and position in PyMOL view.
 
 .. note::
 
-	The value of points in each dimension must be even number.
+	The value of points in each dimension must be even number. Don't forget to click **Save grid box** button after setting grid box.
 
 Performing basic docking
 ------------------------
@@ -120,13 +122,13 @@ Similar to AutoDock Vina, QuickVina-W also needs two steps.
 Performing flexible docking
 ---------------------------
 
-Before performing flexible docking, you should specify flex residues for receptors. In molecular list, right-click a receptor, go to ``Set Flexible Residues`` menu to open dialog:
+Before performing flexible docking, you should specify flex residues for receptors. In molecular list, right-click a receptor, go to **Specify Flexible Residues** menu to open dialog:
 
 .. rst-class:: wy-text-center
 
 	|flexres|
 
-In the residule list, select residues as flexible residues. In addition, you can check ``Select bonds to disallowed`` and click a flexible residue to select bonds to disallowed.
+In the residule list, select residues as flexible residues. In addition, you can check **Select bonds to disallowed** and click a flexible residue to select some bonds to disallowed.
 
 .. rst-class:: wy-text-center
 
@@ -136,22 +138,30 @@ The Dockey will automatically split the receptor coordinates into two PDBQT file
 
 After specification of flexible residues, you can follow the performing basic docking steps to start flexible docking.
 
-Docking Jobs
-------------
+Docking tasks
+-------------
 
-After setting finished for one of docking engines, the each ligand will be docked to each receptor, the generated job queue can be viewed in job table.
+After setting finished for one of docking engines, the each ligand will be docked to each receptor, the generated task queue can be viewed in task table.
 
 .. rst-class:: wy-text-center
 
 	|jobtb|
 
-In job table, you can view the status and progress of each docking job. The status includes pending, running, success and failure.
+In task table, you can view the status and progress of each docking task. The status includes waiting, running, success, failure and stopped.
 
-You are allowed to view the start time and end time of job by using **View Details** in job table right-click menu.
+You are allowed to view the start time and end time of task by using **View Current Task** in task table right-click menu.
 
 .. rst-class:: wy-text-center
 
 	|jobdt|
+
+You are allowed to use **Stop Current Task** to stop the running task. Note that the stopped task can not be restarted.
+
+You can use **View Task Counts** to view the number of tasks.
+
+.. rst-class:: wy-text-center
+
+	|jobnum|
 
 Parallel docking
 ----------------
@@ -215,3 +225,5 @@ Go to **Toolbar** -> click |cpu| to open computing resource usage dialog where y
 	:width: 500
 .. |cpu| image:: _static/cpu.svg
 	:width: 24
+.. |jobnum| image:: _static/jobnum.png
+	:width: 300

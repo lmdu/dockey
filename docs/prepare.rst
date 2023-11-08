@@ -4,7 +4,7 @@ Molecular Preparation
 Receptor Preprocessing
 ----------------------
 
-By default, the Dockey will automatically preprocess the receptors using `PDBFixer <https://github.com/openmm/pdbfixer>`_ or `PDB2PQR <https://github.com/Electrostatics/pdb2pqr>`_. You can go to **Edit** menu -> **Settings** -> **Receptor preprocessing** tab to disable or enable preprocessing tools and set the corresponding parameters. The setting panel was shown in following image:
+Sometimes, your receptor PDB file may have some problems during molecular docking. You can use `PDBFixer <https://github.com/openmm/pdbfixer>`_ or `PDB2PQR <https://github.com/Electrostatics/pdb2pqr>`_ to fix the PDB file. You can go to **Edit** menu -> **Settings** -> **Receptor preprocessing** tab to disable or enable preprocessing tools and set the corresponding parameters. The setting panel was shown in following image:
 
 .. rst-class:: wy-text-center
 

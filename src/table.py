@@ -23,7 +23,7 @@ __all__ = ['DockeyListView', 'JobTableView', 'PoseTableView',
 class MoleculeDetailDialog(QDialog):
 	def __init__(self, parent, info):
 		super(MoleculeDetailDialog, self).__init__(parent)
-		self.setWindowTitle("Molecular Details")
+		self.setWindowTitle("Molecule counts")
 		layout = QVBoxLayout()
 		self.setLayout(layout)
 

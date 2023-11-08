@@ -2,3 +2,5 @@ Fix Segmentation fault when closing on linux
 https://github.com/microsoft/wslg/issues/715
 export MESA_D3D12_DEFAULT_ADAPTER_NAME="llvm"
 export LIBGL_ALWAYS_SOFTWARE=true
+
+https://www.researchgate.net/post/Not_getting_the_correct_docked_position_of_a_known_ligand_in_a_protein_using_Autodock_vina_What_to_do
