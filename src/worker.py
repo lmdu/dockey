@@ -38,7 +38,7 @@ class ImportWorker(QRunnable):
 		self.mol_files = mol_files
 		self.mol_type = mol_type
 		self.mol_count = 0
-		self.consumer, self.producer = multiprocessing.Pipe(duplex=False)
+		self.pipe = multiprocessing.SimpleQueue()
 
 	def delete_imported_molecules(self):
 		DB.query("DELETE FROM molecular")
@@ -73,43 +73,42 @@ class ImportWorker(QRunnable):
 		DB.insert_rows(sql, data['rows'])
 		self.signals.message.emit("Imported {} {}".format(data['total'], mol_type))
 
+	def call_response(self, data):
+		if data['action'] == 'insert':
+			self.write_molecules(data)
+			self.mol_count = data['total']
+
+			if data['progress'] > 0:
+				self.signals.progress.emit(data['progress'])
+
+		elif data['action'] == 'failure':
+			self.signals.failure.emit(data['message'])
+			self.mol_count = 0
+
+		#elif data['action'] == 'success':
+		#	self.signals.success.emit()
+
+		elif data['action'] == 'finish':
+			self.pipe.close()
+
+	@Slot()
 	def run(self):
 		self.signals.message.emit("Starting import molecules ...")
 		self.signals.progress.emit(0)
 
-		proc = self.processer(self.mol_files, self.mol_type, self.producer)
+		proc = self.processer(self.mol_files, self.mol_type, self.pipe)
 		proc.start()
 
-		self.producer.close()
-
-		while 1:
+		while True:
 			try:
-				data = self.consumer.recv()
-
-				if data['action'] == 'insert':
-					self.write_molecules(data)
-					self.mol_count = data['total']
-
-					if data['progress'] > 0:
-						self.signals.progress.emit(data['progress'])
-
-				elif data['action'] == 'failure':
-					self.signals.failure.emit(data['message'])
-					self.mol_count = 0
-
-			except EOFError:
-				break
-
+				data = self.pipe.get()
+				self.call_response(data)
 			except:
-				self.signals.failure.emit(traceback.format_exc())
 				break
-
-			else:
-				#self.signals.success.emit()
-				pass
 
 		if self.mol_count > 0:
 			self.update_molecule_count()
+			self.signals.success.emit()
 
 			if self.mol_count > 1:
 				mol_type = ['', 'receptors', 'ligands'][self.mol_type]
@@ -118,7 +117,6 @@ class ImportWorker(QRunnable):
 					self.mol_count, mol_type))
 
 		self.signals.progress.emit(100)
-		self.signals.success.emit()
 
 class ImportFileWorker(ImportWorker):
 	processer = ImportFileProcess
@@ -144,54 +142,52 @@ class JobListGenerator(QRunnable):
 		super(JobListGenerator, self).__init__()
 		self.setAutoDelete(True)
 		self.signals = JobListSignals()
-		self.consumer, self.producer = multiprocessing.Pipe(duplex=False)
+		self.pipe = multiprocessing.SimpleQueue()
+		self.job_insert = 0
 
 	def write_jobs(self, data):
 		sql = "INSERT INTO jobs VALUES (?,?,?,?,?,?,?,?)"
 		DB.insert_rows(sql, data['rows'])
 		self.signals.message.emit("Generated {} jobs".format(data['total']))
+		self.job_insert += len(data['rows'])
 
 		if data['progress']:
 			self.signals.progress.emit(data['progress'])
+
+	def call_response(self, data):
+		if data['action'] == 'insert':
+			self.write_jobs(data)
+
+		elif data['action'] == 'failure':
+			self.signals.failure.emit(data['message'])
+
+		#elif data['action'] == 'success':
+		#	self.signals.success.emit()
+
+		elif data['action'] == 'finish':
+			self.signals.finished.emit()
+			self.pipe.close()
 
 	def run(self):
 		self.signals.progress.emit(0)
 
 		rids = DB.get_column("SELECT id FROM molecular WHERE type=1")
-		lids = DB.get_column("SELECT id FROM molecular WHERE type=2")
+		lids = DB.get_column("SELECT id FROM molecular WHERE type=2")		
 
-		total_jobs = len(rids) * len(lids)
-
-		proc = JobListProcess(rids, lids, self.producer)
+		proc = JobListProcess(rids, lids, self.pipe)
 		proc.start()
 
-		self.producer.close()
-
-		while 1:
+		while True:
 			try:
-				data = self.consumer.recv()
-
-				if data['action'] == 'insert':
-					self.write_jobs(data)
-
-				if data['action'] == 'failure':
-					self.signals.failure.emit(data['message'])
-
-			except EOFError:
-				break
-
+				data = self.pipe.get()
+				self.call_response(data)
 			except:
-				error = traceback.format_exc()
-				self.signals.failure.emit(error)
 				break
 
-			else:
-				#self.signals.success.emit()
-				pass
+		if self.job_insert > 0:
+			DB.set_option('job_count', self.job_insert)
+			self.signals.success.emit()
 
-		DB.set_option('job_count', total_jobs)
-		self.signals.finished.emit()
-		self.signals.success.emit()
 		self.signals.progress.emit(100)
 
 class ManagerSignals(QObject):
@@ -379,15 +375,14 @@ class WorkerManager(QRunnable):
 	def stop_job(self, jid):
 		if jid in self.job_list:
 			self.job_list[jid].stop()
-			self.job_list.pop(jid)
-			self.job_count += 1
 
 	def stop_jobs(self):
 		self.job_thread = 0
 		self.job_query = None
 
-		for jid in self.job_list:
-			self.job_list[jid].stop()
+		for jid in list(self.job_list.keys()):
+			if jid in self.job_list:
+				self.job_list[jid].stop()
 
 	def set_thread(self, num):
 		self.job_thread = num

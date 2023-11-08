@@ -20,12 +20,12 @@ __all__ = ['ImportFileProcess', 'ImportFolderProcess', 'JobListProcess',
 ]
 
 class ImportProcess(multiprocessing.Process):
-	def __init__(self, mol_files, mol_type, producer):
-		super(ImportProcess, self).__init__()
+	def __init__(self, mol_files, mol_type, pipe):
+		super().__init__()
 		self.daemon = True
 		self.mol_files = mol_files
 		self.mol_type = mol_type
-		self.producer = producer
+		self.pipe = pipe
 		self.mol_list = []
 		self.mol_count = 0
 		self.mol_total = 0
@@ -54,12 +54,12 @@ class ImportProcess(multiprocessing.Process):
 			else:
 				p = 0
 
-			self.producer.send({
+			self.pipe.put({
 				'action': 'insert',
 				'rows': self.mol_list,
 				'total': self.mol_count,
 				'progress': p
-			})		
+			})
 			self.mol_list = []
 
 	def process(self):
@@ -69,15 +69,19 @@ class ImportProcess(multiprocessing.Process):
 		try:
 			self.process()
 			self.write()
-
+			self.pipe.put({
+				'action': 'success'
+			})
 		except:
-			self.producer.send({
+			self.pipe.put({
 				'action': 'failure',
 				'message': traceback.format_exc()
 			})
 			
 		finally:
-			self.producer.close()
+			self.pipe.put({
+				'action': 'finish'
+			})
 
 class ImportFileProcess(ImportProcess):
 	def process(self):
@@ -128,7 +132,7 @@ class ImportURLProcess(ImportProcess):
 			self.add(m)
 
 class JobListProcess(multiprocessing.Process):
-	def __init__(self, rids, lids, producer):
+	def __init__(self, rids, lids, pipe):
 		super(JobListProcess, self).__init__()
 		self.daemon = True
 		self.rids = rids
@@ -136,7 +140,7 @@ class JobListProcess(multiprocessing.Process):
 		self.job_list = []
 		self.job_count = 0
 		self.job_total = 0
-		self.producer = producer
+		self.pipe = pipe
 		self.progress = 0
 
 	def write(self):
@@ -150,7 +154,7 @@ class JobListProcess(multiprocessing.Process):
 			else:
 				p = 0
 
-			self.producer.send({
+			self.pipe.put({
 				'action': 'insert',
 				'rows': self.job_list,
 				'total': self.job_count,
@@ -173,17 +177,21 @@ class JobListProcess(multiprocessing.Process):
 	def run(self):
 		try:
 			self.process()
-
+			self.pipe.put({
+				'action': 'success'
+			})
 		except:
 			error = traceback.format_exc()
-			self.producer.send({
+			self.pipe.put({
 				'action': 'failure',
 				'message': error
 			})
 			print(error)
 
 		finally:
-			self.producer.close()
+			self.pipe.put({
+				'action': 'finish'
+			})
 
 class BaseProcess(multiprocessing.Process):
 	def __init__(self, job, params, cmds, work_dir, pipe):
