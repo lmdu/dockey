@@ -4,6 +4,8 @@ import math
 
 from pymol import cmd
 from rdkit import Chem
+from MolKit import Read
+from MolKit.pdbWriter import PdbWriter
 from openbabel import openbabel
 from urllib.error import HTTPError
 from urllib.request import urlopen
@@ -18,8 +20,26 @@ __all__ = ['AttrDict', 'draw_gridbox', 'convert_dimension_to_coordinates',
 	'time_elapse', 'generate_complex_pdb', 'get_complex_interactions',
 	'interaction_visualize', 'get_dimension_from_pdb', 'load_molecule_from_file',
 	'convert_string_to_pdb', 'memory_format', 'get_molecule_residues', 'sdf_file_parser',
-	'get_sdf_props', 'get_residue_bonds'
+	'get_sdf_props', 'get_residue_bonds', 'convert_pdbqt_to_pdb_by_adt'
 ]
+
+class NewPdbWriter(PdbWriter):
+	def write_string(self, nodes):
+		try:
+			self.write(None, nodes)
+		except:
+			pass
+
+		lines = []
+		for rec in self.PDBRECORDS:
+			if rec in self.recordsToWrite:
+				recLine = self.recordsToWrite[rec]
+				if type(recLine) is list:
+					lines.extend(recLine)
+				else:
+					lines.append(recLine)
+
+		return ''.join(lines)
 
 class AttrDict(dict):
 	def __getattr__(self, attr):
@@ -137,6 +157,10 @@ def draw_gridbox(cmd, data):
 		bg_z = data.bg_z
 	)
 
+def generate_complex_pdb(*args):
+	return ''.join(args)
+
+'''
 def generate_complex_pdb(receptor_pdb, ligand_pdb):
 	complex_lines = []
 	no_tre = True
@@ -210,6 +234,16 @@ def generate_complex_pdb(receptor_pdb, ligand_pdb):
 		complex_lines.append('END')
 
 	return '\n'.join(complex_lines)
+'''
+
+def convert_pdbqt_to_pdb_by_adt(pdbqt, as_string=False):
+	if as_string:
+		mol = Read(alllines=pdbqt, dataformat='pdbqt')
+	else:
+		mol = Read(pdbqt)
+
+	writer = NewPdbWriter()
+	return writer.write_string(mol.allAtoms)
 
 def convert_pdbqt_to_pdb(pdbqt, as_string=True):
 	obc = openbabel.OBConversion()

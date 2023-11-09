@@ -696,13 +696,13 @@ class JobsTableModel(DockeyTableModel):
 		if rowid not in self.displayed:
 			return
 
-		rowid -= 1
-		colid = len(self.custom_headers)-1
-		self.update_cache(rowid)
-		index1 = self.index(rowid, 0)
-		index2 = self.index(rowid, colid)
+		rowidx = rowid - 1
+		colidx = len(self.custom_headers)-1
+		self.update_cache(rowidx)
+		index1 = self.index(rowidx, 3)
+		index2 = self.index(rowidx, colidx)
 		self.dataChanged.emit(index1, index2)
-		self.headerDataChanged.emit(Qt.Vertical, rowid, rowid)
+		self.headerDataChanged.emit(Qt.Vertical, rowidx, rowidx)
 
 class JobsTableDelegate(QStyledItemDelegate):
 	def paint(self, painter, option, index):

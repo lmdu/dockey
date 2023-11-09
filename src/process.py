@@ -20,6 +20,8 @@ __all__ = ['ImportFileProcess', 'ImportFolderProcess', 'JobListProcess',
 ]
 
 class ImportProcess(multiprocessing.Process):
+	chunk_size = 200
+
 	def __init__(self, mol_files, mol_type, pipe):
 		super().__init__()
 		self.daemon = True
@@ -37,13 +39,10 @@ class ImportProcess(multiprocessing.Process):
 			m.energy, m.weight, m.logp
 		])
 
-		if len(self.mol_list) == 200:
+		if len(self.mol_list) == self.chunk_size:
 			self.write()
 
 	def write(self):
-		mol_type = ['', 'receptors', 'ligands'][self.mol_type]
-		sql = "INSERT INTO molecular VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
-
 		if self.mol_list:
 			self.mol_count += len(self.mol_list)
 
@@ -72,12 +71,13 @@ class ImportProcess(multiprocessing.Process):
 			self.pipe.put({
 				'action': 'success'
 			})
+
 		except:
 			self.pipe.put({
 				'action': 'failure',
 				'message': traceback.format_exc()
 			})
-			
+
 		finally:
 			self.pipe.put({
 				'action': 'finish'
@@ -217,6 +217,8 @@ class BaseProcess(multiprocessing.Process):
 		else:
 			self.flex_docking = False
 
+		self.progress = 0
+
 	def send_result(self, poses):
 		interactions = get_complex_interactions(poses, self.work_dir)
 
@@ -244,7 +246,9 @@ class BaseProcess(multiprocessing.Process):
 		})
 
 	def update_progress(self, progress):
-		self.send_message('progress', progress)
+		if progress > self.progress:
+			self.send_message('progress', progress)
+			self.progress = progress
 
 	def update_started(self):
 		self.send_message('start')
@@ -635,16 +639,18 @@ class AutodockVinaProcess(BaseProcess):
 
 				elif line.startswith('ENDMDL'):
 					lines.append(line)
-					mode = convert_pdbqt_to_pdb(''.join(lines))
+					mode = convert_pdbqt_to_pdb_by_adt(lines, as_string=True)
 					modes[idx] = mode
 
-				elif line.startswith('\x00'):
-					pass
+					print(mode)
+
+				#elif line.startswith('\x00'):
+				#	pass
 
 				else:
 					lines.append(line)
 
-		receptor = convert_pdbqt_to_pdb(rpdbqt, as_string=False)
+		receptor = convert_pdbqt_to_pdb_by_adt(rpdbqt, as_string=False)
 
 		for i, row in enumerate(rows):
 			mode = modes.get(i, '')

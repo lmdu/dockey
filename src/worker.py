@@ -22,26 +22,24 @@ __all__ = ['AutodockWorker', 'AutodockVinaWorker', 'QuickVinaWorker',
 ]
 
 class ImportSignals(QObject):
-	success = Signal()
+	success = Signal(str)
 	failure = Signal(str)
 	message = Signal(str)
-	finished = Signal(str)
+	finished = Signal()
 	progress = Signal(int)
 
 class ImportWorker(QRunnable):
 	processer = None
 
 	def __init__(self, mol_files, mol_type=0):
-		super(ImportWorker, self).__init__()
+		super().__init__()
 		self.setAutoDelete(True)
 		self.signals = ImportSignals()
 		self.mol_files = mol_files
 		self.mol_type = mol_type
 		self.mol_count = 0
 		self.pipe = multiprocessing.SimpleQueue()
-
-	def delete_imported_molecules(self):
-		DB.query("DELETE FROM molecular")
+		self.mol_text = ['', 'receptors', 'ligands'][self.mol_type]
 
 	def update_molecule_count(self):
 		if self.mol_type == 1:
@@ -68,10 +66,9 @@ class ImportWorker(QRunnable):
 		DB.set_option('molecule_count', total)
 
 	def write_molecules(self, data):
-		mol_type = ['', 'receptors', 'ligands'][self.mol_type]
 		sql = "INSERT INTO molecular VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
 		DB.insert_rows(sql, data['rows'])
-		self.signals.message.emit("Imported {} {}".format(data['total'], mol_type))
+		self.signals.message.emit("Imported {} {}".format(data['total'], self.mol_text))
 
 	def call_response(self, data):
 		if data['action'] == 'insert':
@@ -83,13 +80,19 @@ class ImportWorker(QRunnable):
 
 		elif data['action'] == 'failure':
 			self.signals.failure.emit(data['message'])
-			self.mol_count = 0
 
-		#elif data['action'] == 'success':
-		#	self.signals.success.emit()
+		elif data['action'] == 'success':
+			if self.mol_count > 1:
+				self.signals.success.emit("Successfully imported {} {}".format(
+					self.mol_count, self.mol_text))
 
 		elif data['action'] == 'finish':
-			self.pipe.close()
+			while True:
+				if self.pipe.empty():
+					self.pipe.close()
+					break
+
+				QThread.msleep(10)
 
 	@Slot()
 	def run(self):
@@ -108,15 +111,9 @@ class ImportWorker(QRunnable):
 
 		if self.mol_count > 0:
 			self.update_molecule_count()
-			self.signals.success.emit()
-
-			if self.mol_count > 1:
-				mol_type = ['', 'receptors', 'ligands'][self.mol_type]
-
-				self.signals.finished.emit("Successfully imported {} {}".format(
-					self.mol_count, mol_type))
 
 		self.signals.progress.emit(100)
+		self.signals.finished.emit()
 
 class ImportFileWorker(ImportWorker):
 	processer = ImportFileProcess
@@ -148,7 +145,7 @@ class JobListGenerator(QRunnable):
 	def write_jobs(self, data):
 		sql = "INSERT INTO jobs VALUES (?,?,?,?,?,?,?,?)"
 		DB.insert_rows(sql, data['rows'])
-		self.signals.message.emit("Generated {} jobs".format(data['total']))
+		self.signals.message.emit("Generated {} tasks".format(data['total']))
 		self.job_insert += len(data['rows'])
 
 		if data['progress']:
@@ -161,18 +158,24 @@ class JobListGenerator(QRunnable):
 		elif data['action'] == 'failure':
 			self.signals.failure.emit(data['message'])
 
-		#elif data['action'] == 'success':
-		#	self.signals.success.emit()
+		elif data['action'] == 'success':
+			if self.job_insert > 0:
+				DB.set_option('job_count', self.job_insert)
+				#self.signals.success.emit()
 
 		elif data['action'] == 'finish':
-			self.signals.finished.emit()
-			self.pipe.close()
+			while True:
+				if self.pipe.empty():
+					self.pipe.close()
+					break
+
+				QThread.msleep(10)
 
 	def run(self):
 		self.signals.progress.emit(0)
 
 		rids = DB.get_column("SELECT id FROM molecular WHERE type=1")
-		lids = DB.get_column("SELECT id FROM molecular WHERE type=2")		
+		lids = DB.get_column("SELECT id FROM molecular WHERE type=2")
 
 		proc = JobListProcess(rids, lids, self.pipe)
 		proc.start()
@@ -184,20 +187,20 @@ class JobListGenerator(QRunnable):
 			except:
 				break
 
-		if self.job_insert > 0:
-			DB.set_option('job_count', self.job_insert)
-			self.signals.success.emit()
-
 		self.signals.progress.emit(100)
+		self.signals.finished.emit()
 
 class ManagerSignals(QObject):
 	finished = Signal()
+	feedback = Signal(int)
 	updated = Signal(int)
 	progress = Signal(int)
+	message = Signal(str)
 
 class WorkerManager(QRunnable):
-	def __init__(self, dock_worker, dock_params):
+	def __init__(self, parent, dock_worker, dock_params):
 		super().__init__()
+		self.parent = parent
 		self.setAutoDelete(True)
 		self.pool = QThreadPool()
 		self.settings = QSettings()
@@ -209,6 +212,8 @@ class WorkerManager(QRunnable):
 		self.job_list = {}
 		self.job_count = 0
 		self.job_params = self.get_all_params()
+
+		self.signals.feedback.connect(self.remove_job)
 
 	def before_run(self):
 		self.job_total = int(DB.get_option('job_count'))
@@ -353,15 +358,14 @@ class WorkerManager(QRunnable):
 	def start_job(self, jid):
 		job = self.get_job(jid)
 		self.job_list[jid] = self.dock_worker(self.job_params, job)
-		self.job_list[jid].signals.finished.connect(self.remove_job, Qt.DirectConnection)
-		self.job_list[jid].signals.changed.connect(self.signals.updated, Qt.DirectConnection)
+		self.job_list[jid].signals.finished.connect(self.parent.job_worker.signals.feedback)
+		self.job_list[jid].signals.changed.connect(self.parent.job_model.update_row)
 		#QThreadPool.globalInstance().start(worker)
 		self.pool.start(self.job_list[jid])
 
 	#@Slot(int)
 	#def update_job(self, jid):
-	#	self.updated.emit(jid)
-	#	print('update', jid)
+	#	self.signals.updated.emit(jid)
 
 	@Slot(int)
 	def remove_job(self, jid):
@@ -389,6 +393,7 @@ class WorkerManager(QRunnable):
 
 	def run(self):
 		self.signals.progress.emit(0)
+		self.signals.message.emit("Docking running ...")
 		self.before_run()
 
 		while True:
@@ -409,6 +414,7 @@ class WorkerManager(QRunnable):
 
 		self.signals.progress.emit(100)
 		self.signals.finished.emit()
+		self.signals.message.emit("Docking completed")
 
 class WorkerSignals(QObject):
 	finished = Signal(int)
@@ -427,20 +433,6 @@ class BaseWorker(QRunnable):
 		self.pipe = multiprocessing.SimpleQueue()
 		self.tempdir = None
 		self.process = None
-
-		#self.signals.threads.connect(self.change_job_numbers)
-		#self.signals.stopjob.connect(self.stop_job)
-		#self.progress = 0
-		#self.job_total = 0
-		#self.job_finish = 0
-
-	#def exit(self):
-	#	self.job_query = None
-	#	self.producer.close()
-
-	#def __del__(self):
-	#	if self.tempdir and self.tempdir.isValid():
-	#		self.tempdir.remove()
 
 	def update_progress(self, data):
 		sql = "UPDATE jobs SET progress=? WHERE id=?"
@@ -536,7 +528,8 @@ class BaseWorker(QRunnable):
 
 	def make_temp_dir(self):
 		self.tempdir = QTemporaryDir()
-		#self.tempdir.setAutoRemove(False)
+		#open for test
+		self.tempdir.setAutoRemove(False)
 
 		if not self.tempdir.isValid():
 			raise Exception(
@@ -562,6 +555,7 @@ class BaseWorker(QRunnable):
 		for child in proc.children(recursive=True):
 			child.kill()
 
+		self.process.kill()
 		self.update_stopped()
 		self.pipe.close()
 
@@ -582,6 +576,7 @@ class BaseWorker(QRunnable):
 			while True:
 				if self.pipe.empty():
 					self.pipe.close()
+					break
 
 				QThread.msleep(10)
 

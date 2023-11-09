@@ -942,12 +942,17 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		self.mol_model.select()
 
 	def start_import_thread(self, thread):
+		pool = QThreadPool.globalInstance()
+
+		if pool.activeThreadCount() > 0:
+			return QMessageBox.warning(self, "Warning", "There is already a task running")
+
 		thread.signals.message.connect(self.show_message)
 		thread.signals.failure.connect(self.show_error_message)
-		thread.signals.success.connect(self.mol_model.select)
-		thread.signals.finished.connect(self.show_popup_message)
+		thread.signals.success.connect(self.show_popup_message)
+		thread.signals.finished.connect(self.mol_model.select)
 		thread.signals.progress.connect(self.progressbar.setValue)
-		QThreadPool.globalInstance().start(thread)
+		pool.start(thread)
 
 	def import_receptors(self):
 		receptors, _ = QFileDialog.getOpenFileNames(self,
@@ -1027,7 +1032,7 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 
 	def import_ligand_from_pubchem(self):
 		urls = PubchemDownloadDialog.get_urls(self)
-		
+
 		if not urls:
 			return
 
@@ -1036,7 +1041,7 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 
 	def import_ligand_from_chembl(self):
 		urls = ChemblDownloadDialog.get_urls(self)
-		
+
 		if not urls:
 			return
 
@@ -1049,16 +1054,14 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 	def export_as_image(self):
 		opt = ExportImageDialog.save_to_png(self)
 
-		if not opt:
-			return
+		if not opt: return
 
 		self.cmd.png(opt.image, opt.width, opt.height, opt.dpi, ray=1)
 
 	def export_as_file(self):
 		outfile, _ = QFileDialog.getSaveFileName(self, filter="PDB (*.pdb)")
 
-		if not outfile:
-			return
+		if not outfile: return
 
 		if not outfile.endswith('.pdb'):
 			outfile += '.pdb'
@@ -1226,14 +1229,19 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		DB.query("DELETE FROM grid WHERE id=?", (r.id,))
 
 	def generate_job_list(self):
+		pool = QThreadPool.globalInstance() 
+
+		if pool.activeThreadCount() > 0:
+			return QMessageBox.warning(self, "Warning", "There is already a task running")
+
 		DB.set_option('tool', self.job_engine)
 
 		thread = JobListGenerator()
 		thread.signals.message.connect(self.show_message)
-		thread.signals.success.connect(self.job_model.select)
+		thread.signals.finished.connect(self.job_model.select)
 		thread.signals.finished.connect(self.start_jobs)
 		thread.signals.progress.connect(self.progressbar.setValue)
-		QThreadPool.globalInstance().start(thread)
+		pool.start(thread)
 
 	def stop_job(self, job):
 		ret = QMessageBox.warning(self, "Warning",
@@ -1260,24 +1268,25 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 
 		if self.job_engine == 'autodock':
 			#self.job_worker = AutodockWorker(params)
-			self.job_worker = WorkerManager(AutodockWorker, params)
+			self.job_worker = WorkerManager(self, AutodockWorker, params)
 
 		elif self.job_engine == 'vina':
 			#self.job_worker = AutodockVinaWorker(params)
-			self.job_worker = WorkerManager(AutodockVinaWorker, params)
+			self.job_worker = WorkerManager(self, AutodockVinaWorker, params)
 
 		elif self.job_engine == 'qvina':
 			#self.job_worker = QuickVinaWorker(params)
-			self.job_worker = WorkerManager(QuickVinaWorker, params)
+			self.job_worker = WorkerManager(self, QuickVinaWorker, params)
 
 		#self.job_worker.signals.refresh.connect(self.job_model.update_row)
 		#self.job_worker.signals.failure.connect(self.show_error_message)
 		#self.job_worker.signals.finished.connect(self.pose_tab.select)
 		#self.job_worker.signals.progress.connect(self.progressbar.setValue)
 
-		self.job_worker.signals.updated.connect(self.job_model.update_row)
+		#self.job_worker.signals.updated.connect(self.job_model.update_row)
 		self.job_worker.signals.finished.connect(self.pose_tab.select)
 		self.job_worker.signals.progress.connect(self.progressbar.setValue)
+		self.job_worker.signals.message.connect(self.show_message)
 		#self.job_thread = QThread(self)
 		#self.job_thread.started.connect(self.job_worker.run)
 		#self.job_worker.finished.connect(self.job_thread.quit)
