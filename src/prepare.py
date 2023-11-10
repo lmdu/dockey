@@ -316,16 +316,19 @@ def prepare_meeko_ligand(ligand_file, ligand_pdbqt, params):
 
 	elif ligand_format == '.sdf':
 		#only get the first mol in sdf file
-		for mol in Chem.SDMolSupplier(ligand_file, sanitize=False, removeHs=False):
-			mol.UpdatePropertyCache(strict=False)
-			ps = Chem.DetectChemistryProblems(mol)
+		#for mol in Chem.SDMolSupplier(ligand_file, sanitize=False, removeHs=False):
+			#mol.UpdatePropertyCache(strict=False)
+			#ps = Chem.DetectChemistryProblems(mol)
 			
-			if ps:
-				errors = ['{}: {}\n'.format(p.GetType(), p.Message()) for p in ps]
-				raise Exception(''.join(errors))
+			#if ps:
+			#	errors = ['{}: {}\n'.format(p.GetType(), p.Message()) for p in ps]
+			#	raise Exception(''.join(errors))
 			
-			Chem.SanitizeMol(mol)
-			break
+			#Chem.SanitizeMol(mol)
+			#break
+		for mol in Chem.SDMolSupplier(ligand_file, removeHs=False):
+			pass
+
 
 	#add hydrogens and 3D coords
 	#if add_h_3d:

@@ -529,7 +529,7 @@ class BaseWorker(QRunnable):
 	def make_temp_dir(self):
 		self.tempdir = QTemporaryDir()
 		#open for test
-		self.tempdir.setAutoRemove(False)
+		#self.tempdir.setAutoRemove(False)
 
 		if not self.tempdir.isValid():
 			raise Exception(

@@ -111,7 +111,7 @@ You can use **molecular weight**, **number of rotatable bonds** and **calculated
 View molecule details
 ^^^^^^^^^^^^^^^^^^^^^
 
-You can use **View Current Molecule** to obtain detailed information of molecule including number of atoms, bonds, heavy atoms, residues and rotors, formula, molecular weight as well as calculated *logp*.
+You can use **View Molecule Details** to obtain detailed information of molecule including number of atoms, bonds, heavy atoms, residues and rotors, formula, molecular weight as well as calculated *logp*.
 
 .. rst-class:: wy-text-center
 

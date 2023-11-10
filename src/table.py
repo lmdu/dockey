@@ -211,7 +211,7 @@ class DockeyListView(QListView):
 		clr_m_act.triggered.connect(self.delete_all)
 		clr_m_act.setEnabled(DB.active())
 
-		view_act = QAction("View Current Molecule", self)
+		view_act = QAction("View Molecule Details", self)
 		view_act.triggered.connect(self.view_details)
 		view_act.setEnabled(self.current_index.isValid())
 
@@ -269,8 +269,6 @@ class DockeyListView(QListView):
 		mol_id = self.current_index.siblingAtColumn(0).data()
 		mol_type = self.current_index.siblingAtColumn(2).data()
 
-		DB.query("DELETE FROM molecular WHERE id=?", (mol_id,))
-
 		if mol_type == 1:
 			option = 'receptor_count'
 		else:
@@ -285,6 +283,7 @@ class DockeyListView(QListView):
 		DB.set_option('molecule_count', total)
 
 		self.parent.mol_model.remove(self.current_index.row())
+		DB.query("DELETE FROM molecular WHERE id=?", (mol_id,))
 
 	@Slot()
 	def delete_ligands(self):
@@ -532,8 +531,6 @@ class DockeyTableModel(QAbstractTableModel):
 		if row != self.cache_row[0]:
 			self.update_cache(row)
 
-		#print(self.cache_row)
-
 		return self.cache_row[1][col]
 
 	def update_cache(self, row):
@@ -607,7 +604,7 @@ class MolecularTableModel(DockeyTableModel):
 			elif v == 2:
 				return QIcon(":/icons/ligand.svg")
 
-		return super(MolecularTableModel, self).data(index, role)
+		return super().data(index, role)
 
 class JobsTableModel(DockeyTableModel):
 	table = 'jobs'

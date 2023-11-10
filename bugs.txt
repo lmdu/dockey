@@ -1,6 +1,13 @@
+1.
 Fix Segmentation fault when closing on linux
 https://github.com/microsoft/wslg/issues/715
 export MESA_D3D12_DEFAULT_ADAPTER_NAME="llvm"
 export LIBGL_ALWAYS_SOFTWARE=true
 
+2.
 https://www.researchgate.net/post/Not_getting_the_correct_docked_position_of_a_known_ligand_in_a_protein_using_Autodock_vina_What_to_do
+
+3.
+If you have installed openbabel on your machine, the openbabel in Dockey will do not work well.
+Uninstall openbabel and restart your computer.
+

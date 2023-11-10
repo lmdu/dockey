@@ -639,18 +639,18 @@ class AutodockVinaProcess(BaseProcess):
 
 				elif line.startswith('ENDMDL'):
 					lines.append(line)
-					mode = convert_pdbqt_to_pdb_by_adt(lines, as_string=True)
+					#mode = convert_pdbqt_to_pdb_by_adt(lines, as_string=True)
+					mode = convert_pdbqt_to_pdb(''.join(lines))
 					modes[idx] = mode
 
-					print(mode)
-
-				#elif line.startswith('\x00'):
-				#	pass
+				elif line.startswith('\x00'):
+					pass
 
 				else:
 					lines.append(line)
 
-		receptor = convert_pdbqt_to_pdb_by_adt(rpdbqt, as_string=False)
+		#receptor = convert_pdbqt_to_pdb_by_adt(rpdbqt, as_string=False)
+		receptor = convert_pdbqt_to_pdb(rpdbqt, as_string=False)
 
 		for i, row in enumerate(rows):
 			mode = modes.get(i, '')

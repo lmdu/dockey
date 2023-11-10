@@ -24,9 +24,9 @@ __all__ = ['AttrDict', 'draw_gridbox', 'convert_dimension_to_coordinates',
 ]
 
 class NewPdbWriter(PdbWriter):
-	def write_string(self, nodes):
+	def write_string(self, atoms):
 		try:
-			self.write(None, nodes)
+			self.write("\\/*&^%$#@!><|", atoms, records=['ATOM', 'HETATM'])
 		except:
 			pass
 
@@ -122,6 +122,7 @@ def get_dimension_from_pdb(pdb_str, spacing):
 	mol = openbabel.OBMol()
 	obc.ReadString(mol, pdb_str)
 	atoms = openbabel.OBMolAtomIter(mol)
+
 	x_coords = []
 	y_coords = []
 	z_coords = []
@@ -157,10 +158,9 @@ def draw_gridbox(cmd, data):
 		bg_z = data.bg_z
 	)
 
-def generate_complex_pdb(*args):
-	return ''.join(args)
+#def generate_complex_pdb(*args):
+#	return ''.join(args)
 
-'''
 def generate_complex_pdb(receptor_pdb, ligand_pdb):
 	complex_lines = []
 	no_tre = True
@@ -234,16 +234,21 @@ def generate_complex_pdb(receptor_pdb, ligand_pdb):
 		complex_lines.append('END')
 
 	return '\n'.join(complex_lines)
-'''
 
 def convert_pdbqt_to_pdb_by_adt(pdbqt, as_string=False):
 	if as_string:
-		mol = Read(alllines=pdbqt, dataformat='pdbqt')
+		mols = Read(alllines=pdbqt, dataformat='pdbqt')
 	else:
-		mol = Read(pdbqt)
+		mols = Read(pdbqt)
+
+	mol = mols[0]
+	mol.buildBondsByDistance()
+	mol.allAtoms.number = list(range(1, len(mol.allAtoms)+1))
 
 	writer = NewPdbWriter()
-	return writer.write_string(mol.allAtoms)
+	res = writer.write_string(mol.allAtoms)
+
+	return res
 
 def convert_pdbqt_to_pdb(pdbqt, as_string=True):
 	obc = openbabel.OBConversion()
