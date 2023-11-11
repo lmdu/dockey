@@ -520,9 +520,10 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		self.del_chain_act.triggered.connect(self.pymol_remove_chain)
 
 		#preferences actions
-		self.setting_act = QAction("Settings", self)
+		self.setting_act = QAction(QIcon(':/icons/setting.svg'), "Settings", self)
+		self.setting_act.setIconVisibleInMenu(False)
 		self.setting_act.triggered.connect(self.open_setting_dialog)
-		#self.setting_act.setShortcut(QKeySequence.Preferences)
+		self.setting_act.setShortcut(QKeySequence.Preferences)
 
 		#self.dock_tool_act = QAction("Docking Tools", self)
 		#self.dock_tool_act.triggered.connect(self.docking_tool_settings)
@@ -731,6 +732,7 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		self.toolbar.addSeparator()
 		self.toolbar.addAction(self.export_image_act)
 		self.toolbar.addSeparator()
+		self.toolbar.addAction(self.setting_act)
 		self.toolbar.addAction(self.check_cpu_act)
 		self.toolbar.addAction(self.pymol_cmd_act)
 		self.feedback_act = self.toolbar.addWidget(self.feedback_edit)

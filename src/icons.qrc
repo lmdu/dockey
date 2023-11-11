@@ -29,5 +29,6 @@
 	<file>icons/chembl.png</file>
 	<file>icons/pdb.png</file>
 	<file>icons/pubchem.png</file>
+	<file>icons/setting.svg</file>
 </qresource>
 </RCC>
