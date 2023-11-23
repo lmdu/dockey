@@ -266,7 +266,7 @@ class WorkerManager(QRunnable):
 			'z': grid.z,
 			'cx': grid.cx,
 			'cy': grid.cy,
-			'cz': grid.cy,
+			'cz': grid.cz,
 			'spacing': grid.spacing,
 			'flex': residues
 		})

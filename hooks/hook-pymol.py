@@ -13,7 +13,7 @@ if is_darwin:
 	binaries = collect_dynamic_libs('pymol')
 
 datas = collect_data_files('pymol',
-	subdir='pymol_path/data/demo',
+	subdir='pymol_path',
 	include_py_files = True,
 	excludes = ['**/__pycache__']
 )
