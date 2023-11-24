@@ -4,6 +4,7 @@ import math
 
 from pymol import cmd
 from rdkit import Chem
+from rdkit.Chem import AllChem
 from MolKit import Read
 from MolKit.pdbWriter import PdbWriter
 from openbabel import openbabel
@@ -26,7 +27,7 @@ __all__ = ['AttrDict', 'draw_gridbox', 'convert_dimension_to_coordinates',
 class NewPdbWriter(PdbWriter):
 	def write_string(self, atoms):
 		try:
-			self.write("\\/*&^%$#@!><|", atoms, records=['ATOM', 'HETATM'])
+			self.write("\\/*&^%$#@!><|", atoms, records=['ATOM', 'HETATM', 'CONECT'])
 		except:
 			pass
 
@@ -235,7 +236,34 @@ def generate_complex_pdb(receptor_pdb, ligand_pdb):
 
 	return '\n'.join(complex_lines)
 
-def convert_pdbqt_to_pdb_by_adt(pdbqt, as_string=False):
+"""
+def assign_bond_orders_from_origin(origin_file, pose_string):
+	origin_format = os.path.splitext(origin_file)[1]
+
+	if origin_format == '.pdb':
+		template = Chem.MolFromPDBFile(origin_file)
+
+	elif origin_format == '.mol2':
+		template = Chem.MolFromMol2File(origin_file)
+
+	elif origin_format == '.mol':
+		template = Chem.MolFromMolFile(origin_file)
+
+	elif origin_format == '.sdf':
+		for template in Chem.SDMolSupplier(origin_file):
+			pass
+
+	with open('pose.pdb', 'w') as fw:
+		fw.write(pose_string)
+
+	docked_pose = Chem.MolFromPDBFile('pose.pdb')
+
+	fixed_pose = AllChem.AssignBondOrdersFromTemplate(template, docked_pose)
+
+	return Chem.MolToPDBBlock(fixed_pose)
+"""
+
+def convert_pdbqt_to_pdb_by_adt(origin_file, pdbqt, as_string=False):
 	if as_string:
 		mols = Read(alllines=pdbqt, dataformat='pdbqt')
 	else:
@@ -247,6 +275,8 @@ def convert_pdbqt_to_pdb_by_adt(pdbqt, as_string=False):
 
 	writer = NewPdbWriter()
 	res = writer.write_string(mol.allAtoms)
+
+	#correct = assign_bond_orders_from_origin(origin_file, res)
 
 	return res
 
