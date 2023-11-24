@@ -685,6 +685,11 @@ class InteractionTabWidget(QTabWidget):
 		for i in range(8):
 			self.widget(i).model().reset()
 
+		self.pose_id = 0
+		self.binding_site = None
+		self.complex_pdb = None
+		self.complex_vis = None
+
 class DockeyConfigPage(QWidget):
 	def __init__(self, parent):
 		super().__init__(parent)
