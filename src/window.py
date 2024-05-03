@@ -19,6 +19,7 @@ from worker import *
 from config import *
 from backend import *
 from gridbox import *
+from setting import *
 
 __all__ = ['DockeyMainWindow']
 
@@ -812,7 +813,8 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 				)
 
 	def open_setting_dialog(self):
-		dlg = DockeyConfigDialog(self)
+		#dlg = DockeyConfigDialog(self)
+		dlg = DockeyGlobalSettingDialog(self)
 		dlg.exec()
 
 	def open_job_manager_dialog(self):

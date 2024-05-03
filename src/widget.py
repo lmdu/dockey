@@ -19,7 +19,8 @@ __all__ = ['BrowseInput', 'CreateProjectDialog', 'AutodockConfigDialog',
 	'TaskManagerDialog', 'PDBDownloadDialog', 'ZINCDownloadDialog',
 	'QuickVinaConfigDialog', 'LigandFilterDialog', 'FlexResiduesDialog',
 	'PubchemDownloadDialog', 'ChemblDownloadDialog', 'DockeyConfigDialog',
-	'AcknowledgementDialog', 'CPUAndMemoryViewDialog'
+	'AcknowledgementDialog', 'CPUAndMemoryViewDialog', 'DockingToolConfigPage',
+	'ReceptorPreparationConfigPage', 'LigandPreparationConfigPage'
 ]
 
 class QHLine(QFrame):

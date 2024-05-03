@@ -12,7 +12,10 @@ from utils import *
 from backend import *
 
 __all__ = ['AutogridParameter', 'AutodockParameterWizard',
-	'AutodockVinaParameterWizard', 'QuickVinaParameterWizard'
+	'AutodockVinaParameterWizard', 'QuickVinaParameterWizard',
+	'BrowseLineEdit',
+	'AutodockParameter', 'AutodockVinaParameter',
+	'QuickVinaParameter'
 ]
 
 class BrowseLineEdit(QWidget):
