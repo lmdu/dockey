@@ -12,6 +12,8 @@ from MolKit import Read
 from MolKit.molecule import BondSet
 from MolKit.protein import ProteinSet, ResidueSet, AtomSet
 
+from openbabel import openbabel
+
 from rdkit import Chem
 from rdkit.Chem import AllChem
 
@@ -26,7 +28,8 @@ from utils import load_molecule_from_file
 
 __all__ = ['prepare_autodock_ligand', 'prepare_autodock_receptor',
 	'prepare_meeko_ligand', 'prepare_ligand', 'prepare_flex_receptor',
-	'fix_receptor_pdb', 'convert_pdb_to_pqr'
+	'fix_receptor_pdb', 'convert_pdb_to_pqr', 'prepare_ligand',
+	'prepare_receptor'
 ]
 
 
@@ -375,14 +378,73 @@ def prepare_meeko_ligand(ligand_file, ligand_pdbqt, params):
 
 	#preparator.write_pdbqt_file(ligand_pdbqt)
 
-def prepare_ligand(ligand_file, ligand_pdbqt, params):
-	tool = params['tool']
+def prepare_openbabel_receptor(receptor_file, receptor_pdbqt):
+	receptor_format = os.path.splitext(receptor_file)[1].lstrip('.')
 
+	conv = openbabel.OBConversion()
+	conv.setInAndOutFormats(receptor_format, 'pdbqt')
+
+	mol = openbabel.OBMol()
+	conv.ReadFile(mol, ligand_file)
+
+	#add hydrogens
+	mol.AddPolarHydrogens()
+
+	#calc partial charges
+	charge_model = openbabel.OBChargeModel.FindType("gasteiger")
+	charge_model.ComputeCharges(mol)
+	charge_model.GetPartialCharges()
+
+	#Output as a rigid molecule
+	conv.AddOption('r', conv.OUTOPTIONS)
+
+	#Combine separate molecular pieces of input into a single rigid molecule
+	conv.AddOption('c', conv.OUTOPTIONS)
+
+	#Preserve atom names
+	conv.AddOption('n', conv.OUTOPTIONS)
+
+	#Preserve atom indices from input file
+	conv.AddOption('p', conv.OUTOPTIONS)
+
+	conv.WriteFile(mol, receptor_pdbqt)
+
+def prepare_openbabel_ligand(ligand_file, ligand_pdbqt):
+	ligand_format = os.path.splitext(ligand_file)[1].lstrip('.')
+
+	conv = openbabel.OBConversion()
+	conv.setInAndOutFormats(ligand_format, 'pdbqt')
+
+	mol = openbabel.OBMol()
+	conv.ReadFile(mol, ligand_file)
+
+	#add polar hydrogens
+	mol.DeleteNonPolarHydrogens()
+	mol.AddPolarHydrogens()
+
+	#calc partial charges
+	charge_model = openbabel.OBChargeModel.FindType("Gasteiger")
+	charge_model.ComputeCharges(mol)
+	charge_model.GetPartialCharges()
+
+	conv.WriteFile(mol, ligand_pdbqt)
+
+def prepare_receptor(tool, receptor_file, receptor_pdbqt, params=None):
+	if tool == 'AutoDockTools':
+		prepare_autodock_receptor(receptor_file, receptor_pdbqt, params)
+
+	elif tool == 'openbabel':
+		prepare_openbabel_receptor(receptor_file, receptor_pdbqt)
+
+def prepare_ligand(tool, ligand_file, ligand_pdbqt, params=None):
 	if tool == 'prepare_ligand4':
 		prepare_autodock_ligand(ligand_file, ligand_pdbqt, params)
 
 	elif tool == 'meeko':
 		prepare_meeko_ligand(ligand_file, ligand_pdbqt, params)
+
+	elif tool == 'openbabel':
+		prepare_openbabel_ligand(ligand_file, ligand_pdbqt)
 
 if __name__ == '__main__':
 	prepare_flex_receptor('las2.pdbqt', {'A': ['LYS16', 'GLY126']})
