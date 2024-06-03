@@ -21,7 +21,7 @@ __all__ = ['BrowseInput', 'CreateProjectDialog', 'AutodockConfigDialog',
 	'PubchemDownloadDialog', 'ChemblDownloadDialog', 'DockeyConfigDialog',
 	'AcknowledgementDialog', 'CPUAndMemoryViewDialog', 'DockingToolConfigPage',
 	'ReceptorPreparationConfigPage', 'LigandPreparationConfigPage',
-	'DockeyConfigPage'
+	'DockeyConfigPage', 'DockeyRunAutodockDialog'
 ]
 
 class QHLine(QFrame):
@@ -1909,3 +1909,86 @@ class CPUAndMemoryViewDialog(QDialog):
 		self.memory_text.setText("Memory: {} \t Running processes: {}".format(
 			memory_format(memory_size), process_count
 		))
+
+class DockeyRunTaskDialog(QDialog):
+	title = "Run Tasks"
+
+	def __init__(self, parent=None):
+		super().__init__(parent)
+
+		self.setWindowTitle(self.title)
+
+		self.main_layout = QVBoxLayout()
+		self.setLayout(self.main_layout)
+
+		self.widget_layout = QGridLayout()
+		self.widget_layout.setColumnStretch(1, 1)
+		self.widget_rownum = -1
+		self.main_layout.addLayout(self.widget_layout)
+
+		self.create_customs()
+		self.create_widgets()
+
+		button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+		button_box.accepted.connect(self.accept)
+		button_box.rejected.connect(self.reject)
+		self.main_layout.addWidget(button_box)
+
+	def create_customs(self):
+		pass
+
+	def create_widgets(self):
+		self.receptor_tool = QComboBox(self)
+		self.receptor_tool.addItems(['AutoDockTools', 'OpenBabel'])
+
+		self.ligand_tool = QComboBox(self)
+		self.ligand_tool.addItems(['Meeko', 'AutoDockTools', 'OpenBabel'])
+
+		self.widget_rownum += 1
+		self.widget_layout.addWidget(QLabel("Select receptor preparation tool:"), self.widget_rownum, 0)
+		self.widget_layout.addWidget(self.receptor_tool, self.widget_rownum, 1)
+
+		self.widget_rownum += 1
+		self.widget_layout.addWidget(QLabel("Select ligand preparation tool:"), self.widget_rownum, 0)
+		self.widget_layout.addWidget(self.ligand_tool, self.widget_rownum, 1)
+
+		self.use_pdbfix = QCheckBox("Use PDBFixer to fix PDB receptor file")
+		self.use_pdbpqr = QCheckBox("Use PDB2PQR to convert PDB to PQR")
+		advance_layout = QVBoxLayout()
+		advance_layout.addWidget(self.use_pdbfix)
+		advance_layout.addWidget(self.use_pdbpqr)
+
+		self.advance_group = QGroupBox("Advanced")
+		self.advance_group.setFlat(True)
+		self.advance_group.toggled.connect(self.use_pdbfix.setVisible)
+
+		self.advance_group.toggled.connect(self.use_pdbpqr.setVisible)
+		self.advance_group.setCheckable(True)
+		self.advance_group.setChecked(False)
+		self.advance_group.setLayout(advance_layout)
+		self.widget_rownum += 1
+		self.main_layout.addWidget(self.advance_group)
+
+	def get_parameters(self):
+		pass
+
+	@classmethod
+	def start(cls, parent=None):
+		dlg = cls(parent)
+
+		if dlg.exec() == QDialog.Accepted:
+			return self.get_parameters()
+
+class DockeyRunAutodockDialog(DockeyRunTaskDialog):
+	title = "Run AutoDock4"
+
+	def create_customs(self):
+		self.algorithm_select = QComboBox(self)
+		self.algorithm_select.addItems(["Lamarckian GA", "Genetic Algorithm",
+			"Simulated Annealing", "Local Search"])
+		self.widget_rownum += 1
+		self.widget_layout.addWidget(QLabel("Select algorithm for AutoDock4:"), self.widget_rownum, 0)
+		self.widget_layout.addWidget(self.algorithm_select, self.widget_rownum, 1)
+
+	def get_parameters(self):
+		pass

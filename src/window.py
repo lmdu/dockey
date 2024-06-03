@@ -1343,6 +1343,10 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		return True
 
 	def run_autodock(self):
+		params = DockeyRunAutodockDialog.start(self)
+		print(params)
+		return
+
 		if not self.check_mols():
 			return
 
