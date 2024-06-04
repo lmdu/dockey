@@ -30,7 +30,7 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		super().__init__()
 		#self.job_query = None
 		self.job_params = None
-		self.job_engine = None
+		self.job_config = None
 		#self.job_mutex = QMutex()
 		self.job_worker = None
 
@@ -521,7 +521,7 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		self.del_chain_act.triggered.connect(self.pymol_remove_chain)
 
 		#preferences actions
-		self.setting_act = QAction(QIcon(':/icons/setting.svg'), "Settings", self)
+		self.setting_act = QAction(QIcon(':/icons/setting.svg'), "Global Settings", self)
 		self.setting_act.setIconVisibleInMenu(False)
 		self.setting_act.triggered.connect(self.open_setting_dialog)
 		self.setting_act.setShortcut(QKeySequence.Preferences)
@@ -1238,7 +1238,7 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		if pool.activeThreadCount() > 0:
 			return QMessageBox.warning(self, "Warning", "There is already a task running")
 
-		DB.set_option('tool', self.job_engine)
+		DB.set_option('tool', self.job_config['engine'])
 
 		thread = JobListGenerator()
 		thread.signals.message.connect(self.show_message)
@@ -1272,15 +1272,15 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 
 		if self.job_engine == 'autodock':
 			#self.job_worker = AutodockWorker(params)
-			self.job_worker = WorkerManager(self, AutodockWorker, params)
+			self.job_worker = WorkerManager(self, AutodockWorker, params, self.job_config)
 
 		elif self.job_engine == 'vina':
 			#self.job_worker = AutodockVinaWorker(params)
-			self.job_worker = WorkerManager(self, AutodockVinaWorker, params)
+			self.job_worker = WorkerManager(self, AutodockVinaWorker, params, self.job_config)
 
 		elif self.job_engine == 'qvina':
 			#self.job_worker = QuickVinaWorker(params)
-			self.job_worker = WorkerManager(self, QuickVinaWorker, params)
+			self.job_worker = WorkerManager(self, QuickVinaWorker, params, self.job_config)
 
 		#self.job_worker.signals.refresh.connect(self.job_model.update_row)
 		#self.job_worker.signals.failure.connect(self.show_error_message)
@@ -1343,10 +1343,6 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		return True
 
 	def run_autodock(self):
-		params = DockeyRunAutodockDialog.start(self)
-		print(params)
-		return
-
 		if not self.check_mols():
 			return
 
@@ -1356,12 +1352,42 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		if not self.check_jobs():
 			return
 
-		dlg = AutodockParameterWizard(self)
-		if not dlg.exec():
+		config = DockeyRunAutodockDialog.start(self)
+		if not config:
 			return
 
-		self.job_params = dlg.params
-		self.job_engine = 'autodock'
+		config['engine'] = 'autodock'
+
+		#dlg = AutodockParameterWizard(self)
+		#if not dlg.exec():
+		#	return
+		params = AutodockParameter()
+		params.set_algorithm(config['algorithm'])
+		settings = QSettings()
+		
+		scopes = ['global']
+		scopes.append(['LGA', 'GA', 'SA', 'LS'][config['algorithm']])
+
+		for scope in scopes:
+			settings.beginGroup('ADT{}'.format(scope))
+
+			for k in settings.allKeys():
+				val = settings.value(k)
+				p = params.get_param(k)
+
+				if isinstance(p.type, list):
+					for i, v in enumerate(val):
+						func = p.type[i]
+						params.set_value(k, func(v), i)
+				else:
+					func = p.type
+					params.set_value(k, func(val))
+
+			settings.endGroup()
+
+		self.job_params = params
+		self.job_config = config
+
 		self.generate_job_list()
 
 		#self.submit_jobs('autodock', params)
@@ -1376,12 +1402,25 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		if not self.check_jobs():
 			return
 
-		dlg = AutodockVinaParameterWizard(self)
-		if not dlg.exec():
+		#dlg = AutodockVinaParameterWizard(self)
+		#if not dlg.exec():
+		#	return
+		config = DockeyRunAutodockVinaDialog.start(self)
+		if not config:
 			return
 
-		self.job_params = dlg.params
-		self.job_engine = 'vina'
+		config['engine'] = 'vina'
+
+		params = AutodockVinaParameter()
+		settings.beginGroup('VINA')
+
+		for k in settings.allKeys():
+			p = params.get_param(k)
+			v = settings.value(k, type=p.type)
+			params.set_value(k, v)
+
+		self.job_params = params
+		self.job_config = config
 		self.generate_job_list()
 		#self.submit_jobs('vina', params)
 
@@ -1395,12 +1434,25 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		if not self.check_jobs():
 			return
 
-		dlg = QuickVinaParameterWizard(self)
-		if not dlg.exec():
+		#dlg = QuickVinaParameterWizard(self)
+		#if not dlg.exec():
+		#	return
+		config = DockeyRunQuickVinaDialog.start(self)
+		if not config:
 			return
 
-		self.job_params = dlg.params
-		self.job_engine = 'qvina'
+		config['engine'] = 'qvina'
+
+		params = AutodockVinaParameter()
+		settings.beginGroup('QVINA')
+
+		for k in settings.allKeys():
+			p = params.get_param(k)
+			v = settings.value(k, type=p.type)
+			params.set_value(k, v)
+
+		self.job_params = params
+		self.job_config = config
 		self.generate_job_list()
 		#self.submit_jobs('qvina', params)
 

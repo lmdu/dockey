@@ -198,7 +198,7 @@ class ManagerSignals(QObject):
 	message = Signal(str)
 
 class WorkerManager(QRunnable):
-	def __init__(self, parent, dock_worker, dock_params):
+	def __init__(self, parent, dock_worker, dock_params, dock_config):
 		super().__init__()
 		self.parent = parent
 		self.setAutoDelete(True)
@@ -207,6 +207,7 @@ class WorkerManager(QRunnable):
 		self.signals = ManagerSignals()
 		self.dock_worker = dock_worker
 		self.dock_params = dock_params
+		self.dock_config = dock_config
 		self.job_query = None
 		self.job_thread = self.settings.value('Job/concurrent', 1, int)
 		self.job_list = {}
@@ -272,12 +273,13 @@ class WorkerManager(QRunnable):
 		})
 
 	def get_prepare_params(self):
-		tool = self.settings.value('Ligand/prepare_tool', 'meeko')
+		#tool = self.settings.value('Ligand/prepare_tool', 'meeko')
+		ltool = self.dock_config['ltool']
 
-		if tool == 'prepare_ligand4':
+		if tool == 'AutoDockTools':
 			self.settings.beginGroup('Ligand')
 			lig_params = dict(
-				tool = 'prepare_ligand4',
+				tool = 'autodocktools',
 				repairs = self.settings.value('repairs', 'bonds_hydrogens'),
 				charges_to_add = self.settings.value('charges_to_add', 'gasteiger'),
 				#preserve_charge_types = self.settings.value('preserve_charge_types', ''),
@@ -290,7 +292,7 @@ class WorkerManager(QRunnable):
 			)
 			self.settings.endGroup()
 
-		elif tool == 'meeko':
+		elif tool == 'Meeko':
 			self.settings.beginGroup('Meeko')
 			lig_params = dict(
 				tool = 'meeko',
@@ -309,41 +311,55 @@ class WorkerManager(QRunnable):
 			)
 			self.settings.endGroup()
 
-		self.settings.beginGroup('Receptor')
-		rep_params = dict(
-			repairs = self.settings.value('repairs', 'bonds_hydrogens'),
-			charges_to_add = self.settings.value('charges_to_add', 'gasteiger'),
-			#preserve_charge_types = self.settings.value('preserve_charge_types', ''),
-			cleanup = self.settings.value('cleanup', 'nphs_lps_waters_nonstdres'),
-			delete_single_nonstd_residues = self.settings.value('delete_single_nonstd_residues', False, bool),
-			unique_atom_names = self.settings.value('unique_atom_names', False, bool)
-		)
-		self.settings.endGroup()
+		else:
+			lig_params = dict(tool = 'openbabel')
 
-		self.settings.beginGroup('PDBFixer')
-		pdbfix_params = dict(
-			use_pdbfix = self.settings.value('use_pdbfix', True, bool),
-			replace_nonres = self.settings.value('replace_nonres', True, bool),
-			remove_heterogen = self.settings.value('remove_heterogen', True, bool),
-			add_misheavy = self.settings.value('add_misheavy', True, bool),
-			add_mishydrogen = self.settings.value('add_mishydrogen', True, bool),
-			mishydrogen_ph = self.settings.value('mishydrogen_ph', 7.0, float)
-		)
-		self.settings.endGroup()
+		rtool = self.dock_config['rtool']
 
-		self.settings.beginGroup('PDB2PQR')
-		pdbpqr_params = dict(
-			use_pdbpqr = self.settings.value('use_pdbpqr', False, bool),
-			force_field = self.settings.value('force_field', 'PARSE'),
-			use_propka = self.settings.value('use_propka', True, bool),
-			propka_ph = self.settings.value('propka_ph', 7.0, float),
-			node_bump = self.settings.value('node_bump', False, bool),
-			no_hopt = self.settings.value('no_hopt', False, bool),
-			remove_water = self.settings.value('remove_water', True, bool),
-			neutraln = self.settings.value('neutraln', False, bool),
-			neutralc = self.settings.value('neutralc', False, bool)
-		)
-		self.settings.endGroup()
+		if rtool == 'AutoDockTools':
+			self.settings.beginGroup('Receptor')
+			rep_params = dict(
+				repairs = self.settings.value('repairs', 'bonds_hydrogens'),
+				charges_to_add = self.settings.value('charges_to_add', 'gasteiger'),
+				#preserve_charge_types = self.settings.value('preserve_charge_types', ''),
+				cleanup = self.settings.value('cleanup', 'nphs_lps_waters_nonstdres'),
+				delete_single_nonstd_residues = self.settings.value('delete_single_nonstd_residues', False, bool),
+				unique_atom_names = self.settings.value('unique_atom_names', False, bool)
+			)
+			self.settings.endGroup()
+		else:
+			rep_params = {'tool': 'openbabel'}
+
+		if self.dock_config['pdbfix']:
+			self.settings.beginGroup('PDBFixer')
+			pdbfix_params = dict(
+				use_pdbfix = True,
+				replace_nonres = self.settings.value('replace_nonres', True, bool),
+				remove_heterogen = self.settings.value('remove_heterogen', True, bool),
+				add_misheavy = self.settings.value('add_misheavy', True, bool),
+				add_mishydrogen = self.settings.value('add_mishydrogen', True, bool),
+				mishydrogen_ph = self.settings.value('mishydrogen_ph', 7.0, float)
+			)
+			self.settings.endGroup()
+		else:
+			pdbfix_params = {'use_pdbfix': False}
+
+		if self.dock_config['pdbpqr']:
+			self.settings.beginGroup('PDB2PQR')
+			pdbpqr_params = dict(
+				use_pdbpqr = True,
+				force_field = self.settings.value('force_field', 'PARSE'),
+				use_propka = self.settings.value('use_propka', True, bool),
+				propka_ph = self.settings.value('propka_ph', 7.0, float),
+				node_bump = self.settings.value('node_bump', False, bool),
+				no_hopt = self.settings.value('no_hopt', False, bool),
+				remove_water = self.settings.value('remove_water', True, bool),
+				neutraln = self.settings.value('neutraln', False, bool),
+				neutralc = self.settings.value('neutralc', False, bool)
+			)
+			self.settings.endGroup()
+		else:
+			pdbpqr_params = {'use_pdbpqr': False}
 
 		pre_params = {}
 		pre_params.update(pdbfix_params)

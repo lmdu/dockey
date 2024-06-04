@@ -3,6 +3,7 @@ from PySide6.QtCore import *
 from PySide6.QtWidgets import *
 
 from param import *
+from utils import *
 from widget import *
 
 __all__ = ['DockeyGlobalSettingDialog']
@@ -24,9 +25,6 @@ class AutodockSettingTabWidget(QTabWidget):
 		}
 
 		self.create_algorithm_widgets()
-
-	def update_parameter(self, cmd, value, idx=-1):
-		self.params.set_value(cmd, value, idx)
 
 	def register_widget(self, widget, wgtype, option, default, convert, index=-1):
 		self.input_widgets.append(AttrDict(
@@ -51,7 +49,7 @@ class AutodockSettingTabWidget(QTabWidget):
 
 	def create_parameter_widgets(self, layout, scope='global'):
 		group = "ADT{}".format(scope)
-		self.settings.beginGroup(group)
+		#self.settings.beginGroup(group)
 
 		for p, m in self.params.items():
 			if not m.user:
@@ -67,7 +65,7 @@ class AutodockSettingTabWidget(QTabWidget):
 				if 'range' in m:
 					_min, _max = m.range
 					editor.setRange(_min, _max)
-				editor.setValue(self.settings.value(p, m.default, int))
+				editor.setValue(self.settings.value(option, m.default, int))
 				self.register_widget(editor, 'spin', option, m.default, m.type)
 				layout.addRow(m.comment, editor)
 
@@ -76,7 +74,7 @@ class AutodockSettingTabWidget(QTabWidget):
 				if 'range' in m:
 					_min, _max = m.range
 					editor.setRange(_min, _max)
-				editor.setValue(self.settings.value(p, m.default, float))
+				editor.setValue(self.settings.value(option, m.default, float))
 				self.register_widget(editor, 'spin', option, m.default, m.type)
 				layout.addRow(m.comment, editor)
 
@@ -87,11 +85,12 @@ class AutodockSettingTabWidget(QTabWidget):
 				btn_layout = QHBoxLayout()
 				btn_group = QButtonGroup()
 				line_btn = QRadioButton("Linear", self)
-				line_btn.setChecked(self.settings.value(p, m.default, m.type))
+				line_btn.setChecked(self.settings.value(option, m.default, m.type))
 				self.register_widget(line_btn, 'radio', option, m.default, m.type)
 				geome_btn = QRadioButton("Geometric", self)
-				geome_btn.setChecked(self.settings.value('geometric_schedule', not m.default, m.type))
-				self.register_widget(geome_btn, 'radio', '{}/{}'.format(group, 'geometric_schedule'), not m.default, m.type)
+				option1 = '{}/{}'.format(group, 'geometric_schedule')
+				geome_btn.setChecked(self.settings.value(option1, not m.default, m.type))
+				self.register_widget(geome_btn, 'radio', option1, not m.default, m.type)
 				btn_layout.addWidget(line_btn)
 				btn_group.addButton(line_btn)
 				btn_layout.addWidget(geome_btn)
@@ -103,13 +102,14 @@ class AutodockSettingTabWidget(QTabWidget):
 				btn_layout = QHBoxLayout()
 				btn_group = QButtonGroup()
 				sw_btn = QRadioButton("classic", self)
-				sw_btn.setChecked(self.settings.value('set_sw1', not m.default, m.type))
-				self.register_widget(sw_btn, 'radio', '{}/{}'.format(group, 'set_sw1'), not m.default, m.type)
+				option1 = '{}/{}'.format(group, 'set_sw1')
+				sw_btn.setChecked(self.settings.value(option1, not m.default, m.type))
+				self.register_widget(sw_btn, 'radio', option1, not m.default, m.type)
 				btn_group.addButton(sw_btn)
 				btn_layout.addWidget(sw_btn)
 
 				psw_btn = QRadioButton("pseudo", self)
-				psw_btn.setChecked(self.settings.value(p, m.default, m.type))
+				psw_btn.setChecked(self.settings.value(option, m.default, m.type))
 				self.register_widget(psw_btn, 'radio', option, m.default, m.type)
 				btn_group.addButton(psw_btn)
 				btn_layout.addWidget(psw_btn)
@@ -118,46 +118,46 @@ class AutodockSettingTabWidget(QTabWidget):
 
 			elif p == 'parameter_file':
 				editor = BrowseLineEdit(self)
-				editor.set_text(self.settings.value(p, m.default, m.type))
+				editor.set_text(self.settings.value(option, m.default, m.type))
 				self.register_widget(editor, 'browse', option, m.default, m.type)
 				layout.addRow(m.comment, editor)
 
 			elif m.type is bool:
 				editor = QCheckBox(self)
-				editor.setChecked(self.settings.value(p, m.default, m.type))
+				editor.setChecked(self.settings.value(option, m.default, m.type))
 				self.register_widget(editor, 'check', option, m.default, m.type)
 				layout.addRow(m.comment, editor)
 
 			elif m.type is str:
 				editor = QLineEdit(self)
-				editor.setText(self.settings.value(p, m.default, m.type))
+				editor.setText(self.settings.value(option, m.default, m.type))
 				self.register_widget(editor, 'line', option, m.default, m.type)
 				layout.addRow(m.comment, editor)
 
 			elif 'choices' in m:
 				editor = QComboBox(self)
 				editor.addItems(m.choices)
-				idx = editor.findText(self.settings.value(p, m.default, m.type))
+				idx = editor.findText(self.settings.value(option, m.default, m.type))
 				editor.setCurrentIndex(idx)
 				self.register_widget(editor, 'select', option, m.default, m.type)
 				layout.addRow(m.comment, editor)
 
 			elif isinstance(m.type, list):
-				vals = self.settings.value(p, m.default)
+				vals = self.settings.value(option, m.default)
 				defs = m.default
 
 				for i, t in enumerate(m.type):
 					if t is int:
 						editor = QSpinBox(self)
-						self.register_widget(editor, 'spin', option, defs[i], t, i)
-						editor.setValue(vals[i])
+						self.register_widget(editor, 'spin', option, defs[i], m.type, i)
+						editor.setValue(int(vals[i]))
 					elif t is float:
 						editor = QDoubleSpinBox(self)
-						self.register_widget(editor, 'spin', option, defs[i], t, i)
-						editor.setValue(vals[i])
+						self.register_widget(editor, 'spin', option, defs[i], m.type, i)
+						editor.setValue(float(vals[i]))
 					else:
 						editor = QLineEdit(self)
-						self.register_widget(editor, 'spin', option, defs[i], t, i)
+						self.register_widget(editor, 'spin', option, defs[i], m.type, i)
 						editor.setText(vals[i])
 
 					if 'range' in m:
@@ -172,7 +172,7 @@ class AutodockSettingTabWidget(QTabWidget):
 			else:
 				layout.addRow(QLabel(m.comment))
 
-		self.settings.endGroup()
+		#self.settings.endGroup()
 
 	def read_settings(self):
 		for w in self.input_widgets:
@@ -219,7 +219,7 @@ class AutodockSettingTabWidget(QTabWidget):
 				self.settings.setValue(w.option, w.widget.value())
 
 			elif w.convert is bool:
-				self.settings.setValue(w.option, w.widget.checkState())
+				self.settings.setValue(w.option, w.widget.isChecked())
 
 			elif 'parameter_file' in w.option:
 				self.settings.setValue(w.option, w.widget.get_text())
@@ -229,9 +229,12 @@ class AutodockSettingTabWidget(QTabWidget):
 
 			elif w.wgtype == 'select':
 				self.settings.setValue(w.option, w.widget.currentText())
-			
+
 			elif isinstance(w.convert, list):
-				vals = [''] * len(w.convert)
+				vals = self.settings.value(w.option)
+
+				if vals is None:
+					vals = [''] * len(w.convert)
 
 				if w.convert[w.index] is str:
 					val = w.widget.text()
@@ -254,13 +257,20 @@ class AutodockVinaSettingWidget(QWidget):
 
 	def __init__(self, parent=None):
 		super().__init__(parent)
+		self.settings = QSettings()
+		self.input_widgets = []
+
 		self.create_algorithm_widgets()
 
-	def update_parameter(self, key, val):
-		if key == 'scoring' and val == 'autodock4':
-			val = 'ad4'
-
-		self.params[key]['value'] = val
+	def register_widget(self, widget, wgtype, option, default, convert, index=-1):
+		self.input_widgets.append(AttrDict(
+			widget = widget,
+			wgtype = wgtype,
+			option = option,
+			default = default,
+			convert = convert,
+			index = index
+		))
 
 	def create_algorithm_widgets(self):
 		param_layout = QFormLayout()
@@ -272,6 +282,8 @@ class AutodockVinaSettingWidget(QWidget):
 			if not m.user:
 				continue
 
+			option = "VINA/{}".format(p)
+
 			if m.type is int:
 				editor = QSpinBox(self)
 
@@ -280,7 +292,7 @@ class AutodockVinaSettingWidget(QWidget):
 					editor.setRange(_min, _max)
 
 				editor.setValue(m.value)
-				editor.valueChanged.connect(lambda x, p=p: self.update_parameter(p, x))
+				self.register_widget(editor, 'spin', option, m.default, m.type)
 				param_layout.addRow(m.comment, editor)
 
 			elif m.type is float:
@@ -291,25 +303,64 @@ class AutodockVinaSettingWidget(QWidget):
 					editor.setRange(_min, _max)
 
 				editor.setValue(m.value)
-				editor.valueChanged.connect(lambda x, p=p: self.update_parameter(p, x))
+				self.register_widget(editor, 'spin', option, m.default, m.type)
 				param_layout.addRow(m.comment, editor)
 
 			elif p == 'scoring':
 				editor = QComboBox(self)
 				editor.addItems(m.choices)
-				editor.setCurrentIndex(0)
-				editor.currentTextChanged.connect(lambda x, p=p: self.update_parameter(p, x))
+				idx = editor.findText(self.settings.value(option, m.default, m.type))
+				editor.setCurrentIndex(idx)
+				self.register_widget(editor, 'select', option, m.default, m.type)
 				param_layout.addRow(m.comment, editor)
+
+	def read_settings(self):
+		for w in self.input_widgets:
+			if w.convert is int:
+				w.widget.setValue(self.settings.value(w.option, w.default, int))
+
+			elif w.convert is float:
+				w.widget.setValue(self.settings.value(w.option, w.default, float))
+
+			elif w.wgtype == 'select':
+				text = self.settings.value(w.option, w.default, str)
+				idx = w.widget.findText(text)
+				w.widget.setCurrentIndex(idx)
+
+	def write_settings(self):
+		for w in self.input_widgets:
+			if w.convert is int:
+				self.settings.setValue(w.option, w.widget.value())
+
+			elif w.convert is float:
+				self.settings.setValue(w.option, w.widget.value())
+
+			elif w.wgtype == 'select':
+				self.settings.setValue(w.option, w.widget.currentText())
+
+	def reset_settings(self):
+		self.settings.remove('VINA')
+		self.read_settings()
 
 class QuickVinaSettingWidget(QWidget):
 	params = QuickVinaParameter()
 
 	def __init__(self, parent=None):
 		super().__init__(parent)
+		self.settings = QSettings()
+		self.input_widgets = []
+
 		self.create_algorithm_widgets()
 
-	def update_parameter(self, key, val):
-		self.params[key]['value'] = val
+	def register_widget(self, widget, wgtype, option, default, convert, index=-1):
+		self.input_widgets.append(AttrDict(
+			widget = widget,
+			wgtype = wgtype,
+			option = option,
+			default = default,
+			convert = convert,
+			index = index
+		))
 
 	def create_algorithm_widgets(self):
 		param_layout = QFormLayout()
@@ -321,6 +372,8 @@ class QuickVinaSettingWidget(QWidget):
 			if not m.user:
 				continue
 
+			option = "QVINA/{}".format(p)
+
 			if m.type is int:
 				editor = QSpinBox(self)
 
@@ -329,7 +382,7 @@ class QuickVinaSettingWidget(QWidget):
 					editor.setRange(_min, _max)
 
 				editor.setValue(m.value)
-				editor.valueChanged.connect(lambda x, p=p: self.update_parameter(p, x))
+				self.register_widget(editor, 'spin', option, m.default, m.type)
 				param_layout.addRow(m.comment, editor)
 
 			elif m.type is float:
@@ -340,8 +393,28 @@ class QuickVinaSettingWidget(QWidget):
 					editor.setRange(_min, _max)
 
 				editor.setValue(m.value)
-				editor.valueChanged.connect(lambda x, p=p: self.update_parameter(p, x))
+				self.register_widget(editor, 'spin', option, m.default, m.type)
 				param_layout.addRow(m.comment, editor)
+
+	def read_settings(self):
+		for w in self.input_widgets:
+			if w.convert is int:
+				w.widget.setValue(self.settings.value(w.option, w.default, int))
+
+			elif w.convert is float:
+				w.widget.setValue(self.settings.value(w.option, w.default, float))
+
+	def write_settings(self):
+		for w in self.input_widgets:
+			if w.convert is int:
+				self.settings.setValue(w.option, w.widget.value())
+
+			elif w.convert is float:
+				self.settings.setValue(w.option, w.widget.value())
+
+	def reset_settings(self):
+		self.settings.remove('QVINA')
+		self.read_settings()
 
 class ADTLigandPreparationConfig(DockeyConfigPage):
 	def create_config_inputs(self):
@@ -697,17 +770,31 @@ class AutodockToolSettingTabWidget(QTabWidget):
 	def __init__(self, parent=None):
 		super().__init__(parent)
 
-		receptor_widget = ReceptorPreparationConfigPage(self)
-		ligand_widget = ADTLigandPreparationConfig(self)
-		self.addTab(receptor_widget , "Prepare Receptors")
-		self.addTab(ligand_widget, "Prepare Ligands")
+		self.receptor_widget = ReceptorPreparationConfigPage(self)
+		self.ligand_widget = ADTLigandPreparationConfig(self)
+		self.addTab(self.receptor_widget , "Prepare Receptors")
+		self.addTab(self.ligand_widget, "Prepare Ligands")
+
+	def write_settings(self):
+		self.receptor_widget.write_settings()
+		self.ligand_widget.write_settings()
+
+	def reset_settings(self):
+		self.receptor_widget.reset_settings()
+		self.ligand_widget.reset_settings()
 
 class MeekoSettingTabWidget(QTabWidget):
 	def __init__(self, parent=None):
 		super().__init__(parent)
 
-		ligand_widget = MeekoLigandPreparationConfig(self)
-		self.addTab(ligand_widget, "Prepare Ligands")
+		self.ligand_widget = MeekoLigandPreparationConfig(self)
+		self.addTab(self.ligand_widget, "Prepare Ligands")
+
+	def write_settings(self):
+		self.ligand_widget.write_settings()
+
+	def reset_settings(self):
+		self.ligand_widget.reset_settings()
 
 class PDBFixerSettingConfig(DockeyConfigPage):
 	def create_config_inputs(self):
@@ -934,7 +1021,7 @@ class DockeyGlobalSettingDialog(QDialog):
 			('QuickVina-W', QuickVinaSettingWidget),
 			('AutoDockTools', AutodockToolSettingTabWidget),
 			('Meeko', MeekoSettingTabWidget),
-			('OpenBabel', QWidget),
+			#('OpenBabel', QWidget),
 			('PDBFixer', PDBFixerSettingConfig),
 			('PDB2PQR', PDB2PQRSettingConfig)
 		]
@@ -963,4 +1050,4 @@ class DockeyGlobalSettingDialog(QDialog):
 	def reset_settings(self):
 		for i in range(self.stack_widget.count()):
 			widget = self.stack_widget.widget(i)
-			widget.restore_settings()
+			widget.reset_settings()

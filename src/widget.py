@@ -768,6 +768,9 @@ class DockingToolConfigPage(DockeyConfigPage):
 			val = i.widget.get_text()
 			self.settings.setValue(i.option, val)
 
+	def reset_settings(self):
+		pass
+
 class TaskManagerDialog(QDialog):
 	def __init__(self, parent):
 		super().__init__(parent)
@@ -1970,14 +1973,19 @@ class DockeyRunTaskDialog(QDialog):
 		self.main_layout.addWidget(self.advance_group)
 
 	def get_parameters(self):
-		pass
+		return dict(
+			rtool = self.receptor_tool.currentText(),
+			ltool = self.ligand_tool.currentText(),
+			pdbfix = self.use_pdbfix.isChecked(),
+			pdbpqr = self.use_pdbpqr.isChecked()
+		)
 
 	@classmethod
 	def start(cls, parent=None):
 		dlg = cls(parent)
 
 		if dlg.exec() == QDialog.Accepted:
-			return self.get_parameters()
+			return dlg.get_parameters()
 
 class DockeyRunAutodockDialog(DockeyRunTaskDialog):
 	title = "Run AutoDock4"
@@ -1991,4 +1999,12 @@ class DockeyRunAutodockDialog(DockeyRunTaskDialog):
 		self.widget_layout.addWidget(self.algorithm_select, self.widget_rownum, 1)
 
 	def get_parameters(self):
-		pass
+		params = super().get_parameters()
+		params['algorithm'] = self.algorithm_select.currentIndex()
+		return params
+
+class DockeyRunAutodockVinaDialog(DockeyRunTaskDialog):
+	title = "Run Autodock Vina"
+
+class DockeyRunQuickVinaDialog(DockeyRunTaskDialog):
+	title = "Run QuickVina-W"
