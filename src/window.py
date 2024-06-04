@@ -1268,17 +1268,18 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 
 		if not ret: return
 
-		params = self.job_params.deep_copy()
+		#params = self.job_params.deep_copy()
+		params = self.job_params
 
-		if self.job_engine == 'autodock':
+		if self.job_config['engine'] == 'autodock':
 			#self.job_worker = AutodockWorker(params)
 			self.job_worker = WorkerManager(self, AutodockWorker, params, self.job_config)
 
-		elif self.job_engine == 'vina':
+		elif self.job_config['engine'] == 'vina':
 			#self.job_worker = AutodockVinaWorker(params)
 			self.job_worker = WorkerManager(self, AutodockVinaWorker, params, self.job_config)
 
-		elif self.job_engine == 'qvina':
+		elif self.job_config['engine'] == 'qvina':
 			#self.job_worker = QuickVinaWorker(params)
 			self.job_worker = WorkerManager(self, QuickVinaWorker, params, self.job_config)
 
@@ -1412,6 +1413,7 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		config['engine'] = 'vina'
 
 		params = AutodockVinaParameter()
+		settings = QSettings()
 		settings.beginGroup('VINA')
 
 		for k in settings.allKeys():
@@ -1444,6 +1446,7 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		config['engine'] = 'qvina'
 
 		params = AutodockVinaParameter()
+		settings = QSettings()
 		settings.beginGroup('QVINA')
 
 		for k in settings.allKeys():

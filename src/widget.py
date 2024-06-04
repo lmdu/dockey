@@ -21,7 +21,8 @@ __all__ = ['BrowseInput', 'CreateProjectDialog', 'AutodockConfigDialog',
 	'PubchemDownloadDialog', 'ChemblDownloadDialog', 'DockeyConfigDialog',
 	'AcknowledgementDialog', 'CPUAndMemoryViewDialog', 'DockingToolConfigPage',
 	'ReceptorPreparationConfigPage', 'LigandPreparationConfigPage',
-	'DockeyConfigPage', 'DockeyRunAutodockDialog'
+	'DockeyConfigPage', 'DockeyRunAutodockDialog', 'DockeyRunAutodockVinaDialog',
+	'DockeyRunQuickVinaDialog'
 ]
 
 class QHLine(QFrame):

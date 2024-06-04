@@ -301,7 +301,7 @@ class BaseProcess(multiprocessing.Process):
 			content = convert_string_to_pdb(self.job.lc, self.job.lf)
 			lfile = os.path.join(self.work_dir, "{}.pdb".format(self.job.ln))
 
-		elif self.ligp_params['tool'] == 'prepare_ligand4' and self.job.lf not in ['pdb', 'mol2']:
+		elif self.ligp_params['tool'] == 'autodocktools' and self.job.lf not in ['pdb', 'mol2']:
 			content = convert_string_to_pdb(self.job.lc, self.job.lf)
 			lfile = os.path.join(self.work_dir, "{}.pdb".format(self.job.ln))
 

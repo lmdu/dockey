@@ -276,8 +276,8 @@ class WorkerManager(QRunnable):
 		#tool = self.settings.value('Ligand/prepare_tool', 'meeko')
 		ltool = self.dock_config['ltool']
 
-		if tool == 'AutoDockTools':
-			self.settings.beginGroup('Ligand')
+		if ltool == 'AutoDockTools':
+			self.settings.beginGroup('ADTLigand')
 			lig_params = dict(
 				tool = 'autodocktools',
 				repairs = self.settings.value('repairs', 'bonds_hydrogens'),
@@ -292,8 +292,8 @@ class WorkerManager(QRunnable):
 			)
 			self.settings.endGroup()
 
-		elif tool == 'Meeko':
-			self.settings.beginGroup('Meeko')
+		elif ltool == 'Meeko':
+			self.settings.beginGroup('MeekoLigand')
 			lig_params = dict(
 				tool = 'meeko',
 				merge_these_atom_types = self.settings.value('merge_these_atom_types', 'H', str),

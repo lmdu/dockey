@@ -127,6 +127,15 @@ class Parameter(OrderedDict):
 		except KeyError:
 			raise AttributeError(attr)
 
+	def get_param(self, k):
+		return self[k]
+
+	def set_value(self, k, v, idx=-1):
+		if idx >= 0:
+			self[k]['value'][idx] = v
+		else:
+			self[k]['value'] = v
+
 	def deep_copy(self):
 		new = self.__class__()
 		for k, v in self.items():
@@ -721,17 +730,8 @@ class AutodockParameter(Parameter):
 	def set_algorithm(cls, index):
 		cls.algorithm = index
 
-	def set_value(self, k, v, idx=-1):
-		if idx >= 0:
-			self[k]['value'][idx] = v
-		else:
-			self[k]['value'] = v
-
 	def get_value(self, k):
 		return self[k]['value']
-
-	def get_param(self, k):
-		return self[k]
 
 	def get_count(self, algorithm='LGA'):
 		count = 0

@@ -429,21 +429,21 @@ def prepare_openbabel_ligand(ligand_file, ligand_pdbqt):
 
 	conv.WriteFile(mol, ligand_pdbqt)
 
-def prepare_receptor(tool, receptor_file, receptor_pdbqt, params=None):
-	if tool == 'AutoDockTools':
+def prepare_receptor(receptor_file, receptor_pdbqt, params=None):
+	if params['tool'] == 'autodocktools':
 		prepare_autodock_receptor(receptor_file, receptor_pdbqt, params)
 
-	elif tool == 'openbabel':
+	else:
 		prepare_openbabel_receptor(receptor_file, receptor_pdbqt)
 
-def prepare_ligand(tool, ligand_file, ligand_pdbqt, params=None):
-	if tool == 'prepare_ligand4':
+def prepare_ligand(ligand_file, ligand_pdbqt, params=None):
+	if params['tool'] == 'autodocktools':
 		prepare_autodock_ligand(ligand_file, ligand_pdbqt, params)
 
-	elif tool == 'meeko':
+	elif params['tool'] == 'meeko':
 		prepare_meeko_ligand(ligand_file, ligand_pdbqt, params)
 
-	elif tool == 'openbabel':
+	else:
 		prepare_openbabel_ligand(ligand_file, ligand_pdbqt)
 
 if __name__ == '__main__':
