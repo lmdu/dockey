@@ -387,6 +387,22 @@ def prepare_openbabel_receptor(receptor_file, receptor_pdbqt):
 	mol = openbabel.OBMol()
 	conv.ReadFile(mol, receptor_file)
 
+	#Remove nonstd residues
+	std_residues = [
+		'CYS','ILE','SER','VAL','GLN','LYS','ASN',
+		'PRO','THR','PHE','ALA','HIS','GLY','ASP',
+		'LEU', 'ARG', 'TRP', 'GLU', 'TYR','MET',
+		'HID', 'HSP', 'HIE', 'HIP', 'CYX', 'CSS'
+	]
+
+	nonstd_residues = []
+	for residue in openbabel.OBResidueIter(mol):
+		if residue.GetName().strip() not in std_residues:
+			nonstd_residues.append(residue)
+
+	for nonstd_residue in nonstd_residues:
+		mol.DeleteResidue(nonstd_residue)
+
 	#add hydrogens
 	mol.AddPolarHydrogens()
 
