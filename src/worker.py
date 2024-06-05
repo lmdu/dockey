@@ -319,6 +319,7 @@ class WorkerManager(QRunnable):
 		if rtool == 'AutoDockTools':
 			self.settings.beginGroup('Receptor')
 			rep_params = dict(
+				tool = 'autodocktools',
 				repairs = self.settings.value('repairs', 'bonds_hydrogens'),
 				charges_to_add = self.settings.value('charges_to_add', 'gasteiger'),
 				#preserve_charge_types = self.settings.value('preserve_charge_types', ''),
@@ -403,6 +404,9 @@ class WorkerManager(QRunnable):
 		for jid in list(self.job_list.keys()):
 			if jid in self.job_list:
 				self.job_list[jid].stop()
+
+	def get_job_pid(self, job):
+		return self.job_list[job].pid
 
 	def set_thread(self, num):
 		self.job_thread = num
@@ -574,6 +578,10 @@ class BaseWorker(QRunnable):
 		self.process.kill()
 		self.update_stopped()
 		self.pipe.close()
+
+	@property
+	def pid(self):
+		return self.progress.pid
 
 	def call_response(self, data):
 		if data['action'] == 'progress':

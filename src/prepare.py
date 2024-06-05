@@ -382,10 +382,10 @@ def prepare_openbabel_receptor(receptor_file, receptor_pdbqt):
 	receptor_format = os.path.splitext(receptor_file)[1].lstrip('.')
 
 	conv = openbabel.OBConversion()
-	conv.setInAndOutFormats(receptor_format, 'pdbqt')
+	conv.SetInAndOutFormats(receptor_format, 'pdbqt')
 
 	mol = openbabel.OBMol()
-	conv.ReadFile(mol, ligand_file)
+	conv.ReadFile(mol, receptor_file)
 
 	#add hydrogens
 	mol.AddPolarHydrogens()
@@ -413,7 +413,7 @@ def prepare_openbabel_ligand(ligand_file, ligand_pdbqt):
 	ligand_format = os.path.splitext(ligand_file)[1].lstrip('.')
 
 	conv = openbabel.OBConversion()
-	conv.setInAndOutFormats(ligand_format, 'pdbqt')
+	conv.SetInAndOutFormats(ligand_format, 'pdbqt')
 
 	mol = openbabel.OBMol()
 	conv.ReadFile(mol, ligand_file)

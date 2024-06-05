@@ -286,7 +286,8 @@ class BaseProcess(multiprocessing.Process):
 			rfile = os.path.join(self.work_dir, "{}.pqr".format(self.job.rn))
 			convert_pdb_to_pqr(pfile, rfile, self.prep_params)
 
-		prepare_autodock_receptor(rfile, rpdbqt, self.repp_params)
+		#prepare_autodock_receptor(rfile, rpdbqt, self.repp_params)
+		prepare_receptor(rfile, rpdbqt, self.repp_params)
 
 		#prepare flexible residues
 		if self.flex_docking:
