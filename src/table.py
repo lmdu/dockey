@@ -772,7 +772,7 @@ class PoseTableModel(DockeyTableModel):
 			val = self.get_value(row, -1)
 
 			if val:
-				return QColor(186,228,188)
+				return QColor(169, 223, 191)
 
 	#def data(self, index, role=Qt.DisplayRole):
 	#	if not index.isValid():
@@ -840,7 +840,7 @@ class BestTableModel(PoseTableModel):
 		return (
 			"SELECT b.id,b.pid,p.jid,r.name,l.name,p.energy,p.rmsd1,"
 			"p.rmsd2,p.logki,p.le,p.sile,p.fq,p.lle,p.lelp,p.ki,"
-			"p.mode,p.complex FROM best AS b "
+			"p.mode,p.complex,p.actives FROM best AS b "
 			"LEFT JOIN pose AS p ON p.id=b.pid "
 			"LEFT JOIN jobs AS j ON j.id=p.jid "
 			"LEFT JOIN molecular AS r ON r.id=j.rid "
@@ -974,7 +974,7 @@ class InteractionModel(DockeyTableModel):
 			val = self.get_value(row, -1)
 
 			if val:
-				return QColor(186,228,188)
+				return QColor(169, 223, 191)
 
 	def change_binding_site(self, site_id):
 		self.binding_site = site_id

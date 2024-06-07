@@ -544,19 +544,12 @@ class BaseWorker(QRunnable):
 			if not interactions[k]:
 				continue
 
-			print(k)
-
 			for i in range(len(interactions[k])):
 				site = interactions[k][i][1]
 				interactions[k][i][1] = site_mapping[site]
 
-			print(interactions[k])
-
 			sql = "INSERT INTO {} VALUES ({})".format(k, ','.join(['?']*cols_mapping[k]))
 			DB.insert_rows(sql, interactions[k])
-			print('done')
-
-		print('yes##############')
 
 	def make_temp_dir(self):
 		self.tempdir = QTemporaryDir()
