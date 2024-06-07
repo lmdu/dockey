@@ -252,6 +252,10 @@ class WorkerManager(QRunnable):
 
 			residues[row[3]][aa] = row[6].split(',')
 
+		sites = []
+		for row in DB.query("SELECT * FROM active WHERE rid=?", (job.rid,)):
+			sites.append("{}:{}:{}".format(row[3], row[4], row[5]))
+
 		return AttrDict({
 			'id': job.id,
 			'rid': rep.id,
@@ -269,7 +273,8 @@ class WorkerManager(QRunnable):
 			'cy': grid.cy,
 			'cz': grid.cz,
 			'spacing': grid.spacing,
-			'flex': residues
+			'flex': residues,
+			'active': sites
 		})
 
 	def get_prepare_params(self):
@@ -491,7 +496,7 @@ class BaseWorker(QRunnable):
 		poses = data['poses']
 		interactions = data['interactions']
 
-		pose_sql = "INSERT INTO pose VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
+		pose_sql = "INSERT INTO pose VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
 		DB.insert_rows(pose_sql, poses)
 
 		pid_sql = "SELECT id FROM pose WHERE jid=?"
@@ -522,14 +527,14 @@ class BaseWorker(QRunnable):
 		site_mapping = {"{}:{}".format(pose_ids.index(row[1]), row[2]) : row[0] for row in DB.query(bs_sql)}
 
 		cols_mapping = {
-			'hydrogen_bond': 12,
-			'halogen_bond': 10,
-			'hydrophobic_interaction': 8,
-			'water_bridge': 13,
-			'salt_bridge': 9,
-			'pi_stacking': 10,
-			'pi_cation': 10,
-			'metal_complex': 9
+			'hydrogen_bond': 13,
+			'halogen_bond': 11,
+			'hydrophobic_interaction': 9,
+			'water_bridge': 14,
+			'salt_bridge': 10,
+			'pi_stacking': 11,
+			'pi_cation': 11,
+			'metal_complex': 10
 		}
 
 		for k in interactions:
@@ -539,12 +544,19 @@ class BaseWorker(QRunnable):
 			if not interactions[k]:
 				continue
 
+			print(k)
+
 			for i in range(len(interactions[k])):
 				site = interactions[k][i][1]
 				interactions[k][i][1] = site_mapping[site]
 
+			print(interactions[k])
+
 			sql = "INSERT INTO {} VALUES ({})".format(k, ','.join(['?']*cols_mapping[k]))
 			DB.insert_rows(sql, interactions[k])
+			print('done')
+
+		print('yes##############')
 
 	def make_temp_dir(self):
 		self.tempdir = QTemporaryDir()

@@ -1482,6 +1482,10 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		dlg = FlexResiduesDialog(self, mol_id)
 		dlg.exec()
 
+	def set_active_sites(self, mol_id):
+		dlg = ActiveBindingSitesDialog(self, mol_id)
+		dlg.exec()
+
 	def filter_ligands(self):
 		condition = LigandFilterDialog.filter(self)
 

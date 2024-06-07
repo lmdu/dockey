@@ -220,7 +220,7 @@ class BaseProcess(multiprocessing.Process):
 		self.progress = 0
 
 	def send_result(self, poses):
-		interactions = get_complex_interactions(poses, self.work_dir)
+		interactions = get_complex_interactions(poses, self.work_dir, self.job.active)
 
 		#get min energy
 		e = 0

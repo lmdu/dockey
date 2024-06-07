@@ -21,7 +21,8 @@ __all__ = ['AttrDict', 'draw_gridbox', 'convert_dimension_to_coordinates',
 	'time_elapse', 'generate_complex_pdb', 'get_complex_interactions',
 	'interaction_visualize', 'get_dimension_from_pdb', 'load_molecule_from_file',
 	'convert_string_to_pdb', 'memory_format', 'get_molecule_residues', 'sdf_file_parser',
-	'get_sdf_props', 'get_residue_bonds', 'convert_pdbqt_to_pdb_by_adt'
+	'get_sdf_props', 'get_residue_bonds', 'convert_pdbqt_to_pdb_by_adt',
+	'clean_pdb_for_protein'
 ]
 
 class NewPdbWriter(PdbWriter):
@@ -575,7 +576,7 @@ def ligand_efficiency_assessment(pdb_str, energy, ki=None):
 	else:
 		return (logki, None, None, None, None, None, ki)
 
-def get_complex_interactions(poses, work_dir):
+def get_complex_interactions(poses, work_dir, active_sites):
 	interactions = {
 		'binding_site': [],
 		'hydrogen_bond': [],
@@ -590,8 +591,9 @@ def get_complex_interactions(poses, work_dir):
 
 	for i, pose in enumerate(poses):
 		compound = pose[-1]
-
-		if not compound:
+		poses[i].append('')
+		
+		if not compound:	
 			continue
 
 		mol = PDBComplex()
@@ -607,6 +609,22 @@ def get_complex_interactions(poses, work_dir):
 
 			#hydrogen bonds
 			for hb in s.hbonds_pdon + s.hbonds_ldon:
+				residue = "{}:{}:{}".format(hb.reschain, hb.restype, hb.resnr)
+
+				if residue in active_sites:
+					is_active_site = 1
+					interact = "hb:{}".format(residue)
+
+					if poses[i][-1]:
+						if interact not in poses[i][-1]:
+							poses[i][-1] = "{},{}".format(poses[i][-1], interact)
+
+					else:
+						poses[i][-1] = interact
+
+				else:
+					is_active_site = 0
+
 				interactions['hydrogen_bond'].append([None, site,
 					hb.reschain, hb.resnr, hb.restype,
 					"{:.2}".format(hb.distance_ah),
@@ -615,20 +633,54 @@ def get_complex_interactions(poses, work_dir):
 					'Yes' if hb.protisdon else 'No',
 					'Yes' if hb.sidechain else 'No',
 					"{} [{}]".format(hb.d_orig_idx, hb.dtype),
-					"{} [{}]".format(hb.a_orig_idx, hb.atype)
+					"{} [{}]".format(hb.a_orig_idx, hb.atype),
+					is_active_site
 				])
 
 			#hydrophobic interactions
 			for hc in s.hydrophobic_contacts:
+				residue = "{}:{}:{}".format(hc.reschain, hc.restype, hc.resnr)
+
+				if residue in active_sites:
+					is_active_site = 1
+					interact = "hi:{}".format(residue)
+
+					if poses[i][-1]:
+						if interact not in poses[i][-1]:
+							poses[i][-1] = "{},{}".format(poses[i][-1], interact)
+
+					else:
+						poses[i][-1] = interact
+
+				else:
+					is_active_site = 0
+
 				interactions['hydrophobic_interaction'].append([None, site,
 					hc.reschain, hc.resnr, hc.restype,
 					"{:.2}".format(hc.distance),
 					hc.ligatom_orig_idx,
-					hc.bsatom_orig_idx
+					hc.bsatom_orig_idx,
+					is_active_site
 				])
 
 			#water bridges
 			for wb in s.water_bridges:
+				residue = "{}:{}:{}".format(wb.reschain, wb.restype, wb.resnr)
+
+				if residue in active_sites:
+					is_active_site = 1
+					interact = "wb:{}".format(residue)
+
+					if poses[i][-1]:
+						if interact not in poses[i][-1]:
+							poses[i][-1] = "{},{}".format(poses[i][-1], interact)
+
+					else:
+						poses[i][-1] = interact
+
+				else:
+					is_active_site = 0
+
 				interactions['water_bridge'].append([None, site,
 					wb.reschain, wb.resnr, wb.restype,
 					"{:.2}".format(wb.distance_aw),
@@ -638,11 +690,28 @@ def get_complex_interactions(poses, work_dir):
 					'Yes' if wb.protisdon else 'No',
 					"{} [{}]".format(wb.d_orig_idx, wb.dtype),
 					"{} [{}]".format(wb.a_orig_idx, wb.atype),
-					wb.water_orig_idx
+					wb.water_orig_idx,
+					is_active_site
 				])
 
 			#salt bridges
 			for sb in s.saltbridge_lneg + s.saltbridge_pneg:
+				residue = "{}:{}:{}".format(sb.reschain, sb.restype, sb.resnr)
+
+				if residue in active_sites:
+					is_active_site = 1
+					interact = "sb:{}".format(residue)
+
+					if poses[i][-1]:
+						if interact not in poses[i][-1]:
+							poses[i][-1] = "{},{}".format(poses[i][-1], interact)
+
+					else:
+						poses[i][-1] = interact
+
+				else:
+					is_active_site = 0
+
 				if sb.protispos:
 					group = sb.negative.fgroup
 					ligand_atom_ids = ','.join(str(x) for x in sb.negative.atoms_orig_idx)
@@ -658,23 +727,57 @@ def get_complex_interactions(poses, work_dir):
 					'Yes' if sb.protispos else 'No',
 					group.capitalize(),
 					ligand_atom_ids,
+					is_active_site
 					#protein_atom_ids
 				])
 
 			#pi-stacking
 			for ps in s.pistacking:
+				residue = "{}:{}:{}".format(ps.reschain, ps.restype, ps.resnr)
+
+				if residue in active_sites:
+					is_active_site = 1
+					interact = "ps:{}".format(residue)
+
+					if poses[i][-1]:
+						if interact not in poses[i][-1]:
+							poses[i][-1] = "{},{}".format(poses[i][-1], interact)
+
+					else:
+						poses[i][-1] = interact
+
+				else:
+					is_active_site = 0
+
 				interactions['pi_stacking'].append([None, site,
 					ps.reschain, ps.resnr, ps.restype,
 					"{:.2}".format(ps.distance),
 					"{:.2}".format(ps.angle),
 					"{:.2}".format(ps.offset),
 					ps.type,
-					','.join(str(x) for x in ps.ligandring.atoms_orig_idx)
+					','.join(str(x) for x in ps.ligandring.atoms_orig_idx),
+					is_active_site
 					#','.join(str(x) for x in ps.proteinring.atoms_orig_idx)
 				])
 
 			#pi-cation
 			for pc in s.pication_laro + s.pication_paro:
+				residue = "{}:{}:{}".format(pc.reschain, pc.restype, pc.resnr)
+
+				if residue in active_sites:
+					is_active_site = 1
+					interact = "pc:{}".format(residue)
+
+					if poses[i][-1]:
+						if interact not in poses[i][-1]:
+							poses[i][-1] = "{},{}".format(poses[i][-1], interact)
+
+					else:
+						poses[i][-1] = interact
+
+				else:
+					is_active_site = 0
+
 				if pc.protcharged:
 					ligand_atom_ids = ','.join(str(x) for x in pc.ring.atoms_orig_idx)
 					protein_atom_ids = ','.join(str(x) for x in pc.charge.atoms_orig_idx)
@@ -691,28 +794,62 @@ def get_complex_interactions(poses, work_dir):
 					'Yes' if pc.protcharged else 'No',
 					group.capitalize(),
 					ligand_atom_ids,
+					is_active_site
 					#protein_atom_ids
 				])
 
 			#halogen bonds
-			for hb in s.halogen_bonds:
+			for ha in s.halogen_bonds:
+				residue = "{}:{}:{}".format(ha.reschain, ha.restype, ha.resnr)
+
+				if residue in active_sites:
+					is_active_site = 1
+					interact = "ha:{}".format(residue)
+
+					if poses[i][-1]:
+						if interact not in poses[i][-1]:
+							poses[i][-1] = "{},{}".format(poses[i][-1], interact)
+
+					else:
+						poses[i][-1] = interact
+
+				else:
+					is_active_site = 0
+
 				interactions['halogen_bond'].append([None, site,
-					hb.reschain, hb.resnr, hb.restype,
-					"{:.2}".format(hb.distance),
-					"{:.2}".format(hb.don_angle),
-					"{:.2}".format(hb.acc_angle),
-					"{} [{}]".format(hb.don_orig_idx, hb.donortype),
-					"{} [{}]".format(hb.acc_orig_idx, hb.acctype)
+					ha.reschain, ha.resnr, ha.restype,
+					"{:.2}".format(ha.distance),
+					"{:.2}".format(ha.don_angle),
+					"{:.2}".format(ha.acc_angle),
+					"{} [{}]".format(ha.don_orig_idx, ha.donortype),
+					"{} [{}]".format(ha.acc_orig_idx, ha.acctype)
 				])
 
 			#metal complexes
 			for mc in s.metal_complexes:
+				residue = "{}:{}:{}".format(mc.reschain, mc.restype, mc.resnr)
+
+				if residue in active_sites:
+					is_active_site = 1
+					interact = "mc:{}".format(residue)
+
+					if poses[i][-1]:
+						if interact not in poses[i][-1]:
+							poses[i][-1] = "{},{}".format(poses[i][-1], interact)
+
+					else:
+						poses[i][-1] = interact
+
+				else:
+					is_active_site = 0
+
 				interactions['metal_complex'].append([None, site,
 					mc.reschain, mc.resnr, mc.restype,
 					"{} [{}]".format(mc.metal_orig_idx, mc.metal_type),
 					"{} [{}]".format(mc.target_orig_idx, mc.target_type),
 					"{:.2}".format(mc.distance),
-					mc.location
+					mc.location,
+					is_active_site
 				])
 
 	return interactions
@@ -820,6 +957,24 @@ def get_sdf_props(sdf_file):
 	for mol in suppl:
 		if mol:
 			return mol.GetPropNames()
+
+def clean_pdb_for_protein(pdb_file):
+	std_residues = [
+		'CYS','ILE','SER','VAL','GLN','LYS','ASN',
+		'PRO','THR','PHE','ALA','HIS','GLY','ASP',
+		'LEU', 'ARG', 'TRP', 'GLU', 'TYR','MET',
+		'HID', 'HSP', 'HIE', 'HIP', 'CYX', 'CSS'
+	]
+
+	lines = []
+	with open(pdb_file) as fh:
+		for line in fh:
+			if line.startswith('ATOM'):
+				if line[17:20] in std_residues:
+					lines.append(line)
+
+	return ''.join(lines)
+
 
 if __name__ == '__main__':
 	import sys

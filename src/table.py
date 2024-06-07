@@ -191,6 +191,10 @@ class DockeyListView(QListView):
 		rep_f_act.triggered.connect(self.set_flex_residules)
 		rep_f_act.setEnabled(self.current_index.isValid() and self.current_index.siblingAtColumn(2).data() == 1)
 
+		rep_a_act = QAction("Preset Active Binding Sites", self)
+		rep_a_act.triggered.connect(self.set_active_sites)
+		rep_a_act.setEnabled(self.current_index.isValid() and self.current_index.siblingAtColumn(2).data() == 1)
+
 		lig_f_act = QAction("Filter and Remove Ligands", self)
 		lig_f_act.triggered.connect(self.ligand_filter)
 		lig_f_act.setEnabled(DB.active())
@@ -225,6 +229,7 @@ class DockeyListView(QListView):
 		#menu.addAction(self.parent.import_receptor_act)
 		#menu.addAction(self.parent.import_ligand_act)
 		menu.addAction(rep_f_act)
+		menu.addAction(rep_a_act)
 		menu.addSeparator()
 		menu.addAction(lig_f_act)
 		menu.addSeparator()
@@ -250,6 +255,11 @@ class DockeyListView(QListView):
 	def set_flex_residules(self):
 		mol_id = self.current_index.siblingAtColumn(0).data()
 		self.parent.set_receptor_flexres(mol_id)
+
+	@Slot()
+	def set_active_sites(self):
+		mol_id = self.current_index.siblingAtColumn(0).data()
+		self.parent.set_active_sites(mol_id)
 
 	@Slot()
 	def ligand_filter(self):
@@ -748,6 +758,22 @@ class PoseTableModel(DockeyTableModel):
 			fetch_count
 		)
 
+	def data(self, index, role=Qt.DisplayRole):
+		if not index.isValid():
+			return None
+
+		row = index.row()
+		col = index.column()
+
+		if role == Qt.DisplayRole:
+			return self.get_value(row, col)
+
+		elif role == Qt.BackgroundRole:
+			val = self.get_value(row, -1)
+
+			if val:
+				return QColor(186,228,188)
+
 	#def data(self, index, role=Qt.DisplayRole):
 	#	if not index.isValid():
 	#		return None
@@ -933,6 +959,22 @@ class InteractionModel(DockeyTableModel):
 	@property
 	def get_sql(self):
 		return "SELECT * FROM {} WHERE bid={} AND id=? LIMIT 1".format(self.table, self.binding_site)
+
+	def data(self, index, role=Qt.DisplayRole):
+		if not index.isValid():
+			return None
+
+		row = index.row()
+		col = index.column()
+
+		if role == Qt.DisplayRole:
+			return self.get_value(row, col)
+
+		elif role == Qt.BackgroundRole:
+			val = self.get_value(row, -1)
+
+			if val:
+				return QColor(186,228,188)
 
 	def change_binding_site(self, site_id):
 		self.binding_site = site_id
@@ -1300,7 +1342,7 @@ class PoseTableView(QTableView):
 			"</table>"
 		)
 
-		dlg = MoleculeDetailDialog(self.parent, info.format(
+		dock_info = info.format(
 			titles[0],
 			pose.run,
 			titles[1],
@@ -1316,7 +1358,27 @@ class PoseTableView(QTableView):
 			pose.fq,
 			pose.lle,
 			pose.lelp
-		))
+		)
+
+		if pose.actives:
+			rows = []
+			for active in pose.actives.split(','):
+				itype, chain, res, num = active.split(':')
+				rows.append("<tr><td>{}</td><td>{}</td><td>{}</td><td>{}</td></tr>".format(
+					itype, chain, res, num
+				))
+
+			interact_info = """
+			Interaction with preset active binding sites:
+			<table>
+			<tr><td>Interaction</td><td>Chain</td><td>Residue</td><td>Number</td></tr>
+			{}
+			</table>
+			""".format('\n'.join(rows))
+		else:
+			interact_info = ""
+
+		dlg = MoleculeDetailDialog(self.parent, "{}{}".format(dock_info, interact_info))
 		dlg.exec()
 
 class BestTableView(PoseTableView):

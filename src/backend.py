@@ -28,6 +28,14 @@ DB_TABLES = {
 		('residue', 'TEXT'),
 		('bonds', 'TEXT')
 	],
+	'active': [
+		('id', 'INTEGER PRIMARY KEY'),
+		('rid', 'INTEGER'),
+		('idx', 'INTEGER'),
+		('chain', 'INTEGER'),
+		('residue', 'TEXT'),
+		('number', 'TEXT')
+	],
 	'grid': [
 		('id', 'INTEGER PRIMARY KEY'),
 		('rid', 'INTEGER'),
@@ -64,7 +72,8 @@ DB_TABLES = {
 		('lelp', 'REAL'),
 		('ki', 'TEXT'),
 		('mode', 'TEXT'),
-		('complex', 'TEXT')
+		('complex', 'TEXT'),
+		('actives', 'TEXT')
 	],
 	'best': [
 		('id', 'INTEGER PRIMARY KEY'),
@@ -98,7 +107,8 @@ DB_TABLES = {
 		('protein_donor', 'TEXT'),
 		('side_chain', 'TEXT'),
 		('donor_atom', 'TEXT'),
-		('acceptor_atom', 'TEXT')
+		('acceptor_atom', 'TEXT'),
+		('active_site', 'INTEGER')
 	],
 	'halogen_bond': [
 		('id', 'INTEGER PRIMARY KEY'),
@@ -110,7 +120,8 @@ DB_TABLES = {
 		('donor_angle', 'REAL'),
 		('acceptor_angle', 'REAL'),
 		('donor_atom', 'TEXT'),
-		('acceptor_atom', 'TEXT')
+		('acceptor_atom', 'TEXT'),
+		('active_site', 'INTEGER')
 	],
 	'hydrophobic_interaction': [
 		('id', 'INTEGER PRIMARY KEY'),
@@ -120,7 +131,8 @@ DB_TABLES = {
 		('amino_acid', 'TEXT'),
 		('distance', 'REAL'),
 		('ligand_atom', 'INTEGER'),
-		('protein_atom', 'INTEGER')
+		('protein_atom', 'INTEGER'),
+		('active_site', 'INTEGER')
 	],
 	'salt_bridge': [
 		('id', 'INTEGER PRIMARY KEY'),
@@ -131,7 +143,8 @@ DB_TABLES = {
 		('distance', 'REAL'),
 		('protein_positive', 'INTEGER'),
 		('ligand_group', 'TEXT'),
-		('ligand_atoms', 'TEXT')
+		('ligand_atoms', 'TEXT'),
+		('active_site', 'INTEGER')
 	],
 	'water_bridge': [
 		('id', 'INTEGER PRIMARY KEY'),
@@ -146,7 +159,8 @@ DB_TABLES = {
 		('protein_donor', 'INTEGER'),
 		('donor_atom', 'REAL'),
 		('acceptor_atom', 'REAL'),
-		('water_atom', 'INTEGER')
+		('water_atom', 'INTEGER'),
+		('active_site', 'INTEGER')
 	],
 	'pi_stacking': [
 		('id', 'INTEGER PRIMARY KEY'),
@@ -158,7 +172,8 @@ DB_TABLES = {
 		('angle', 'REAL'),
 		('offset', 'REAL'),
 		('type', 'TEXT'),
-		('ligand_atoms', 'TEXT')
+		('ligand_atoms', 'TEXT'),
+		('active_site', 'INTEGER')
 	],
 	'pi_cation': [
 		('id', 'INTEGER PRIMARY KEY'),
@@ -170,7 +185,8 @@ DB_TABLES = {
 		('offset', 'REAL'),
 		('protein_charged', 'INTEGER'),
 		('ligand_group', 'TEXT'),
-		('ligand_atoms', 'TEXT')
+		('ligand_atoms', 'TEXT'),
+		('active_site', 'INTEGER')
 	],
 	'metal_complex': [
 		('id', 'INTEGER PRIMARY KEY'),
@@ -181,7 +197,8 @@ DB_TABLES = {
 		('metal', 'INTEGER'),
 		('target', 'INTEGER'),
 		('distance', 'REAL'),
-		('location', 'TEXT')
+		('location', 'TEXT'),
+		('active_site', 'INTEGER')
 	]
 }
 

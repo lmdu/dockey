@@ -1,6 +1,6 @@
 apsw==3.45.2.0
 requests==2.31.0
-numpy==1.26.4
+numpy==1.23.5
 psutil==5.9.8
 meeko==0.5.0
 rdkit==2023.9.5

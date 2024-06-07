@@ -24,7 +24,7 @@ from AutoDockTools.MoleculePreparation import AD4LigandPreparation
 from AutoDockTools.MoleculePreparation import AD4ReceptorPreparation
 from AutoDockTools.MoleculePreparation import AD4FlexibleReceptorPreparation
 
-from utils import load_molecule_from_file
+from utils import load_molecule_from_file, clean_pdb_for_protein
 
 __all__ = ['prepare_autodock_ligand', 'prepare_autodock_receptor',
 	'prepare_meeko_ligand', 'prepare_ligand', 'prepare_flex_receptor',
@@ -383,34 +383,6 @@ def prepare_openbabel_receptor(receptor_file, receptor_pdbqt):
 
 	conv = openbabel.OBConversion()
 	conv.SetInAndOutFormats(receptor_format, 'pdbqt')
-
-	mol = openbabel.OBMol()
-	conv.ReadFile(mol, receptor_file)
-
-	#Remove nonstd residues
-	std_residues = [
-		'CYS','ILE','SER','VAL','GLN','LYS','ASN',
-		'PRO','THR','PHE','ALA','HIS','GLY','ASP',
-		'LEU', 'ARG', 'TRP', 'GLU', 'TYR','MET',
-		'HID', 'HSP', 'HIE', 'HIP', 'CYX', 'CSS'
-	]
-
-	nonstd_residues = []
-	for residue in openbabel.OBResidueIter(mol):
-		if residue.GetName().strip() not in std_residues:
-			nonstd_residues.append(residue)
-
-	for nonstd_residue in nonstd_residues:
-		mol.DeleteResidue(nonstd_residue)
-
-	#add hydrogens
-	mol.AddPolarHydrogens()
-
-	#calc partial charges
-	charge_model = openbabel.OBChargeModel.FindType("gasteiger")
-	charge_model.ComputeCharges(mol)
-	charge_model.GetPartialCharges()
-
 	#Output as a rigid molecule
 	conv.AddOption('r', conv.OUTOPTIONS)
 
@@ -422,6 +394,46 @@ def prepare_openbabel_receptor(receptor_file, receptor_pdbqt):
 
 	#Preserve atom indices from input file
 	conv.AddOption('p', conv.OUTOPTIONS)
+
+	mol = openbabel.OBMol()
+
+	if receptor_format == 'pdb':
+		pdb_content = clean_pdb_for_protein(receptor_file)
+		conv.ReadString(mol, pdb_content)
+	else:
+		conv.ReadFile(mol, receptor_file)
+
+		#Remove nonstd residues
+		std_residues = [
+			'CYS','ILE','SER','VAL','GLN','LYS','ASN',
+			'PRO','THR','PHE','ALA','HIS','GLY','ASP',
+			'LEU', 'ARG', 'TRP', 'GLU', 'TYR','MET',
+			'HID', 'HSP', 'HIE', 'HIP', 'CYX', 'CSS'
+		]
+
+		nonstd_residues = []
+		for residue in openbabel.OBResidueIter(mol):
+			if residue.GetName().strip() not in std_residues:
+				nonstd_residues.append(residue)
+
+		for nonstd_residue in nonstd_residues:
+			mol.DeleteResidue(nonstd_residue)
+
+		nonstd_atoms = []
+		for atom in openbabel.OBMolAtomIter(mol):
+			if atom.GetResidue() is None:
+				nonstd_atoms.append(atom)
+
+		for nonstd_atom in nonstd_atoms:
+			mol.DeleteAtom(nonstd_atom)
+
+	#add hydrogens
+	mol.AddPolarHydrogens()
+
+	#calc partial charges
+	charge_model = openbabel.OBChargeModel.FindType("gasteiger")
+	charge_model.ComputeCharges(mol)
+	charge_model.GetPartialCharges()
 
 	conv.WriteFile(mol, receptor_pdbqt)
 

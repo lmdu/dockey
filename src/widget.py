@@ -22,7 +22,7 @@ __all__ = ['BrowseInput', 'CreateProjectDialog', 'AutodockConfigDialog',
 	'AcknowledgementDialog', 'CPUAndMemoryViewDialog', 'DockingToolConfigPage',
 	'ReceptorPreparationConfigPage', 'LigandPreparationConfigPage',
 	'DockeyConfigPage', 'DockeyRunAutodockDialog', 'DockeyRunAutodockVinaDialog',
-	'DockeyRunQuickVinaDialog'
+	'DockeyRunQuickVinaDialog', 'ActiveBindingSitesDialog'
 ]
 
 class QHLine(QFrame):
@@ -1568,7 +1568,7 @@ class FlexResiduesDialog(QDialog):
 		self.residue_tree = QTreeWidget(self)
 		self.residue_tree.setColumnCount(5)
 		self.residue_tree.setRootIsDecorated(False)
-		self.residue_tree.setHeaderLabels(["Index", "Chain", "AA", "Residue", "Atoms"])
+		self.residue_tree.setHeaderLabels(["Index", "Chain", "Residue", "Number", "Atoms"])
 		self.residue_tree.itemChanged.connect(self.on_residue_checked)
 		self.residue_tree.itemClicked.connect(self.on_residue_clicked)
 
@@ -1718,6 +1718,98 @@ class FlexResiduesDialog(QDialog):
 				if flexres.data[0] is not None:
 					sql = "DELETE FROM flex WHERE id=?"
 					DB.query(sql, (flexres.data[0],))
+
+		self.accept()
+
+class ActiveBindingSitesDialog(QDialog):
+	def __init__(self, parent, mol_id):
+		super().__init__(parent)
+		self.mol_id = mol_id
+		self.active_sites = {}
+
+		self.setWindowTitle("Preset active binding sites")
+
+		self.residue_tree = QTreeWidget(self)
+		self.residue_tree.setColumnCount(5)
+		self.residue_tree.setRootIsDecorated(False)
+		self.residue_tree.setHeaderLabels(["Index", "Chain", "Residue", "Number", "Atoms"])
+		self.residue_tree.itemChanged.connect(self.on_residue_checked)
+		#self.residue_tree.itemClicked.connect(self.on_residue_clicked)
+
+		self.btns = QDialogButtonBox(
+			QDialogButtonBox.Cancel |
+			QDialogButtonBox.Ok
+		)
+		self.btns.accepted.connect(self.on_accept_clicked)
+		self.btns.rejected.connect(self.reject)
+
+		layout = QVBoxLayout()
+		layout.addWidget(QLabel("Select residues as active binding sites:", self))
+		layout.addWidget(self.residue_tree, 1)
+		layout.addWidget(self.btns)
+		self.setLayout(layout)
+
+		self.get_molecule_and_sites()
+		self.display_molecule_residues()
+
+	def sizeHint(self):
+		return QSize(550, 350)
+
+	def get_molecule_and_sites(self):
+		sql = "SELECT content,format FROM molecular WHERE id=? LIMIT 1"
+		self.mol = DB.get_dict(sql, (self.mol_id,))
+
+		sql = "SELECT * FROM active WHERE rid=?"
+		for row in DB.query(sql, (self.mol_id,)):
+			self.active_sites[row[2]] = AttrDict({
+				'checked': True,
+				'data': list(row)
+			})
+
+	def display_molecule_residues(self):
+		for res in get_molecule_residues(self.mol.content, self.mol.format):
+			item = QTreeWidgetItem(self.residue_tree, res)
+			item.setFlags(item.flags() | Qt.ItemIsUserCheckable)
+
+			idx = int(res[0])
+			
+			if idx in self.active_sites:
+				item.setCheckState(0, Qt.Checked)
+			else:
+				item.setCheckState(0, Qt.Unchecked)
+
+			self.residue_tree.addTopLevelItem(item)
+
+	@Slot(QTreeWidgetItem, int)
+	def on_residue_checked(self, item, column):
+		idx = int(item.text(0))
+		chain = item.text(1)
+		res = item.text(2)
+		num = item.text(3)
+		if item.checkState(0) == Qt.Checked:
+			if idx in self.active_sites:
+				self.active_sites[idx].checked = True
+			else:
+				self.active_sites[idx] = AttrDict({
+					'checked': True,
+					'data': [None, self.mol_id, idx, chain, res, num],
+				})
+		else:
+			if idx in self.active_sites:
+				self.active_sites[idx].checked = False
+
+	@Slot()
+	def on_accept_clicked(self):
+		for idx, site in self.active_sites.items():
+			if site.checked:
+				if site.data[0] is None:
+					sql = "INSERT INTO active VALUES (?,?,?,?,?,?)"
+					DB.query(sql, site.data)
+
+			else:
+				if site.data[0] is not None:
+					sql = "DELETE FROM active WHERE id=?"
+					DB.query(sql, (site.data[0],))
 
 		self.accept()
 
