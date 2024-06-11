@@ -2,9 +2,9 @@ apsw==3.45.2.0
 requests==2.31.0
 numpy==1.23.5
 psutil==5.9.8
-meeko==0.5.0
+meeko==0.5.1
 rdkit==2023.9.5
 pdb2pqr==3.6.2
 plip==2.3.0
 PySide6-Essentials==6.4.3
-pyinstaller==6.5.0
+pyinstaller==6.8.0
