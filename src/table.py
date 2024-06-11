@@ -1255,13 +1255,16 @@ class PoseTableView(QTableView):
 			return
 
 		headers = self.model().custom_headers
+		headers.append("Actives")
 		sql = "SELECT * FROM pose WHERE jid=?"
 
 		with open(out, 'w') as fw:
 			fw.write("{}\n".format(','.join(headers)))
 
 			for row in DB.query(sql, (jid,)):
-				fw.write("{}\n".format(','.join(map(str,row[0:len(headers)]))))
+				res = list(row[0:len(headers)-1])
+				res.append(row[-1])
+				fw.write("{}\n".format(','.join(map(str, res))))
 
 		self.parent.show_message("Export table to {}".format(out))
 
@@ -1369,8 +1372,8 @@ class PoseTableView(QTableView):
 				))
 
 			interact_info = """
-			Interaction with preset active binding sites:
-			<table>
+			<table cellspacing='10'>
+			<tr><td colspan='4'><b>Interaction with preset active binding sites:</b></td></tr>
 			<tr><td>Interaction</td><td>Chain</td><td>Residue</td><td>Number</td></tr>
 			{}
 			</table>
@@ -1436,13 +1439,16 @@ class BestTableView(PoseTableView):
 			return
 
 		headers = self.model().custom_headers
+		headers.append("Actives")
 		sql = self.model().get_sql.split('WHERE')[0]
 
 		with open(out, 'w') as fw:
 			fw.write("{}\n".format(','.join(headers)))
 
 			for row in DB.query(sql):
-				fw.write("{}\n".format(','.join(map(str,row[0:len(headers)]))))
+				res = list(row[0:len(headers)-1])
+				res.append(row[-1])
+				fw.write("{}\n".format(','.join(map(str, res))))
 
 		self.parent.show_message("Export table to {}".format(out))
 
@@ -1517,8 +1523,7 @@ class BestTableView(PoseTableView):
 			"<tr><td>Ligand efficiency lipophilic price (LELP): </td><td>{}</td></tr>"
 			"</table>"
 		)
-
-		dlg = MoleculeDetailDialog(self.parent, info.format(
+		dock_info = info.format(
 			titles[0],
 			pose.run,
 			titles[1],
@@ -1534,7 +1539,27 @@ class BestTableView(PoseTableView):
 			pose.fq,
 			pose.lle,
 			pose.lelp
-		))
+		)
+
+		if pose.actives:
+			rows = []
+			for active in pose.actives.split(','):
+				itype, chain, res, num = active.split(':')
+				rows.append("<tr><td>{}</td><td>{}</td><td>{}</td><td>{}</td></tr>".format(
+					itype, chain, res, num
+				))
+
+			interact_info = """
+			<table cellspacing='10'>
+			<tr><td colspan='4'><b>Interaction with preset active binding sites:</b></td></tr>
+			<tr><td>Interaction</td><td>Chain</td><td>Residue</td><td>Number</td></tr>
+			{}
+			</table>
+			""".format('\n'.join(rows))
+		else:
+			interact_info = ""
+
+		dlg = MoleculeDetailDialog(self.parent, "{}{}".format(dock_info, interact_info))
 		dlg.exec()
 
 class DockeyTextBrowser(QTextBrowser):

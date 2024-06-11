@@ -613,11 +613,11 @@ def get_complex_interactions(poses, work_dir, active_sites):
 
 				if residue in active_sites:
 					is_active_site = 1
-					interact = "hb:{}".format(residue)
+					interact = "hydrogen_bond:{}".format(residue)
 
 					if poses[i][-1]:
 						if interact not in poses[i][-1]:
-							poses[i][-1] = "{},{}".format(poses[i][-1], interact)
+							poses[i][-1] = "{};{}".format(poses[i][-1], interact)
 
 					else:
 						poses[i][-1] = interact
@@ -643,11 +643,11 @@ def get_complex_interactions(poses, work_dir, active_sites):
 
 				if residue in active_sites:
 					is_active_site = 1
-					interact = "hi:{}".format(residue)
+					interact = "hydrophobic_interaction:{}".format(residue)
 
 					if poses[i][-1]:
 						if interact not in poses[i][-1]:
-							poses[i][-1] = "{},{}".format(poses[i][-1], interact)
+							poses[i][-1] = "{};{}".format(poses[i][-1], interact)
 
 					else:
 						poses[i][-1] = interact
@@ -669,11 +669,11 @@ def get_complex_interactions(poses, work_dir, active_sites):
 
 				if residue in active_sites:
 					is_active_site = 1
-					interact = "wb:{}".format(residue)
+					interact = "water_bridge:{}".format(residue)
 
 					if poses[i][-1]:
 						if interact not in poses[i][-1]:
-							poses[i][-1] = "{},{}".format(poses[i][-1], interact)
+							poses[i][-1] = "{};{}".format(poses[i][-1], interact)
 
 					else:
 						poses[i][-1] = interact
@@ -700,11 +700,11 @@ def get_complex_interactions(poses, work_dir, active_sites):
 
 				if residue in active_sites:
 					is_active_site = 1
-					interact = "sb:{}".format(residue)
+					interact = "salt_bridge:{}".format(residue)
 
 					if poses[i][-1]:
 						if interact not in poses[i][-1]:
-							poses[i][-1] = "{},{}".format(poses[i][-1], interact)
+							poses[i][-1] = "{};{}".format(poses[i][-1], interact)
 
 					else:
 						poses[i][-1] = interact
@@ -737,11 +737,11 @@ def get_complex_interactions(poses, work_dir, active_sites):
 
 				if residue in active_sites:
 					is_active_site = 1
-					interact = "ps:{}".format(residue)
+					interact = "pi_stacking:{}".format(residue)
 
 					if poses[i][-1]:
 						if interact not in poses[i][-1]:
-							poses[i][-1] = "{},{}".format(poses[i][-1], interact)
+							poses[i][-1] = "{};{}".format(poses[i][-1], interact)
 
 					else:
 						poses[i][-1] = interact
@@ -766,11 +766,11 @@ def get_complex_interactions(poses, work_dir, active_sites):
 
 				if residue in active_sites:
 					is_active_site = 1
-					interact = "pc:{}".format(residue)
+					interact = "pi_cation:{}".format(residue)
 
 					if poses[i][-1]:
 						if interact not in poses[i][-1]:
-							poses[i][-1] = "{},{}".format(poses[i][-1], interact)
+							poses[i][-1] = "{};{}".format(poses[i][-1], interact)
 
 					else:
 						poses[i][-1] = interact
@@ -804,11 +804,11 @@ def get_complex_interactions(poses, work_dir, active_sites):
 
 				if residue in active_sites:
 					is_active_site = 1
-					interact = "ha:{}".format(residue)
+					interact = "halogen_bond:{}".format(residue)
 
 					if poses[i][-1]:
 						if interact not in poses[i][-1]:
-							poses[i][-1] = "{},{}".format(poses[i][-1], interact)
+							poses[i][-1] = "{};{}".format(poses[i][-1], interact)
 
 					else:
 						poses[i][-1] = interact
@@ -831,11 +831,11 @@ def get_complex_interactions(poses, work_dir, active_sites):
 
 				if residue in active_sites:
 					is_active_site = 1
-					interact = "mc:{}".format(residue)
+					interact = "metal_complex:{}".format(residue)
 
 					if poses[i][-1]:
 						if interact not in poses[i][-1]:
-							poses[i][-1] = "{},{}".format(poses[i][-1], interact)
+							poses[i][-1] = "{};{}".format(poses[i][-1], interact)
 
 					else:
 						poses[i][-1] = interact
