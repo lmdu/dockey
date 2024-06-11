@@ -7,4 +7,4 @@ rdkit==2023.9.5
 pdb2pqr==3.6.2
 plip==2.3.0
 PySide6-Essentials==6.4.3
-pyinstaller==6.7.0
+pyinstaller==5.13.2
