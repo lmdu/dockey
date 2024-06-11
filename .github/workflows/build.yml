@@ -206,8 +206,8 @@ jobs:
           version=`awk '/^DOCKEY_VERSION/{print $NF}' src/config.py | sed 's/\"//g'`
           npm install --global create-dmg
           cd dist
-          create-dmg Dockey.app || true
-          mv "Dockey 0.0.0.dmg" Dockey-v${version}-macos.dmg
+          create-dmg Dockey.app || test -f Dockey\ 0.0.0.dmg
+          mv Dockey\ 0.0.0.dmg Dockey-v${version}-macos.dmg
           tar -czvf Dockey-v${version}-macos.tar.gz Dockey.app
 
       - uses: actions/upload-artifact@v4
