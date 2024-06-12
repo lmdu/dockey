@@ -1,3 +1,4 @@
+import os
 import sys
 import apsw
 import numpy
@@ -35,9 +36,12 @@ large-scale molecular docking and virtual screening. <i>Briefings in
 Bioinformatics</i>. 2023, 24(2):bbad047.
 (doi:<a href="https://doi.org/10.1093/bib/bbad047">10.1093/bib/bbad047</a>)
 </p>
+<p>{data} <br> {lib}</p>
 """.format(
 	version = DOCKEY_VERSION,
-	build = DOCKEY_BUILD
+	build = DOCKEY_BUILD,
+	data = os.environ['BABEL_DATADIR'],
+	lib = os.environ['BABEL_LIBDIR']
 )
 
 DOCKEY_THANKS = """
