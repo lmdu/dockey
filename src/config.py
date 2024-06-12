@@ -10,7 +10,7 @@ import psutil
 import pdb2pqr
 import requests
 import pdbfixer
-import openbabel
+from openbabel import openbabel
 from PySide6.QtCore import __version__ as pyside_version
 from plip.basic.config import __version__ as plip_version
 
@@ -36,12 +36,13 @@ large-scale molecular docking and virtual screening. <i>Briefings in
 Bioinformatics</i>. 2023, 24(2):bbad047.
 (doi:<a href="https://doi.org/10.1093/bib/bbad047">10.1093/bib/bbad047</a>)
 </p>
-<p>{data} <br> {lib}</p>
+<p>{data} <br> {lib} <br> {path}</p>
 """.format(
 	version = DOCKEY_VERSION,
 	build = DOCKEY_BUILD,
 	data = os.environ['BABEL_DATADIR'],
-	lib = os.environ['BABEL_LIBDIR']
+	lib = os.environ['BABEL_LIBDIR'],
+	path = os.environ['PATH']
 )
 
 DOCKEY_THANKS = """
@@ -232,7 +233,7 @@ DOCKEY_THANKS = """
 	apsw = apsw.apswversion(),
 	pyside = pyside_version,
 	pymol = pymol.cmd.get_version()[0],
-	babel = openbabel.__version__,
+	babel = openbabel.OBReleaseVersion(),
 	rdkit = rdkit.__version__,
 	meeko = meeko.__version__,
 	plip = plip_version,

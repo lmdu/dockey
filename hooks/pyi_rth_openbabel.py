@@ -2,10 +2,11 @@ import os
 import sys
 
 d = sys._MEIPASS
+is_win = sys.platform.startswith('win')
 
-if sys.platform.startswith('win32'):
-	os.environ['BABEL_DATADIR'] = os.path.join(d, 'openbabel', 'data')
-	os.environ['BABEL_LIBDIR'] = os.path.join(d, 'openbabel')
+if is_win:
+	os.environ['BABEL_DATADIR'] = os.path.join(d, 'data')
+	os.environ['BABEL_LIBDIR'] = os.path.join(d)
 else:
 	os.environ['BABEL_DATADIR'] = os.path.join(d, 'openbabel', 'data')
 	os.environ['BABEL_LIBDIR'] = os.path.join(d, 'openbabel', 'lib')
