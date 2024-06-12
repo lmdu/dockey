@@ -854,6 +854,7 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 			os.remove(project_file)
 
 		self.create_db_connect(project_file)
+		DB.set_option('version', DOCKEY_VERSION)
 
 	def open_project(self):
 		if DB.active():
@@ -873,6 +874,25 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 			return
 
 		self.create_db_connect(project_file)
+
+		current_version = DB.get_option('version')
+
+		if not current_version:
+			warn = (
+				"This project file is not compatible with the current version of Dockey!<br>"
+				"You can create a new project file."
+			)
+			QMessageBox.warning(self, "Warning", warn, QMessageBox.Ok)
+
+		elif compare_versions(COMPAT_VERSION, current_version):
+			warn = (
+				"This project file was created by Dockey {}.<br>"
+				"It's not compatible with the current version of Dockey!<br>"
+				"You can create a new project file."
+			).format(current_version)
+
+			QMessageBox.warning(self, "Warning",warn, QMessageBox.Ok)
+
 
 	def save_project(self):
 		if DB.changed():
@@ -1133,14 +1153,23 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		self.pymol_auto_save_mol()
 
 	def pymol_remove_water(self):
+		if not self.cmd.get_object_list():
+			return
+
 		self.cmd.remove('resn hoh')
 		self.pymol_auto_save_mol()
 
 	def pymol_remove_solvent(self):
+		if not self.cmd.get_object_list():
+			return
+
 		self.cmd.remove('solvent')
 		self.pymol_auto_save_mol()
 
 	def pymol_remove_organic(self):
+		if not self.cmd.get_object_list():
+			return
+
 		self.cmd.remove('organic')
 		self.pymol_auto_save_mol()
 

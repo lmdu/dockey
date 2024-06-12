@@ -22,7 +22,7 @@ __all__ = ['AttrDict', 'draw_gridbox', 'convert_dimension_to_coordinates',
 	'interaction_visualize', 'get_dimension_from_pdb', 'load_molecule_from_file',
 	'convert_string_to_pdb', 'memory_format', 'get_molecule_residues', 'sdf_file_parser',
 	'get_sdf_props', 'get_residue_bonds', 'convert_pdbqt_to_pdb_by_adt',
-	'clean_pdb_for_protein'
+	'clean_pdb_for_protein', 'compare_versions'
 ]
 
 class NewPdbWriter(PdbWriter):
@@ -975,6 +975,26 @@ def clean_pdb_for_protein(pdb_file):
 
 	return ''.join(lines)
 
+def compare_versions(version1, version2):
+	major1, minor1, patch1 = version1.split('.')
+	major2, minor2, patch2 = version1.split('.')
+
+	if int(major1) > int(major2):
+		return True
+	elif int(major1) < int(major2):
+		return False
+
+	if int(minor1) > int(minor2):
+		return True
+	elif int(minor1) < int(minor2):
+		return False
+
+	if int(patch1) > int(patch2):
+		return True
+	elif int(patch1) < int(patch2):
+		return False
+
+	return True
 
 if __name__ == '__main__':
 	import sys
