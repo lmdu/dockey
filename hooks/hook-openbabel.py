@@ -23,9 +23,11 @@ if is_linux:
 	)
 	binaries = collect_data_files('openbabel',
 		subdir='plugin',
+		include_py_files = True
 	)
 	binaries += collect_data_files('openbabel',
 		subdir='../openbabel.libs',
+		include_py_files = True
 	)
 
 if is_darwin:
@@ -34,5 +36,6 @@ if is_darwin:
 	)
 	binaries = collect_data_files('openbabel',
 		subdir='plugin',
+		include_py_files = True
 	)
 	binaries += collect_dynamic_libs('openbabel')
