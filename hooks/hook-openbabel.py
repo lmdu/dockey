@@ -25,10 +25,10 @@ if is_linux:
 		subdir='plugin',
 		include_py_files = True
 	)
-	binaries += collect_data_files('openbabel',
-		subdir='../openbabel.libs',
-		include_py_files = True
-	)
+	#binaries += collect_data_files('openbabel',
+	#	subdir='../openbabel.libs',
+	#	include_py_files = True
+	#)
 
 if is_darwin:
 	datas = collect_data_files('openbabel',
