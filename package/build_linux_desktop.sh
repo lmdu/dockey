@@ -122,7 +122,7 @@ mkdir -p Dockey/usr/share/metainfo
 cat > Dockey/usr/share/metainfo/dockey.appdata.xml <<EOF
 <?xml version="1.0" encoding="UTF-8"?>
 <component type="desktop-application">
-<id>com.big.dockey</id>
+<id>com.dulab.dockey</id>
 <metadata_license>CC0-1.0</metadata_license>
 <project_license>MIT</project_license>
 <name>Dockey</name>
