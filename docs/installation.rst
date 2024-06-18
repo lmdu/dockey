@@ -88,6 +88,8 @@ Go to `https://qvina.github.io/ <https://qvina.github.io/>`_ page, and then clic
 		chmod +x Dockey-version-ubuntu.AppImage
 		./Dockey-version-ubuntu.AppImage
 
+	You can also double click the .AppImage file to run it.
+
 #. Or, you can click on ``Dockey-version-ubuntu.tar.gz`` to download the compressed package, and then uncompress it to run Dockey:
 
 .. code:: shell
