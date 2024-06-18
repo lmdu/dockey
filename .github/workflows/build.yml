@@ -81,7 +81,7 @@ jobs:
         run: |
           pip3 install git+https://github.com/lmdu/AutoDockTools_py3
           pip3 install https://github.com/lmdu/pymol-wheel/releases/download/2.6.0.post4/pymol-2.6.0a0-cp310-cp310-manylinux_2_28_x86_64.whl
-          pip3 install https://github.com/lmdu/openbabel-wheel/releases/download/3.1.1.post8/openbabel-3.1.1-cp310-cp310-manylinux_2_28_x86_64.whl
+          pip3 install https://github.com/lmdu/openbabel-wheel/releases/download/3.1.1.post9/openbabel-3.1.1-cp310-cp310-manylinux_2_28_x86_64.whl
           pip3 install https://github.com/lmdu/openmm-wheel/releases/download/8.0.0.post1/OpenMM-8.0.0-cp310-cp310-manylinux_2_28_x86_64.whl
           pip3 install https://github.com/openmm/pdbfixer/archive/refs/tags/1.9.tar.gz
           pip3 install -r requirements.txt

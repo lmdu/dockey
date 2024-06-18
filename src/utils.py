@@ -977,7 +977,7 @@ def clean_pdb_for_protein(pdb_file):
 
 def compare_versions(version1, version2):
 	major1, minor1, patch1 = version1.split('.')
-	major2, minor2, patch2 = version1.split('.')
+	major2, minor2, patch2 = version2.split('.')
 
 	if int(major1) > int(major2):
 		return True
@@ -997,11 +997,5 @@ def compare_versions(version1, version2):
 	return True
 
 if __name__ == '__main__':
-	import sys
-	infile = sys.argv[1]
-	with open(infile) as fh:
-		pdb_str = fh.read()
-	
-	res = get_dimension_from_pdb(pdb_str, 0.375)
-
-	print(res)
+	flag = compare_versions('0.9.0', '1.0.0')
+	print(flag)

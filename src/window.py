@@ -780,7 +780,7 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		self.pose_tab.select()
 		self.project_ready.emit(True)
 
-		self.setWindowTitle("{} - Dockey".format(db_file))
+		self.setWindowTitle("{} - Dockey v{}".format(db_file, DOCKEY_VERSION))
 
 	def dragEnterEvent(self, event):
 		event.acceptProposedAction()
@@ -880,19 +880,18 @@ class DockeyMainWindow(QMainWindow, PyMOLDesktopGUI):
 		if not current_version:
 			warn = (
 				"This project file is not compatible with the current version of Dockey!<br>"
-				"You can create a new project file."
+				"You can create a new project file to perform docking."
 			)
 			QMessageBox.warning(self, "Warning", warn, QMessageBox.Ok)
 
-		elif compare_versions(COMPAT_VERSION, current_version):
+		elif not compare_versions(current_version, COMPAT_VERSION):
 			warn = (
 				"This project file was created by Dockey {}.<br>"
 				"It's not compatible with the current version of Dockey!<br>"
-				"You can create a new project file."
+				"You can create a new project file to perform docking."
 			).format(current_version)
 
 			QMessageBox.warning(self, "Warning",warn, QMessageBox.Ok)
-
 
 	def save_project(self):
 		if DB.changed():
