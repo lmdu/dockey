@@ -20,8 +20,9 @@ Molecular docking and virtual screening
    overview
    project
    input
-   prepare
    docking
+   prepare
+   settings
    pose
    interaction
    visualization

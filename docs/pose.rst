@@ -77,6 +77,11 @@ You can click one pose in best pose table or job pose table to view the 3D struc
 #. Go to **File** menu -> **Export As Image** to save the 3D structure in PyMOL view to PNG file.
 #. Go to **File** menu -> **Export As File** to save the content of PyMOL view to pdb file.
 
+Preset Active Binding Sites
+---------------------------
+
+You can right click a receptor in molecular list and then go to menu **Preset Active Binding Sites** to open a dialog. You can select several residues as active binding sites to see whether ligands can be docked to them. If the ligand can be docked to preset binding sites, the pose in table will has green background color.
+
 .. |bestpose| image:: _static/bestpose.png
 .. |jobpose| image:: _static/jobpose.png
 .. |posemenu| image:: _static/posemenu.png

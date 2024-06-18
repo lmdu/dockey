@@ -6,7 +6,7 @@ Docking engines
 
 Firstly, you should specify the location of docking engines to ensure that the Dockey can invoke the docking engines.
 
-Go to **Edit** menu -> **Settings** -> **Docking tools** tab to open the docking engine setting dialog in where you can select the path of docking engines.
+Go to **Edit** menu -> **Global Settings** -> **Docking tools** tab to open the docking engine setting dialog in where you can select the path of docking engines.
 
 .. rst-class:: wy-text-center
 
@@ -45,79 +45,70 @@ Currently, Dockey supports three docking engines: AutoDock4, AutoDock Vina and Q
 Run AutoDock4
 ~~~~~~~~~~~~~
 
-Go to **Run** menu -> **AutoDock** to start AutoDock4 docking. If Dockey has completed docking jobs, you will be prompted with a dialog box asking whether or not to delete the previous jobs and docking results, and genreate new docking jobs.
+Go to **Run** menu -> **AutoDock4** to start AutoDock4 docking. You will be prompted with a dialog box asking to select receptor and ligand preparation tools.
 
 .. rst-class:: wy-text-center
 
 	|taskdlg|
 
-There are four steps to start AutoDock4. You can click ``<Back`` or ``Next>`` button in each page to switch step. At last, you can click ``Finish`` button to generate job queue and start docking jobs.
+#. Select a search algorithm: Genetic Algorithm (GA), Lamarckian GA, Simulated Annealing or Local Search for Autodock4. Lamarckian GA is most widely used search algorithm.
 
-**Step 1**, select a search algorithm: Genetic Algorithm (GA), Lamarckian GA, Simulated Annealing or Local Search. 
+#. Select a receptor preparation tool (AutoDockTools or OpenBabel).
 
-.. rst-class:: wy-text-center
+#. Select a ligand preparation tool (Meeko, AutoDockTools or OpenBabel).
 
-	|ad1|
-
-.. note::
-
-	Lamarckian GA is most widely used search algorithm.
-
-**Step 2**, set parameters for selected algorithm. You can use default parameters or uncheck ``Use default paramters`` to adjust parameters. 
-
-.. rst-class:: wy-text-center
-
-	|ad2|
-
-**Step 3**, set other docking parameters.
-
-.. rst-class:: wy-text-center
-
-	|ad3|
-
-**Step 4**, confirm docking jobs, you will get the number of docking jobs.
-
-.. rst-class:: wy-text-center
-
-	|ad4|
+#. Click **OK** to start docking tasks.
 
 .. note::
 
-	The meanings of above parameters can be found in `AutoDock4 manual <https://autodock.scripps.edu/wp-content/uploads/sites/56/2021/10/AutoDock4.2.6_UserGuide.pdf>`_. For simplicity, you can use the default value of parameters.
+	How to select receptor and ligand preparation tools (view `Molecular Preparation`_). How to set parameters for AutoDock4 (view `Autodock4 Settings`_)
 
 Run AutoDock Vina
 ~~~~~~~~~~~~~~~~~
 
-AudoDock Vina is more simple than AutoDock4, only two steps need to start Vina.
-
-**Step 1**, set docking parameters for AutoDock Vina. Using default parameters is Ok.
+Go to **Run** menu -> **AutoDock Vina** to start Autodock Vina. You will be prompted with a dialog box asking to select receptor and lignad preparation tool.
 
 .. rst-class:: wy-text-center
 
 	|vina1|
 
-**Step 2**, comfirm docking jobs.
+#. Select a receptor preparation tool (AutoDockTools or OpenBabel).
 
-.. rst-class:: wy-text-center
+#. Select a ligand preparation tool (Meeko, AutoDockTools or OpenBabel).
 
-	|vina2|
+#. Click **OK** to start docking tasks.
+
+How to select receptor and ligand preparation tools (view `Molecular Preparation`_). How to set parameters for AutoDock Vina (view `Autodock Vina Settings`_)
 
 Run QuickVina-W
 ~~~~~~~~~~~~~~~
 
-Similar to AutoDock Vina, QuickVina-W also needs two steps.
-
-**Step 1**, set docking parameters for QuickVina-W. Using default parameters is Ok.
+Go to **Run** menu -> **QuickVina-W** to start QuickVina. You will be prompted with a dialog box asking to select receptor and lignad preparation tool.
 
 .. rst-class:: wy-text-center
 
 	|qvinaw1|
 
-**Step 2**, comfirm docking jobs.
+#. Select a receptor preparation tool (AutoDockTools or OpenBabel).
+
+#. Select a ligand preparation tool (Meeko, AutoDockTools or OpenBabel).
+
+#. Click **OK** to start docking tasks.
+
+How to select receptor and ligand preparation tools (view `Preparation Tools`_). How to set parameters for QuickVina-W (view `QuickVina Settings`_)
+
+Fix Receptor
+------------
+
+Sometimes, your receptor PDB file may have some problems during molecular docking. You can use `PDBFixer <https://github.com/openmm/pdbfixer>`_ or `PDB2PQR <https://github.com/Electrostatics/pdb2pqr>`_ to fix the PDB file. The parameter settings can be found in `PDBFixer Settings`_ and `PDB2PQR Settings`_.
 
 .. rst-class:: wy-text-center
 
-	|qvinaw2|
+	|fixer|
+
+.. note::
+
+	We recommend that you use different receptor preparation tools first, and if the error persists, then consider using PDBFixer or PDB2PQR or both to fix receptors.
 
 Performing flexible docking
 ---------------------------
@@ -227,3 +218,6 @@ Go to **Toolbar** -> click |cpu| to open computing resource usage dialog where y
 	:width: 24
 .. |jobnum| image:: _static/jobnum.png
 	:width: 300
+
+.. |fixer| image:: _static/fixer.png
+	:width: 500
