@@ -80,11 +80,31 @@ You can click one pose in best pose table or job pose table to view the 3D struc
 Preset Active Binding Sites
 ---------------------------
 
-You can right click a receptor in molecular list and then go to menu **Preset Active Binding Sites** to open a dialog. You can select several residues as active binding sites to see whether ligands can be docked to them. If the ligand can be docked to preset binding sites, the pose in table will has green background color.
+Before starting docking, you can right click a receptor in molecular list and then go to menu **Preset Active Binding Sites** to open a dialog. You can select several residues as active binding sites to see whether ligands can be docked to them. If the ligand can be docked to preset binding sites, the pose in table will has green background color.
+
+.. rst-class:: wy-text-center
+
+	|posegreen|
+
+You can right click the pose with green background, and go to **view details** to view interactions.
+
+.. rst-class:: wy-text-center
+
+	|poseinter|
+
 
 .. |bestpose| image:: _static/bestpose.png
+
 .. |jobpose| image:: _static/jobpose.png
+
 .. |posemenu| image:: _static/posemenu.png
 	:width: 250
+
 .. |poseview| image:: _static/poseview.png
+	:width: 500
+
+.. |posegreen| image:: _static/posegreen.png
+	:width: 500
+
+.. |poseinter| image:: _static/poseinter.png
 	:width: 500

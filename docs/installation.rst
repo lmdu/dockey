@@ -81,6 +81,12 @@ Go to `https://qvina.github.io/ <https://qvina.github.io/>`_ page, and then clic
 
 #. Go to `https://github.com/lmdu/dockey/releases <https://github.com/lmdu/dockey/releases>`_ page, click on ``Dockey-version-ubuntu.deb`` to download it. Then double click the downloaded installer to install the program following the on-screen instructions.
 
+#. You can also install Dockey using command line tool like this:
+
+	.. code:: shell
+
+		sudo dpkg -i Dockey-version-ubuntu.deb
+
 #. Or, you can click on ``Dockey-version-ubuntu.AppImage`` to download it and run it like this:
 
 	.. code:: shell
