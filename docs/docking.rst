@@ -61,7 +61,7 @@ Go to **Run** menu -> **AutoDock4** to start AutoDock4 docking. You will be prom
 
 .. note::
 
-	How to select receptor and ligand preparation tools (view `Molecular Preparation`_). How to set parameters for AutoDock4 (view `Autodock4 Settings`_)
+	How to select receptor and ligand preparation tools (view **Molecular Preparation** section). How to set parameters for AutoDock4 (view **Global Settings** -> **Autodock4 Settings** section)
 
 Run AutoDock Vina
 ~~~~~~~~~~~~~~~~~
@@ -78,7 +78,9 @@ Go to **Run** menu -> **AutoDock Vina** to start Autodock Vina. You will be prom
 
 #. Click **OK** to start docking tasks.
 
-How to select receptor and ligand preparation tools (view `Molecular Preparation`_). How to set parameters for AutoDock Vina (view `Autodock Vina Settings`_)
+.. note::
+
+	How to select receptor and ligand preparation tools (view **Molecular Preparation** section). How to set parameters for AutoDock Vina (view **Global Settings** -> **Autodock Vina Settings** section)
 
 Run QuickVina-W
 ~~~~~~~~~~~~~~~
@@ -95,12 +97,14 @@ Go to **Run** menu -> **QuickVina-W** to start QuickVina. You will be prompted w
 
 #. Click **OK** to start docking tasks.
 
-How to select receptor and ligand preparation tools (view `Preparation Tools`_). How to set parameters for QuickVina-W (view `QuickVina Settings`_)
+.. note::
+
+	How to select receptor and ligand preparation tools (view **Preparation Tools** section). How to set parameters for QuickVina-W (view **Global Settings** -> **QuickVina Settings** section)
 
 Fix Receptor
 ------------
 
-Sometimes, your receptor PDB file may have some problems during molecular docking. You can use `PDBFixer <https://github.com/openmm/pdbfixer>`_ or `PDB2PQR <https://github.com/Electrostatics/pdb2pqr>`_ to fix the PDB file. The parameter settings can be found in `PDBFixer Settings`_ and `PDB2PQR Settings`_.
+Sometimes, your receptor PDB file may have some problems during molecular docking. You can use `PDBFixer <https://github.com/openmm/pdbfixer>`_ or `PDB2PQR <https://github.com/Electrostatics/pdb2pqr>`_ to fix the PDB file. The parameter settings can be found in **Gobal Settings** -> **PDBFixer Settings** and **PDB2PQR Settings**.
 
 .. rst-class:: wy-text-center
 

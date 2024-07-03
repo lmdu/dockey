@@ -1365,7 +1365,7 @@ class PoseTableView(QTableView):
 
 		if pose.actives:
 			rows = []
-			for active in pose.actives.split(','):
+			for active in pose.actives.split(';'):
 				itype, chain, res, num = active.split(':')
 				rows.append("<tr><td>{}</td><td>{}</td><td>{}</td><td>{}</td></tr>".format(
 					itype, chain, res, num

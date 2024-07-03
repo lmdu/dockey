@@ -96,3 +96,9 @@ Go to **Edit** -> **Global Settings** -> **PDB2PQR** -> to set parameters for PD
 
 .. |meekolig| image:: _static/meekolig.png
 	:width: 500
+
+.. |pdbfixer| image:: _static/pdbfixer.png
+	:width: 500
+
+.. |pdb2pqr| image:: _static/pdb2pqr.png
+	:width: 500
