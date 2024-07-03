@@ -640,15 +640,15 @@ class BaseWorker(QRunnable):
 
 		while True:
 			try:
-				data = self.pipe.get_nowait()
+				data = self.pipe.get()
 				self.call_response(data)
 
-			except queue.Empty:
-				QThread.msleep(10)
-				continue
+			#except queue.Empty:
+			#	QThread.msleep(10)
+			#	continue
 
 			except:
-				print(traceback.format_exc())
+				#print(traceback.format_exc())
 				break
 
 		self.update_finished()
