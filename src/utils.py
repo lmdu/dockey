@@ -593,7 +593,7 @@ def get_complex_interactions(poses, work_dir, active_sites):
 		compound = pose[-1]
 		poses[i].append('')
 		
-		if not compound:	
+		if not compound:
 			continue
 
 		mol = PDBComplex()
@@ -822,7 +822,8 @@ def get_complex_interactions(poses, work_dir, active_sites):
 					"{:.2}".format(ha.don_angle),
 					"{:.2}".format(ha.acc_angle),
 					"{} [{}]".format(ha.don_orig_idx, ha.donortype),
-					"{} [{}]".format(ha.acc_orig_idx, ha.acctype)
+					"{} [{}]".format(ha.acc_orig_idx, ha.acctype),
+					is_active_site
 				])
 
 			#metal complexes

@@ -110,7 +110,9 @@ class ImportSDFProcess(ImportProcess):
 class ImportFolderProcess(ImportProcess):
 	def process(self):
 		mol_files = QDirIterator(self.mol_files, QDir.Files)
-		self.mol_total = QDir(self.mol_files, filter=QDir.Files).count()
+		mol_dir = QDir(self.mol_files)
+		mol_dir.setFilter(QDir.Files)
+		self.mol_total = mol_dir.count()
 
 		while mol_files.hasNext():
 			mol_file = mol_files.next()

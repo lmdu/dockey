@@ -1,6 +1,7 @@
 import os
 import csv
 import time
+import queue
 import psutil
 import traceback
 import subprocess
@@ -203,6 +204,7 @@ class WorkerManager(QRunnable):
 		self.parent = parent
 		self.setAutoDelete(True)
 		self.pool = QThreadPool()
+		self.mutex = QMutex()
 		self.settings = QSettings()
 		self.signals = ManagerSignals()
 		self.dock_worker = dock_worker
@@ -379,7 +381,7 @@ class WorkerManager(QRunnable):
 
 	def start_job(self, jid):
 		job = self.get_job(jid)
-		self.job_list[jid] = self.dock_worker(self.job_params, job)
+		self.job_list[jid] = self.dock_worker(self.mutex, self.job_params, job)
 		self.job_list[jid].signals.finished.connect(self.parent.job_worker.signals.feedback)
 		self.job_list[jid].signals.changed.connect(self.parent.job_model.update_row)
 		#QThreadPool.globalInstance().start(worker)
@@ -411,7 +413,10 @@ class WorkerManager(QRunnable):
 				self.job_list[jid].stop()
 
 	def get_job_pid(self, job):
-		return self.job_list[job].pid
+		try:
+			return self.job_list[job].pid
+		except:
+			pass
 
 	def set_thread(self, num):
 		self.job_thread = num
@@ -448,46 +453,54 @@ class WorkerSignals(QObject):
 class BaseWorker(QRunnable):
 	processer = None
 
-	def __init__(self, params, job):
+	def __init__(self, mutex, params, job):
 		super().__init__()
 		self.setAutoDelete(True)
 		self.job = job
+		self.mutex = mutex
 		self.params = params
 		self.signals = WorkerSignals()
 		self.settings = QSettings()
-		self.pipe = multiprocessing.SimpleQueue()
+		#self.pipe = multiprocessing.SimpleQueue()
+		self.pipe = multiprocessing.Queue()
+
 		self.tempdir = None
 		self.process = None
 
+	def update_data(self, sql, data):
+		self.mutex.lock()
+		DB.query(sql, data)
+		self.mutex.unlock()
+
 	def update_progress(self, data):
 		sql = "UPDATE jobs SET progress=? WHERE id=?"
-		DB.query(sql, (data['message'], self.job.id))
+		self.update_data(sql, (data['message'], self.job.id))
 		self.signals.changed.emit(self.job.id)
 
 	def update_started(self):
 		sql = "UPDATE jobs SET status=?,progress=?,started=? WHERE id=?"
-		DB.query(sql, (3, 0, int(time.time()), self.job.id))
+		self.update_data(sql, (3, 0, int(time.time()), self.job.id))
 		self.signals.changed.emit(self.job.id)
 
 	def update_stopped(self):
 		sql = "UPDATE jobs SET status=? WHERE id=?"
-		DB.query(sql, (2, self.job.id))
+		self.update_data(sql, (2, self.job.id))
 		self.signals.changed.emit(self.job.id)
 
 	def update_finished(self):
 		sql = "UPDATE jobs SET progress=?,finished=? WHERE id=?"
-		DB.query(sql, (100, int(time.time()), self.job.id))
+		self.update_data(sql, (100, int(time.time()), self.job.id))
 		self.signals.changed.emit(self.job.id)
 		self.signals.finished.emit(self.job.id)
 
 	def update_success(self):
 		sql = "UPDATE jobs SET status=? WHERE id=?"
-		DB.query(sql, (1, self.job.id))
+		self.update_data(sql, (1, self.job.id))
 		self.signals.changed.emit(self.job.id)
 
 	def update_error(self, data):
 		sql = "UPDATE jobs SET status=?,message=? WHERE id=?"
-		DB.query(sql, (0, data['message'], self.job.id))
+		self.update_data(sql, (0, data['message'], self.job.id))
 		self.signals.changed.emit(self.job.id)
 
 	def write_pose_interactions(self, data):
@@ -497,20 +510,24 @@ class BaseWorker(QRunnable):
 		interactions = data['interactions']
 
 		pose_sql = "INSERT INTO pose VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)"
+		self.mutex.lock()
 		DB.insert_rows(pose_sql, poses)
+		self.mutex.unlock()
 
 		pid_sql = "SELECT id FROM pose WHERE jid=?"
 		pose_ids = DB.get_column(pid_sql, (jid,))
 
 		best_sql = "INSERT INTO best VALUES (?,?)"
-		DB.query(best_sql, (None, pose_ids[best]))
+		self.update_data(best_sql, (None, pose_ids[best]))
 
 		best_count = DB.get_option('best_count')
 		if best_count:
 			best_count = int(best_count) + 1
 		else:
 			best_count = 1
+		self.mutex.lock()
 		DB.set_option('best_count', best_count)
+		self.mutex.unlock()
 
 		site_sql = "INSERT INTO binding_site VALUES (?,?,?)"
 		sites = interactions['binding_site']
@@ -519,7 +536,9 @@ class BaseWorker(QRunnable):
 		for site in sites:
 			site[1] = pose_ids[site[1]]
 
+		self.mutex.lock()
 		DB.insert_rows(site_sql, sites)
+		self.mutex.unlock()
 
 		bs_sql = "SELECT * from binding_site WHERE pid IN ({})".format(
 			','.join(map(str, pose_ids))
@@ -549,7 +568,9 @@ class BaseWorker(QRunnable):
 				interactions[k][i][1] = site_mapping[site]
 
 			sql = "INSERT INTO {} VALUES ({})".format(k, ','.join(['?']*cols_mapping[k]))
+			self.mutex.lock()
 			DB.insert_rows(sql, interactions[k])
+			self.mutex.unlock()
 
 	def make_temp_dir(self):
 		self.tempdir = QTemporaryDir()
@@ -575,18 +596,21 @@ class BaseWorker(QRunnable):
 		self.process.start()
 
 	def stop(self):
-		proc = psutil.Process(self.process.pid)
+		try:
+			proc = psutil.Process(self.process.pid)
 
-		for child in proc.children(recursive=True):
-			child.kill()
+			for child in proc.children(recursive=True):
+				child.kill()
 
-		self.process.kill()
-		self.update_stopped()
-		self.pipe.close()
+			self.process.kill()
+			self.pipe.close()
+		finally:
+			self.update_stopped()
+		
 
 	@property
 	def pid(self):
-		return self.progress.pid
+		return self.process.pid
 
 	def call_response(self, data):
 		if data['action'] == 'progress':
@@ -616,10 +640,15 @@ class BaseWorker(QRunnable):
 
 		while True:
 			try:
-				data = self.pipe.get()
+				data = self.pipe.get_nowait()
 				self.call_response(data)
 
+			except queue.Empty:
+				QThread.msleep(10)
+				continue
+
 			except:
+				print(traceback.format_exc())
 				break
 
 		self.update_finished()
