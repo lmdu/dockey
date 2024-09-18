@@ -324,6 +324,10 @@ class AutodockVinaSettingWidget(QWidget):
 
 			elif w.wgtype == 'select':
 				text = self.settings.value(w.option, w.default, str)
+
+				if text == 'ad4':
+					text = 'autodock4'
+
 				idx = w.widget.findText(text)
 				w.widget.setCurrentIndex(idx)
 
@@ -336,7 +340,12 @@ class AutodockVinaSettingWidget(QWidget):
 				self.settings.setValue(w.option, w.widget.value())
 
 			elif w.wgtype == 'select':
-				self.settings.setValue(w.option, w.widget.currentText())
+				text = w.widget.currentText()
+
+				if text == 'autodock4':
+					text = 'ad4'
+
+				self.settings.setValue(w.option, text)
 
 	def reset_settings(self):
 		self.settings.remove('VINA')

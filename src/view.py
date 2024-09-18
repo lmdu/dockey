@@ -314,6 +314,12 @@ class PymolGLWidget(QOpenGLWidget):
 		self.pymol.button(button, 0, *args)
 		self.pymol.button(button, 1, *args)
 
+	def keyPressEvent(self, ev):
+		args = keyPressEventToPyMOLButtonArgs(ev)
+
+		if args is not None:
+			self.pymol.button(*args)
+
 	##########################
 	# OpenGL
 	##########################
