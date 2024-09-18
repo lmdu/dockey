@@ -309,7 +309,12 @@ class AutodockVinaSettingWidget(QWidget):
 			elif p == 'scoring':
 				editor = QComboBox(self)
 				editor.addItems(m.choices)
-				idx = editor.findText(self.settings.value(option, m.default, m.type))
+				text = self.settings.value(option, m.default, m.type)
+
+				if text == 'ad4':
+					text = 'autodock4'
+
+				idx = editor.findText(text)
 				editor.setCurrentIndex(idx)
 				self.register_widget(editor, 'select', option, m.default, m.type)
 				param_layout.addRow(m.comment, editor)
