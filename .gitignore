@@ -7,3 +7,4 @@ autogrid4.exe
 *.pyc
 src/las2.pdb
 src/las2.pdbqt
+/tests

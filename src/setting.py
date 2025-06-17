@@ -25,6 +25,7 @@ class AutodockSettingTabWidget(QTabWidget):
 		}
 
 		self.create_algorithm_widgets()
+		self.read_settings()
 
 	def register_widget(self, widget, wgtype, option, default, convert, index=-1):
 		self.input_widgets.append(AttrDict(
@@ -261,6 +262,7 @@ class AutodockVinaSettingWidget(QWidget):
 		self.input_widgets = []
 
 		self.create_algorithm_widgets()
+		self.read_settings()
 
 	def register_widget(self, widget, wgtype, option, default, convert, index=-1):
 		self.input_widgets.append(AttrDict(
@@ -365,6 +367,7 @@ class QuickVinaSettingWidget(QWidget):
 		self.input_widgets = []
 
 		self.create_algorithm_widgets()
+		self.read_settings()
 
 	def register_widget(self, widget, wgtype, option, default, convert, index=-1):
 		self.input_widgets.append(AttrDict(
