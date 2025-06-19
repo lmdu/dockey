@@ -403,6 +403,7 @@ class WorkerManager(QRunnable):
 	def stop_job(self, jid):
 		if jid in self.job_list:
 			self.job_list[jid].stop()
+			self.job_list.pop(jid)
 
 	def stop_jobs(self):
 		self.job_thread = 0
@@ -411,6 +412,7 @@ class WorkerManager(QRunnable):
 		for jid in list(self.job_list.keys()):
 			if jid in self.job_list:
 				self.job_list[jid].stop()
+				self.job_list.pop(jid)
 
 	def get_job_pid(self, job):
 		try:
@@ -601,12 +603,11 @@ class BaseWorker(QRunnable):
 
 			for child in proc.children(recursive=True):
 				child.kill()
-
+			
 			self.process.kill()
 			self.pipe.close()
 		finally:
 			self.update_stopped()
-		
 
 	@property
 	def pid(self):
@@ -648,7 +649,7 @@ class BaseWorker(QRunnable):
 			#	continue
 
 			except:
-				#print(traceback.format_exc())
+				print(traceback.format_exc())
 				break
 
 		self.update_finished()

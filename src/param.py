@@ -792,9 +792,9 @@ class AutodockParameter(Parameter):
 					rows.append("map {}".format(m))
 
 			if k == 'parameter_file':
-				if os.path.isfile(v):
+				if os.path.isfile(v.value):
 					plf = os.path.join(os.path.dirname(receptor_file), "param_library.dat")
-					with open(v) as fh, open(plf, 'w') as fw:
+					with open(v.value) as fh, open(plf, 'w') as fw:
 						fw.write(fh.read())
 
 					rows.append("parameter_file param_library.dat")
