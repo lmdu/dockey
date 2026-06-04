@@ -682,6 +682,8 @@ class InteractionTabWidget(QTabWidget):
 		for i in range(8):
 			self.widget(i).model().clear()
 
+		self.pose_id = 0
+
 	def reset(self):
 		self.site_model.reset()
 
@@ -1545,7 +1547,7 @@ class PubchemDownloadDialog(DownloaderDialog):
 	id_label = "PubChem CIDs:"
 	mol_type = 2
 	mol_fmt = 'sdf'
-	base_url = "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/{}/sdf"
+	base_url = "https://pubchem.ncbi.nlm.nih.gov/rest/pug/compound/cid/{}/sdf?record_type=3d"
 
 class ChemblDownloadDialog(DownloaderDialog):
 	title = "Import Ligand from ChEMBL Database"

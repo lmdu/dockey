@@ -5,15 +5,15 @@ on: [push, pull_request]
 jobs:
   build_win:
     name: Build on Windows
-    runs-on: windows-2019
+    runs-on: windows-2022
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
-          python-version: '3.10.x'
+          python-version: '3.10'
 
       - name: Install requirements
         run: |
@@ -36,14 +36,14 @@ jobs:
           cd dist
           7z a Dockey-v$version-win64.7z Dockey
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: Dockey-win64
           path: |
             dist/*.exe
             dist/*.7z
 
-      - uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@v3
         if: startsWith(github.ref, 'refs/tags/')
         with:
           files: |
@@ -55,27 +55,12 @@ jobs:
     runs-on: ubuntu-22.04
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
-          python-version: '3.10.x'
-
-      - name: Install gcc12
-        run: |
-          sudo apt install g++-12 gcc-12 -y
-          sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-12 12
-          sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-12 12
-
-      - name: Install Linux requirements
-        run: |
-          sudo rm /var/cache/debconf/config.dat
-          sudo dpkg --configure -a
-          sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
-          sudo apt update
-          sudo apt upgrade
-          sudo apt install -y build-essential checkinstall libegl-dev zlib1g-dev libssl-dev ninja-build autoconf libx11-dev libx11-xcb-dev libfontenc-dev libice-dev libsm-dev libxau-dev libxaw7-dev libxcomposite-dev libxcursor-dev libxdamage-dev libxdmcp-dev libxext-dev libxfixes-dev libxi-dev libxinerama-dev libxkbfile-dev libxmu-dev libxmuu-dev libxpm-dev libxrandr-dev libxrender-dev libxres-dev libxss-dev libxt-dev libxtst-dev libxv-dev libxvmc-dev libxxf86vm-dev xtrans-dev libxcb-render0-dev libxcb-render-util0-dev libxcb-xkb-dev libxcb-icccm4-dev libxcb-image0-dev libxcb-keysyms1-dev libxcb-randr0-dev libxcb-shape0-dev libxcb-sync-dev libxcb-xfixes0-dev libxcb-xinerama0-dev xkb-data libxcb-dri3-dev uuid-dev libxcb-util-dev libxkbcommon-x11-dev pkg-config
+          python-version: '3.10'
 
       - name: Install build requirements
         run: |
@@ -93,37 +78,32 @@ jobs:
       - name: Package installer
         run: |
           version=`awk '/^DOCKEY_VERSION/{print $NF}' src/config.py | sed 's/\"//g'`
-          cd dist
-          chmod a+x ../package/build_linux_desktop.sh
-          ../package/build_linux_desktop.sh $version
+          chmod a+x package/build_linux_desktop.sh
+          package/build_linux_desktop.sh $version
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: Dockey-ubuntu22.04
           path: |
-            dist/*.deb
-            dist/*.tar.gz
             dist/*.AppImage
 
-      - uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@v3
         if: startsWith(github.ref, 'refs/tags/')
         with:
           files: |
-            dist/*.deb
-            dist/*.tar.gz
             dist/*.AppImage
 
   build_mac:
     name: Build on MacOS
-    runs-on: macos-13
+    runs-on: macos-15-intel
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Install Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
-          python-version: '3.10.x'
+          python-version: '3.10'
 
       - name: Install requirements
         run: |
@@ -141,22 +121,17 @@ jobs:
       - name: Package
         run: |
           version=`awk '/^DOCKEY_VERSION/{print $NF}' src/config.py | sed 's/\"//g'`
-          npm install --global create-dmg
-          cd dist
-          create-dmg Dockey.app || test -f Dockey\ 0.0.0.dmg
-          mv Dockey\ 0.0.0.dmg Dockey-v${version}-macos.dmg
-          tar -czvf Dockey-v${version}-macos.tar.gz Dockey.app
+          chmod a+x package/build_mac_installer.sh
+          package/build_mac_installer.sh $version x64
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: Dockey-macos
           path: |
             dist/*.dmg
-            dist/*.tar.gz
 
-      - uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@v3
         if: startsWith(github.ref, 'refs/tags/')
         with:
           files: |
             dist/*.dmg
-            dist/*.tar.gz

@@ -1261,7 +1261,7 @@ class AutodockVinaParameter(Parameter):
 		with open(config_file, 'w') as fw:
 			for p, m in self.items():
 				if m.required or m.default != m.value:
-					fw.write("{} = {}\n".format(p, m.value))
+					print(p, m.value, sep=' = ', file=fw)
 
 class AutodockVinaParameterWizard(QWizard):
 	params = AutodockVinaParameter()
@@ -1493,7 +1493,7 @@ class QuickVinaParameter(Parameter):
 		with open(config_file, 'w') as fw:
 			for p, m in self.items():
 				if m.required or m.default != m.value:
-					fw.write("{} = {}\n".format(p, m.value))
+					print(p, m.value, sep=' = ', file=fw)
 
 class QuickVinaParameterWizard(QWizard):
 	params = QuickVinaParameter()

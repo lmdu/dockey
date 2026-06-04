@@ -55,7 +55,7 @@ Computer-aided drug design (CADD) has become one of the most efficient methods t
 ## Docking engines
 
 - [AutoDock4](https://autodock.scripps.edu)
-- [AutoDock Vina](https://github.com/ccsb-scripps/AutoDock-Vina)
+- [AutoDock Vina](https://github.com/ccsb-scripps/AutoDock-Vina) >= v1.2.5
 - [QuickVina-W](https://qvina.github.io/)
 
 ## Usage
@@ -66,4 +66,4 @@ The documentation is available here: [https://dockey.readthedocs.io/en/latest](h
 
 You can download the latest installer for Windows, Linux and MacOS from [https://github.com/lmdu/dockey/releases](https://github.com/lmdu/dockey/releases)
 
-中国镜像下载地址: [https://big.cdu.edu.cn/software/dockey](https://big.cdu.edu.cn/software/dockey)
+中国镜像下载地址: [https://big.cdu.edu.cn/bioinfo/software/dockey](https://big.cdu.edu.cn/bioinfo/software/dockey)
