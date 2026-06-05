@@ -329,7 +329,7 @@ def prepare_meeko_ligand(ligand_file, ligand_pdbqt, params):
 			
 			#Chem.SanitizeMol(mol)
 			#break
-		for mol in Chem.SDMolSupplier(ligand_file, removeHs=False):
+		for mol in Chem.SDMolSupplier(ligand_file):
 			pass
 
 
@@ -346,7 +346,13 @@ def prepare_meeko_ligand(ligand_file, ligand_pdbqt, params):
 	#	AllChem.UFFOptimizeMolecule(mol)
 	#except:
 	#	pass
-	mol = Chem.AddHs(mol, addCoords=True)
+
+	if mol.GetConformer().Is3D():
+		mol = Chem.AddHs(mol, addCoords=True)
+	else:
+		mol = Chem.AddHs(mol)
+		AllChem.EmbedMolecule(mol, AllChem.ETKDGv3())
+		AllChem.UFFOptimizeMolecule(mol)
 
 	preparator = MoleculePreparation(
 		#keep_nonpolar_hydrogens = keep_nonpolar_hydrogens,
